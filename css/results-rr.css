@@ -1,0 +1,123 @@
+:root {
+	--cell-padding: 0.2em;
+	font-size: clamp(12px, 1.5vw, 30px);
+}
+
+html {
+	background-color: #333;
+	font-family: Helvetica, Arial, sans-serif;
+	/* font-variant-numeric: tabular-nums; */
+	/* font-variant-numeric: slashed-zero; */
+}
+
+body {
+	margin: 0;
+	padding: 2vh 2vw;
+	font-size: 0.9em;
+}
+
+h1 {
+	font-size: 2rem;
+	/* color: red; */
+}
+
+.bracket {
+	display: grid;
+	grid-template-columns: min-content max-content min-content min-content max-content repeat(5, min-content) max-content;
+	float: left;
+	margin-top: 5vh;
+	border: 1px solid;
+	text-align: center;
+}
+
+.col {
+	border-right: 1px solid;
+
+	display: grid;
+	grid-template-rows: 1fr repeat(7, min-content);
+}
+
+.col:last-child,
+.names,
+.rating-pre {
+	border-right: none;
+}
+
+.names {
+	text-align: left;
+	min-width: 12em;
+}
+
+.winner {
+	color: red;
+}
+
+.names .row-header,
+.rating-pre .row-header {
+	border-right: 1px solid;
+}
+
+.row-header {
+	border-bottom: 1px solid;
+}
+
+.row-header,
+.row {
+	padding: var(--cell-padding);
+}
+
+.names .row,
+.rating-pre .row,
+.rating-post .row {
+	border-color: transparent;
+}
+
+.row:last-child {
+	border-bottom: 0;
+}
+
+.games .row-header,
+.games .row,
+.rating-change-vs .row-header,
+.rating-change-vs .row {
+	padding: 0;
+}
+
+
+.row-header-top {
+	border-bottom: 1px solid;
+	padding: var(--cell-padding);
+}
+
+.row-header-bottom,
+.game.row,
+.rating-change-player.row {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+}
+
+.row-header-bottom > div:not(:last-child),
+.game.row .score {
+	/* padding: var(--cell-padding); */
+	border-right: 1px solid;
+}
+
+.score {
+	display: grid;
+	grid-template-columns: auto auto;
+	padding: var(--cell-padding);
+}
+
+.score .num:last-child {
+	padding-left: 0.45em;
+}
+
+.score.empty,
+.rating.empty {
+	background-color: #222;
+}
+
+.rating {
+	padding: var(--cell-padding);
+}
+
