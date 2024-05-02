@@ -4,7 +4,6 @@
 }
 
 html {
-	background-color: #333;
 	font-family: Helvetica, Arial, sans-serif;
 	/* font-variant-numeric: tabular-nums; */
 	/* font-variant-numeric: slashed-zero; */
@@ -114,7 +113,7 @@ h1 {
 
 .score.empty,
 .rating.empty {
-	background-color: #222;
+	background-color: #808080;
 }
 
 .rating {
