@@ -9,13 +9,12 @@ html {
 
 body {
 	margin: 0;
-	padding: 2vh 2vw;
+	padding: 2vh 2vw 10vh;
 	font-size: 0.9em;
 }
 
 h1 {
 	font-size: 2rem;
-	/* color: red; */
 }
 
 .back-to-rr-results-link:before {
@@ -27,10 +26,10 @@ h1 {
 .bracket {
 	display: grid;
 	grid-template-columns: min-content max-content min-content min-content max-content repeat(5, min-content) max-content;
-	float: left;
 	margin-top: 5vh;
 	border: 1px solid;
 	text-align: center;
+	width: min-content;
 }
 
 .col {
