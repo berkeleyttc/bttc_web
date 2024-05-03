@@ -5,8 +5,6 @@
 
 html {
 	font-family: Helvetica, Arial, sans-serif;
-	/* font-variant-numeric: tabular-nums; */
-	/* font-variant-numeric: slashed-zero; */
 }
 
 body {
@@ -103,7 +101,6 @@ h1 {
 
 .row-header-bottom > div:not(:last-child),
 .game.row .score {
-	/* padding: var(--cell-padding); */
 	border-right: 1px solid;
 }
 
