@@ -53,6 +53,7 @@ h1 {
 
 .winner {
 	color: red;
+	font-weight: bold;
 }
 
 .names .row-header,
