@@ -20,6 +20,12 @@ h1 {
 	/* color: red; */
 }
 
+.back-to-rr-results-link:before {
+	content: '\2190';
+	display: inline-block;
+	padding-right: 0.5em;
+}
+
 .bracket {
 	display: grid;
 	grid-template-columns: min-content max-content min-content min-content max-content repeat(5, min-content) max-content;
