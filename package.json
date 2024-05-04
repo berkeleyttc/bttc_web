@@ -2,9 +2,9 @@
   "name": "bttc_web",
   "version": "1.0.0",
   "description": "Berkeley Table Tennis Club website",
-  "main": "index.js",
+  "main": "generateResultsIndex.js",
   "scripts": {
-    "build": "node index.js",
+    "build": "node generateResultsIndex.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
