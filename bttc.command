@@ -20,6 +20,6 @@ git add .
 git commit -m "added results for $name"
 git push --set-upstream origin "$name"
 
-open "https://github.com/berkeleyttc/bttc_web/compare"
+open "https://github.com/berkeleyttc/bttc_web/compare/main...${name}?title=added%20results%20for%20${name}&expand=1&body=added%20results%20for%20${name}"
 
-echo "Branch $name was pushed upstream. Create a new PR against this branch."
+echo "Branch $name was pushed upstream. Click create pull request in the browser window that opened."
