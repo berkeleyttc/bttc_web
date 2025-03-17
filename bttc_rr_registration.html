@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Phone Lookup</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    input { padding: 10px; width: 250px; margin: 10px; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    #result { margin-top: 20px; }
+    .entry { border: 1px solid #ccc; padding: 10px; margin: 10px; text-align: left; display: inline-block; }
+  </style>
+</head>
+<body>
+  <h2>Enter Your Phone Number</h2>
+  <form id="lookupForm">
+    <input type="text" id="phoneInput" name="phone" placeholder="Enter phone number" required>
+    <button type="submit">Submit</button>
+  </form>
+  <div id="result"></div>
+  
+  <script>
+    // Replace with your deployed Google Apps Script URL
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbwgED7raqcs242IwCSNZGFjtuu3OjdnSdiqlJeufwTH-23lC2iV5TPa2Q5iPYjduPSq/exec';
+
+
+    document.getElementById('lookupForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const phone = document.getElementById('phoneInput').value.trim();
+      if (!phone) {
+        document.getElementById('result').innerHTML = '<p style="color:red;">Please enter a phone number.</p>';
+        return;
+      }
+      const url = scriptUrl + '?phone=' + encodeURIComponent(phone);
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          const resultDiv = document.getElementById('result');
+          // Check if response indicates no data found
+          if (data.result === "None") {
+            resultDiv.innerHTML = '<p style="color:red;">No data found for this phone number.</p>';
+          } else if (Array.isArray(data) && data.length > 0) {
+            let htmlContent = '<p style="color:green;">Data found!</p>';
+            data.forEach(item => {
+              htmlContent += `
+                <div class="entry">
+                  <p><strong>First Name:</strong> ${item.first_name}</p>
+                  <p><strong>Last Name:</strong> ${item.last_name}</p>
+                  <p><strong>Email:</strong> ${item.email}</p>
+                  <p>
+                    <a href="${item.preFilledUrl}" target="_blank">
+                      Click here to open the pre-filled form
+                    </a>
+                  </p>
+                </div>
+              `;
+            });
+            resultDiv.innerHTML = htmlContent;
+          } else {
+            resultDiv.innerHTML = '<p style="color:red;">Unexpected response format.</p>';
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          document.getElementById('result').innerHTML = '<p style="color:red;">An error occurred. Please try again.</p>';
+        });
+    });
+  </script>
+</body>
+</html>
