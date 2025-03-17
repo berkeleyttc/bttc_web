@@ -1,71 +1,101 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Phone Lookup</title>
-  <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-    input { padding: 10px; width: 250px; margin: 10px; }
-    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-    #result { margin-top: 20px; }
-    .entry { border: 1px solid #ccc; padding: 10px; margin: 10px; text-align: left; display: inline-block; }
+  <meta charset="utf-8">
+
+  <title>Berkeley Table Tennis Club</title>
+
+  <meta name="description" content="The Berkeley Table Tennis Club is a fun, friendly group of people in the San Francisco Bay Area. Come out and play!">
+  <meta name="author" content="Adam Traver">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+  <link rel="stylesheet" href="http://www.google.com/cse/api/overlay.css">
+  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Lobster|PT+Sans+Narrow:400,700">
+  <link rel="stylesheet" href="css/style.css?v=1">
+  <link rel="stylesheet" href="css/handheld.css?v=1" media="handheld">
+
+  <script src="http://www.google.com/jsapi" type="text/javascript"></script>
+  <style type="text/css">
+    .auto-style1 {
+      color: #A90A08;
+    }
+    .entry { border: 4px solid #ccc; padding: 10px; margin: 10px; text-align: left; display: inline-block; }
   </style>
 </head>
 <body>
-  <h2>Enter Your Phone Number</h2>
-  <form id="lookupForm">
-    <input type="text" id="phoneInput" name="phone" placeholder="Enter phone number" required>
-    <button type="submit">Submit</button>
-  </form>
-  <div id="result"></div>
-  
+
+  <!-- Message for non-Friday days -->
+  <div id="message" style="display:none; position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);">
+    <h2>Today is not a round robin league. Please come back on Friday to sign up</h2>
+  </div>
+
+  <!-- Phone lookup content shown only on Friday -->
+  <div id="lookupContent" style="display:none; position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);">
+    <h3>Enter Your Phone Number - format '5101234567'</h3>
+    <form id="lookupForm">
+      <input type="text" id="phoneInput" name="phone" placeholder="Enter phone number" required>
+      <button type="submit">Submit</button>
+    </form>
+    <div id="result"></div>
+  </div>
+
   <script>
-    // Replace with your deployed Google Apps Script URL
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbwgED7raqcs242IwCSNZGFjtuu3OjdnSdiqlJeufwTH-23lC2iV5TPa2Q5iPYjduPSq/exec';
+    // JavaScript to check if today is Friday (5 = Friday)
+    var today = new Date().getDay();
+    if (today !== 1) {
+      document.getElementById("message").style.display = "block";
+    } else {
+      document.getElementById("lookupContent").style.display = "block";
 
+      // Only attach the event listener if it's Friday
+      const scriptUrl = 'https://script.google.com/macros/s/AKfycbwgED7raqcs242IwCSNZGFjtuu3OjdnSdiqlJeufwTH-23lC2iV5TPa2Q5iPYjduPSq/exec'; // Replace with your Google Apps Script URL
 
-    document.getElementById('lookupForm').addEventListener('submit', function(event) {
-      event.preventDefault();
-      const phone = document.getElementById('phoneInput').value.trim();
-      if (!phone) {
-        document.getElementById('result').innerHTML = '<p style="color:red;">Please enter a phone number.</p>';
-        return;
-      }
-      const url = scriptUrl + '?phone=' + encodeURIComponent(phone);
+      document.getElementById('lookupForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const phone = document.getElementById('phoneInput').value.trim();
+        if (!phone) {
+          document.getElementById('result').innerHTML = '<p style="color:red;">Please enter a phone number.</p>';
+          return;
+        }
+        const url = scriptUrl + '?phone=' + encodeURIComponent(phone);
 
-      fetch(url)
-        .then(response => response.json())
-        .then(data => {
-          const resultDiv = document.getElementById('result');
-          // Check if response indicates no data found
-          if (data.result === "None") {
-            resultDiv.innerHTML = '<p style="color:red;">No data found for this phone number.</p>';
-          } else if (Array.isArray(data) && data.length > 0) {
-            let htmlContent = '<p style="color:green;">Data found!</p>';
-            data.forEach(item => {
-              htmlContent += `
-                <div class="entry">
-                  <p><strong>First Name:</strong> ${item.first_name}</p>
-                  <p><strong>Last Name:</strong> ${item.last_name}</p>
-                  <p><strong>Email:</strong> ${item.email}</p>
-                  <p>
-                    <a href="${item.preFilledUrl}" target="_blank">
-                      Click here to open the pre-filled form
-                    </a>
-                  </p>
-                </div>
-              `;
-            });
-            resultDiv.innerHTML = htmlContent;
-          } else {
-            resultDiv.innerHTML = '<p style="color:red;">Unexpected response format.</p>';
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          document.getElementById('result').innerHTML = '<p style="color:red;">An error occurred. Please try again.</p>';
-        });
-    });
+        fetch(url)
+          .then(response => response.json())
+          .then(data => {
+            const resultDiv = document.getElementById('result');
+            if (data.result === "None") {
+              resultDiv.innerHTML = '<p style="color:red;">No player found for this phone number.</p>';
+            } else if (Array.isArray(data) && data.length > 0) {
+              let htmlContent = '<p style="color:green;">Players found!</p>';
+              data.forEach(item => {
+                htmlContent += `
+                  <div class="entry">
+                    <p><strong>First Name:</strong> ${item.first_name}</p>
+                    <p><strong>Last Name:</strong> ${item.last_name}</p>
+                    <p><strong>Email:</strong> ${item.email}</p>
+                    <p>
+                      <a href="${item.preFilledUrl}" target="_blank">
+                        Click here to open the pre-filled form
+                      </a>
+                    </p>
+                  </div>
+                `;
+              });
+              resultDiv.innerHTML = htmlContent;
+            } else {
+              resultDiv.innerHTML = '<p style="color:red;">Unexpected response format.</p>';
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('result').innerHTML = '<p style="color:red;">An error occurred. Please try again.</p>';
+          });
+      });
+    }
   </script>
 </body>
 </html>
