@@ -3,100 +3,184 @@
 
 <head>
   <meta charset="utf-8">
-
   <title>Berkeley Table Tennis Club</title>
-
   <meta name="description" content="The Berkeley Table Tennis Club is a fun, friendly group of people in the San Francisco Bay Area. Come out and play!">
   <meta name="author" content="Adam Traver">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <link rel="shortcut icon" href="/favicon.ico">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="http://www.google.com/cse/api/overlay.css">
-  <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Lobster|PT+Sans+Narrow:400,700">
-  <link rel="stylesheet" href="css/style.css?v=1">
-  <link rel="stylesheet" href="css/handheld.css?v=1" media="handheld">
-
-  <script src="http://www.google.com/jsapi" type="text/javascript"></script>
-  <style type="text/css">
-    .auto-style1 {
-      color: #A90A08;
+  <!-- Styles -->
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background-color: #f7f9fb;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
     }
-    .entry { border: 4px solid #ccc; padding: 10px; margin: 10px; text-align: left; display: inline-block; }
+
+    .container {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      max-width: 500px;
+      width: 90%;
+    }
+
+    h2, h3 {
+      color: #1a1a1a;
+      margin-bottom: 1rem;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    input[type="text"] {
+      padding: 0.75rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 0.75rem;
+      background-color: #0d6efd;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    button:hover {
+      background-color: #0b5ed7;
+    }
+
+    .entry {
+      border: 1px solid #ddd;
+      background: #fafafa;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+      text-align: left;
+    }
+
+    .entry p {
+      margin: 0.5rem 0;
+    }
+
+    a {
+      color: #0d6efd;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .message, .result {
+      margin-top: 1.5rem;
+    }
+
+    .error {
+      color: #dc3545;
+      font-weight: 600;
+    }
+
+    .success {
+      color: #198754;
+      font-weight: 600;
+    }
   </style>
 </head>
-<body>
 
-  <!-- Message for non-Friday days -->
-  <div id="message" style="display:none; position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);">
-    <h2>Today is not round robin league day. Please come back on Friday to sign up</h2>
+<body>
+  <div class="container" id="message" style="display: none;">
+    <h2>Today is not Round Robin League day</h2>
+    <p>Please come back on Friday to sign up.</p>
   </div>
 
-  <!-- Phone lookup content shown only on Friday -->
-  <div id="lookupContent" style="display:none; position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);">
-    <h3>Enter Your Phone Number - format '5101234567'</h3>
+  <div class="container" id="lookupContent" style="display: none;">
+    <h3>Round Robin Sign-Up</h3>
+    <p>Enter your phone number (e.g., 5101234567):</p>
     <form id="lookupForm">
       <input type="text" id="phoneInput" name="phone" placeholder="Enter phone number" required>
       <button type="submit">Submit</button>
     </form>
-    <div id="result"></div>
+    <div class="result" id="result"></div>
   </div>
 
   <script>
-    // JavaScript to check if today is Friday (5 = Friday)
-    var today = new Date().getDay();
+    const today = new Date().getDay();
+    const messageDiv = document.getElementById("message");
+    const lookupDiv = document.getElementById("lookupContent");
+
     if (today !== 6) {
-      document.getElementById("message").style.display = "block";
+      messageDiv.style.display = "block";
     } else {
-      document.getElementById("lookupContent").style.display = "block";
+      lookupDiv.style.display = "block";
 
-      // Only attach the event listener if it's Friday
       const scriptUrl = 'https://script.google.com/macros/s/AKfycbwgED7raqcs242IwCSNZGFjtuu3OjdnSdiqlJeufwTH-23lC2iV5TPa2Q5iPYjduPSq/exec';
+      const form = document.getElementById('lookupForm');
+      const resultDiv = document.getElementById('result');
 
-      document.getElementById('lookupForm').addEventListener('submit', function(event) {
+      form.addEventListener('submit', function (event) {
         event.preventDefault();
         const phone = document.getElementById('phoneInput').value.trim();
+
         if (!phone) {
-          document.getElementById('result').innerHTML = '<p style="color:red;">Please enter a phone number.</p>';
+          resultDiv.innerHTML = `<p class="error">Please enter a phone number.</p>`;
           return;
         }
-        const url = scriptUrl + '?phone=' + encodeURIComponent(phone);
 
-        fetch(url)
+        fetch(`${scriptUrl}?phone=${encodeURIComponent(phone)}`)
           .then(response => response.json())
           .then(data => {
-            const resultDiv = document.getElementById('result');
             if (data.result === "None") {
-              resultDiv.innerHTML = '<p style="color:red;">No player found for this phone number. Please contact BTTC support - 510-926-6913  (TEXT MESSAGES ONLY)</p>';
+              resultDiv.innerHTML = `
+                <p class="error">
+                  No player found for this phone number.<br>
+                  Contact BTTC support at 510-926-6913 (TEXT ONLY)
+                </p>`;
             } else if (Array.isArray(data) && data.length > 0) {
-              let htmlContent = '<p style="color:green;">Players found!</p>';
+              let htmlContent = `<p class="success">Players found!</p>`;
               data.forEach(item => {
                 htmlContent += `
                   <div class="entry">
                     <p><strong>First Name:</strong> ${item.first_name}</p>
                     <p><strong>Last Name:</strong> ${item.last_name}</p>
                     <p><strong>Email:</strong> ${item.email}</p>
-                    <p><strong>RR league signup date - YYYY-MM-DD:</strong> ${item.rr_league_date}</p>
-                    <p>
-                      <a href="${item.preFilledUrl}" target="_blank">
-                        Click here to register for the league !
-                      </a>
-                    </p>
-                  </div>
-                `;
+                    <p><strong>Signup Date:</strong> ${item.rr_league_date}</p>
+                    <p><a href="${item.preFilledUrl}" target="_blank">Click here to register for the league</a></p>
+                  </div>`;
               });
               resultDiv.innerHTML = htmlContent;
             } else {
-              resultDiv.innerHTML = '<p style="color:red;">Unexpected response format.</p>';
+              resultDiv.innerHTML = `<p class="error">Unexpected response format.</p>`;
             }
           })
           .catch(error => {
             console.error('Error:', error);
-            document.getElementById('result').innerHTML = '<p style="color:red;">An error occurred. Please try again.</p>';
+            resultDiv.innerHTML = `<p class="error">An error occurred. Please try again.</p>`;
           });
       });
     }
   </script>
 </body>
+
 </html>
