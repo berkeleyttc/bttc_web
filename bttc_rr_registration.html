@@ -155,9 +155,9 @@
     const messageDiv = document.getElementById("message");
     const lookupDiv = document.getElementById("lookupContent");
 
-    if (today !== 6) {
-      messageDiv.style.display = "block";
-    } else {
+    // if (today !== 5) {
+      // messageDiv.style.display = "block";
+    // } else {
       lookupDiv.style.display = "block";
 
       const scriptUrl = 'https://script.google.com/macros/s/AKfycbwgED7raqcs242IwCSNZGFjtuu3OjdnSdiqlJeufwTH-23lC2iV5TPa2Q5iPYjduPSq/exec';
@@ -204,7 +204,7 @@
             resultDiv.innerHTML = `<p class="error">An error occurred. Please try again.</p>`;
           });
       });
-    }
+    // }
   </script>
 </body>
 
