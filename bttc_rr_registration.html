@@ -2,42 +2,37 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>Berkeley Table Tennis Club</title>
+
   <meta name="description" content="The Berkeley Table Tennis Club is a fun, friendly group of people in the San Francisco Bay Area. Come out and play!">
-  <meta name="author" content="Mohit Galvankar">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Adam Traver">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <link rel="shortcut icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+  <!-- Legacy Styles -->
+  <link rel="stylesheet" href="css/style.css?v=1">
+  <link rel="stylesheet" href="css/handheld.css?v=1" media="handheld">
 
   <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Lobster|PT+Sans+Narrow:400,700" rel="stylesheet">
 
-  <!-- Styles -->
   <style>
     body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Inter', sans-serif;
-      background-color: #f7f9fb;
-      color: #333;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      text-align: center;
+      background-color: #EBE9E4;
     }
 
     .container {
       background: #fff;
+      margin: 4rem auto;
       padding: 2rem;
       border-radius: 12px;
       box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
       max-width: 500px;
       width: 90%;
-    }
-
-    h2, h3 {
-      color: #1a1a1a;
-      margin-bottom: 1rem;
+      text-align: center;
     }
 
     form {
@@ -64,7 +59,6 @@
       border-radius: 8px;
       font-size: 1rem;
       cursor: pointer;
-      transition: background-color 0.2s ease-in-out;
     }
 
     button:hover {
@@ -84,47 +78,64 @@
       margin: 0.5rem 0;
     }
 
-    a {
-      color: #0d6efd;
-      text-decoration: none;
-    }
-
-    a:hover {
-      text-decoration: underline;
-    }
-
-    .message, .result {
+    .result {
       margin-top: 1.5rem;
     }
 
     .error {
       color: #dc3545;
-      font-weight: 600;
+      font-weight: bold;
     }
 
     .success {
       color: #198754;
-      font-weight: 600;
+      font-weight: bold;
     }
   </style>
 </head>
 
 <body>
+
+  <!-- Legacy Header and Nav Bar -->
+  <div id="header">
+    <div class="container_12 clearfix">
+      <div id="logo" class="grid_6">
+        <a href="index.html" title="Go Home">
+          <img src="images/logo.gif" height="60" alt="BTTC Logo" />
+        </a>
+      </div>
+      <div id="search" class="grid_6"></div>
+    </div>
+    <div class="border">
+      <ul id="nav" class="container_12 clearfix">
+        <li class="grid_2"><a href="index.html" title="Home">Home</a></li>
+        <li class="grid_2"><a href="results.html" title="Weekly Results">Results</a></li>
+        <li class="grid_2"><a href="coaching.html" title="Coaching">Coaching</a></li>
+        <li class="grid_2"><a href="about.html" title="About Us">About Us</a></li>
+        <li class="grid_2"><a href="club_policy.html" title="Club Policy">Club Policy</a></li>
+        <li class="grid_2 last"><a href="more.html" title="More...">More...</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Friday-only Message -->
   <div class="container" id="message" style="display: none;">
     <h2>Today is not Round Robin League day</h2>
     <p>Please come back on Friday to sign up.</p>
   </div>
 
+  <!-- Friday Sign-Up Form -->
   <div class="container" id="lookupContent" style="display: none;">
     <h3>Round Robin Sign-Up</h3>
     <p>Enter your phone number (e.g., 5101234567):</p>
     <form id="lookupForm">
-      <input type="text" id="phoneInput" name="phone" placeholder="Enter phone number" required>
+      <input type="text" id="phoneInput" name="phone" placeholder="Enter phone number" required />
       <button type="submit">Submit</button>
     </form>
     <div class="result" id="result"></div>
   </div>
 
+  <!-- Friday Checker Script -->
   <script>
     const today = new Date().getDay();
     const messageDiv = document.getElementById("message");
@@ -154,7 +165,7 @@
             if (data.result === "None") {
               resultDiv.innerHTML = `
                 <p class="error">
-                  No player found for this phone number.<br>
+                  No player found for this phone number.<br />
                   Contact BTTC support at 510-926-6913 (TEXT ONLY)
                 </p>`;
             } else if (Array.isArray(data) && data.length > 0) {
