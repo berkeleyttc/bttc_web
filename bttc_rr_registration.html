@@ -30,7 +30,7 @@
 
   <!-- Message for non-Friday days -->
   <div id="message" style="display:none; position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);">
-    <h2>Today is not a round robin league. Please come back on Friday to sign up</h2>
+    <h2>Today is not round robin league day. Please come back on Friday to sign up</h2>
   </div>
 
   <!-- Phone lookup content shown only on Friday -->
@@ -46,13 +46,13 @@
   <script>
     // JavaScript to check if today is Friday (5 = Friday)
     var today = new Date().getDay();
-    if (today !== 1) {
+    if (today !== 6) {
       document.getElementById("message").style.display = "block";
     } else {
       document.getElementById("lookupContent").style.display = "block";
 
       // Only attach the event listener if it's Friday
-      const scriptUrl = 'https://script.google.com/macros/s/AKfycbwgED7raqcs242IwCSNZGFjtuu3OjdnSdiqlJeufwTH-23lC2iV5TPa2Q5iPYjduPSq/exec'; // Replace with your Google Apps Script URL
+      const scriptUrl = 'https://script.google.com/macros/s/AKfycbwgED7raqcs242IwCSNZGFjtuu3OjdnSdiqlJeufwTH-23lC2iV5TPa2Q5iPYjduPSq/exec';
 
       document.getElementById('lookupForm').addEventListener('submit', function(event) {
         event.preventDefault();
@@ -68,7 +68,7 @@
           .then(data => {
             const resultDiv = document.getElementById('result');
             if (data.result === "None") {
-              resultDiv.innerHTML = '<p style="color:red;">No player found for this phone number.</p>';
+              resultDiv.innerHTML = '<p style="color:red;">No player found for this phone number. Please contact BTTC support - 510-926-6913  (TEXT MESSAGES ONLY)</p>';
             } else if (Array.isArray(data) && data.length > 0) {
               let htmlContent = '<p style="color:green;">Players found!</p>';
               data.forEach(item => {
@@ -77,9 +77,10 @@
                     <p><strong>First Name:</strong> ${item.first_name}</p>
                     <p><strong>Last Name:</strong> ${item.last_name}</p>
                     <p><strong>Email:</strong> ${item.email}</p>
+                    <p><strong>RR league signup date - YYYY-MM-DD:</strong> ${item.rr_league_date}</p>
                     <p>
                       <a href="${item.preFilledUrl}" target="_blank">
-                        Click here to open the pre-filled form
+                        Click here to register for the league !
                       </a>
                     </p>
                   </div>
