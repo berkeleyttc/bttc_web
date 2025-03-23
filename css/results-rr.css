@@ -1,6 +1,6 @@
 :root {
 	--cell-padding: 0.2em;
-	font-size: clamp(12px, 1.5vw, 30px);
+	font-size: clamp(12px, 1.49vw, 30px);
 }
 
 html {
@@ -40,6 +40,7 @@ h1 {
 }
 
 .col:last-child,
+.col:nth-child(11n),
 .names,
 .rating-pre {
 	border-right: none;
@@ -50,7 +51,8 @@ h1 {
 	min-width: 12em;
 }
 
-.winner {
+/* winner */
+.col:nth-child(13) {
 	color: red;
 	font-weight: bold;
 }
@@ -100,7 +102,7 @@ h1 {
 }
 
 .row-header-bottom > div:not(:last-child),
-.game.row .score {
+.game.row .score:not(:nth-child(7)) {
 	border-right: 1px solid;
 }
 
@@ -123,3 +125,6 @@ h1 {
 	padding: var(--cell-padding);
 }
 
+/* .num {
+	font-family: monospace;
+} */
