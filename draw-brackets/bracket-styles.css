@@ -42,10 +42,27 @@ hr {
 
 header {
 	border-bottom: 1px solid;
+
+	p {
+		margin-bottom: 0;
+	}
 }
+
+
 
 nav {
 	max-width: 600px;
+
+	&.group-list-container {
+		width: fit-content;
+		ul {
+			display: flex;
+		}
+		a {
+			padding-left: 0.5rem;
+			padding-right: 0.5rem;
+		}
+	}
 
 	ul {
 		list-style-type: none;
@@ -81,12 +98,32 @@ nav {
 	width: fit-content;
 }
 
+
+@keyframes yellowflash-bg {
+	from {
+		background: yellow;
+	}
+
+	to {
+		background: transparent;
+	}
+}
+
+
 .name-section {
+	scroll-margin: 3rem;
+
+	&:target {
+		animation: yellowflash-bg 2s;
+	}
+
 	h2 {
 		/* border-top: 1px solid; */
 		margin-top: 0.4em;
 		margin-bottom: 0;
+
 	}
+
 	ul {
 		list-style-type: none;
 		padding-left: 0;
@@ -120,6 +157,15 @@ ol {
 ol.play-order-no-names {
 	li:before{
 		content: '';
+	}
+}
+
+.players {
+	li {
+		scroll-margin: 1000em;
+		&:target {
+			animation: yellowflash-bg 2s;
+		}
 	}
 }
 

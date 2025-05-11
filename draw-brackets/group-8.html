@@ -21,13 +21,13 @@
 
 	<section class="players">
 		<ol>
-			<li><span class="rating">(725)</span> Guive Nassiri</li>
-			<li><span class="rating">(772)</span> Constantine Dinkov</li>
-			<li><span class="rating">(721)</span> Mike Young</li>
-			<li><span class="rating">(652)</span> Samia Bendi</li>
-			<li><span class="rating">(744)</span> Charles Lee</li>
-			<li><span class="rating">(736)</span> Rongjin Xu</li>
-			<li><span class="rating">(547)</span> Rahil Ajani</li>
+			<li id="guivenassiri"><span class="rating">(725)</span> Guive Nassiri</li>
+			<li id="constantinedinkov"><span class="rating">(772)</span> Constantine Dinkov</li>
+			<li id="mikeyoung"><span class="rating">(721)</span> Mike Young</li>
+			<li id="samiabendi"><span class="rating">(652)</span> Samia Bendi</li>
+			<li id="charleslee"><span class="rating">(744)</span> Charles Lee</li>
+			<li id="rongjinxu"><span class="rating">(736)</span> Rongjin Xu</li>
+			<li id="rahilajani"><span class="rating">(547)</span> Rahil Ajani</li>
 		</ol>
 	</section>
 
@@ -101,6 +101,12 @@
 			</div>
 		</div>
 	</section>
+
+	<!-- <script>
+		document.body.querySelectorAll('.players li').forEach(li => {
+			li.id = li.textContent.toLocaleLowerCase().replace(/[\.|\(|\)| |\d]/g, '').split(',').join('');
+		});
+	</script> -->
 
 </body>
 </html>

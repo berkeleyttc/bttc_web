@@ -22,12 +22,12 @@
 
 	<section class="players">
 		<ol>
-			<li><span class="rating">(319)</span> Juli Wan</li>
-			<li><span class="rating">(256)</span> Nicholas Hymel</li>
-			<li><span class="rating">(118)</span> Matthew Haag</li>
-			<li><span class="rating">(169)</span> Waleed Meleis</li>
-			<li><span class="rating">(100)</span> Edward Hayes</li>
-			<li><span class="rating">(100)</span> Natalie Nussbaum</li>
+			<li id="juliwan"><span class="rating">(319)</span> Juli Wan</li>
+			<li id="nicholashymel"><span class="rating">(256)</span> Nicholas Hymel</li>
+			<li id="matthewhaag"><span class="rating">(118)</span> Matthew Haag</li>
+			<li id="waleedmeleis"><span class="rating">(169)</span> Waleed Meleis</li>
+			<li id="edwardhayes"><span class="rating">(100)</span> Edward Hayes</li>
+			<li id="natalienussbaum"><span class="rating">(100)</span> Natalie Nussbaum</li>
 		</ol>
 	</section>
 
@@ -96,6 +96,10 @@
 		</div>
 	</section>
 
+<!-- <script>
+	document.body.querySelectorAll('.players li').forEach(li => {
+		li.id = li.textContent.toLocaleLowerCase().replace(/[\.|\(|\)| |\d]/g, '').split(',').join('');
+	});
+</script> -->
 </body>
-
 </html>
