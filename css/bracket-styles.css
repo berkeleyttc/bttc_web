@@ -216,9 +216,21 @@ ol.play-order-no-names {
 	outline: 2px solid black;
 	width: 7%;
 	padding-bottom: 14%;
+	position: relative;
 
 	&.selected {
 		background-color: black;
+		color: white;
+	}
+
+	&.open:after {
+		content:'OPEN';
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		position: absolute;
+		inset: 0;
+		writing-mode: vertical-rl;
 	}
 }
 
