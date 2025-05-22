@@ -20,17 +20,23 @@ h2 {
 	font-size: clamp(16px, 5vw, 24px);
 }
 
-header h2 {
-	margin-top: 0;
-	font-weight: normal;
+header {
+	border-bottom: 1px solid;
+
+	h1 {
+		margin-top: 0;
+	}
+
+	h2 {
+		margin-bottom: 0;
+		font-weight: normal;
+	}
 }
 
-.group-page {
+.group-page,
+.table-map-page {
 	nav {
 		width: fit-content;
-		/* position: absolute;
-		top: 0;
-		right: 0.5rem; */
 	}
 }
 
@@ -39,15 +45,6 @@ hr {
 	border-width: 1px;
 	border-top: 0;
 }
-
-header {
-	border-bottom: 1px solid;
-
-	p {
-		margin-bottom: 0;
-	}
-}
-
 
 
 nav {
@@ -84,9 +81,14 @@ nav {
 		color: var(--link-color);
 		background-color: white;
 
-		&:hover {
+		&:hover,
+		&.selected {
 			background-color: var(--link-color);
 			color: white;
+		}
+
+		&.selected {
+			pointer-events: none;
 		}
 	}
 }
@@ -154,12 +156,6 @@ ol {
 	}
 }
 
-ol.play-order-no-names {
-	li:before{
-		content: '';
-	}
-}
-
 .players {
 	li {
 		scroll-margin: 1000em;
@@ -174,9 +170,15 @@ ol.play-order-no-names {
 }
 
 .play-order {
+	list-style-type: none;
+	padding-inline-start: 0;
 	margin-bottom: 3rem;
 	padding-bottom: 2rem;
 	border-bottom: 1px solid;
+
+	li:before {
+		content: '\2022  ';
+	}
 }
 
 .group-page .date {
@@ -223,14 +225,17 @@ ol.play-order-no-names {
 		color: white;
 	}
 
-	&.open:after {
-		content:'OPEN';
+	&.rotated:before {
+		writing-mode: vertical-rl;
+	}
+
+	&:before {
+		content: attr(data-content);
 		display: flex;
 		justify-content: center;
 		align-items: center;
 		position: absolute;
 		inset: 0;
-		writing-mode: vertical-rl;
 	}
 }
 
