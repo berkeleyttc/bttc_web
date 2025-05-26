@@ -12,11 +12,9 @@
   <link rel="shortcut icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
-  <!-- Legacy Styles -->
   <link rel="stylesheet" href="css/style.css?v=1">
   <link rel="stylesheet" href="css/handheld.css?v=1" media="handheld">
 
-  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css?family=Lobster|PT+Sans+Narrow:400,700" rel="stylesheet">
 
   <style>
@@ -93,18 +91,17 @@
     }
 
     .roster-link {
-  font-weight: bold;
-  color: #0d6efd;
-  text-decoration: underline;
-  margin-top: 0.5rem;
-  display: inline-block;
-}
+      font-weight: bold;
+      color: #0d6efd;
+      text-decoration: underline;
+      margin-top: 0.5rem;
+      display: inline-block;
+    }
   </style>
 </head>
 
 <body>
 
-  <!-- Legacy Header and Nav Bar -->
   <div id="header">
     <div class="container_12 clearfix">
       <div id="logo" class="grid_6">
@@ -126,86 +123,117 @@
     </div>
   </div>
 
-  <!-- Friday-only Message -->
-  <div class="container" id="message" style="display: none;">
-    <h2>Today is not Round Robin League day</h2>
-    <p>Please come back on Friday to sign up.</p>
-  </div>
-
-  <!-- Friday Sign-Up Form -->
-  <div class="container" id="lookupContent" style="display: none;">
+  <div class="container" id="lookupContent">
     <h3>Round Robin Sign-Up</h3>
     <p>Enter your phone number (e.g., 5101234567):</p>
     <form id="lookupForm">
       <input type="text" id="phoneInput" name="phone" placeholder="Enter phone number" required />
-      <button type="submit">Submit</button>
+      <button type="submit">Lookup</button>
     </form>
     <div class="result" id="result"></div>
-          <a id="rosterLink" 
-   href="https://docs.google.com/spreadsheets/d/1kNEL4DvxN3rtUmrwF1Q2bRXDVhmGqtEX2yLd-VkUxto/edit?usp=sharing" 
-   target="_blank" 
-   class="roster-link">
-  LIST OF PLAYERS REGISTERED
-</a>
+    <div class="result" id="registrationForm"></div>
+    <a id="rosterLink"
+      href="https://docs.google.com/spreadsheets/d/1kNEL4DvxN3rtUmrwF1Q2bRXDVhmGqtEX2yLd-VkUxto/edit?usp=sharing"
+      target="_blank" class="roster-link">
+      LIST OF PLAYERS REGISTERED
+    </a>
   </div>
 
-  <!-- Friday Checker Script -->
-  <script>
-    const today = new Date().getDay();
-    const messageDiv = document.getElementById("message");
-    const lookupDiv = document.getElementById("lookupContent");
+<script>
+  const scriptUrl = 'https://script.google.com/macros/s/AKfycbwJCSexZFziDn6re023EJ_fiFlmTNfdj9IUMqzORcucGB8fMSMh60gzC7USVTBgRpj9/exec';
+  let players = [];
 
-    // if (today !== 5) {
-      // messageDiv.style.display = "block";
-    // } else {
-      lookupDiv.style.display = "block";
+  document.getElementById('lookupForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    const phone = document.getElementById('phoneInput').value.trim();
+    const resultDiv = document.getElementById('result');
+    const formDiv = document.getElementById('registrationForm');
+    resultDiv.innerHTML = '';
+    formDiv.innerHTML = '';
+    players = [];
 
-      const scriptUrl = 'https://script.google.com/macros/s/AKfycbwgED7raqcs242IwCSNZGFjtuu3OjdnSdiqlJeufwTH-23lC2iV5TPa2Q5iPYjduPSq/exec';
-      const form = document.getElementById('lookupForm');
-      const resultDiv = document.getElementById('result');
+    if (!phone) {
+      resultDiv.innerHTML = `<p class="error">Please enter a phone number.</p>`;
+      return;
+    }
 
-      form.addEventListener('submit', function (event) {
-        event.preventDefault();
-        const phone = document.getElementById('phoneInput').value.trim();
-
-        if (!phone) {
-          resultDiv.innerHTML = `<p class="error">Please enter a phone number.</p>`;
+    fetch(`${scriptUrl}?phone=${encodeURIComponent(phone)}`)
+      .then(res => res.text())
+      .then(text => {
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          resultDiv.innerHTML = `<p class="error">Invalid response from server.</p>`;
           return;
         }
 
-        fetch(`${scriptUrl}?phone=${encodeURIComponent(phone)}`)
-          .then(response => response.json())
-          .then(data => {
-            if (data.result === "None") {
-              resultDiv.innerHTML = `
-                <p class="error">
-                  No player found for this phone number.<br />
-                  Contact BTTC support at 510-926-6913 (TEXT ONLY)
-                </p>`;
-            } else if (Array.isArray(data) && data.length > 0) {
-              let htmlContent = `<p class="success">Players found!</p>`;
-              data.forEach(item => {
-                htmlContent += `
-                  <div class="entry">
-                    <p><strong>First Name:</strong> ${item.first_name}</p>
-                    <p><strong>Last Name:</strong> ${item.last_name}</p>
-                    <p><strong>Email:</strong> ${item.email}</p>
-                    <p><strong>Signup Date:</strong> ${item.rr_league_date}</p>
-                    <p><a href="${item.preFilledUrl}" target="_blank">Click here to register for the league</a></p>
-                  </div>`;
-              });
-              resultDiv.innerHTML = htmlContent;
-            } else {
-              resultDiv.innerHTML = `<p class="error">Unexpected response format.</p>`;
-            }
+        if (data.result === "None" || data.length === 0) {
+          resultDiv.innerHTML = `<p class="error">No player found for this phone number.<br />Contact BTTC support at 510-926-6913 (TEXT ONLY)</p>`;
+          return;
+        }
+
+        players = data;
+        let html = `<p class="success">Select your name:</p><form id="registerForm">`;
+        data.forEach((p, i) => {
+          html += `
+            <div class="entry">
+              <label>
+                <input type="radio" name="player" value="${i}" required />
+                ${p.first_name} ${p.last_name} (${p.email})
+              </label>
+            </div>`;
+        });
+
+        html += `
+          <input type="text" id="tokenInput" placeholder="Enter your token" required />
+          <button type="submit">Register</button>
+        </form>`;
+        formDiv.innerHTML = html;
+
+        document.getElementById('registerForm').addEventListener('submit', function (e) {
+          e.preventDefault();
+          const selectedIndex = document.querySelector('input[name="player"]:checked')?.value;
+          const token = document.getElementById('tokenInput').value.trim();
+          const registerResult = document.createElement("div");
+
+          if (selectedIndex === undefined || !token) {
+            registerResult.innerHTML = `<p class="error">Please select your name and enter your token.</p>`;
+            formDiv.appendChild(registerResult);
+            return;
+          }
+
+          const player = players[selectedIndex];
+          const payload = {
+            first_name: player.first_name,
+            last_name: player.last_name,
+            token: token
+          };
+
+          fetch(scriptUrl, {
+            method: "POST",
+            body: JSON.stringify(payload) // no content-type header (avoid preflight)
           })
-          .catch(error => {
-            console.error('Error:', error);
-            resultDiv.innerHTML = `<p class="error">An error occurred. Please try again.</p>`;
-          });
+            .then(r => r.text())
+            .then(text => {
+              try {
+                const data = JSON.parse(text);
+                formDiv.innerHTML = `<p class="${data.success ? 'success' : 'error'}">${data.message}</p>`;
+              } catch {
+                formDiv.innerHTML += `<p class="error">Unexpected server response.</p>`;
+              }
+            })
+            .catch(err => {
+              formDiv.innerHTML += `<p class="error">Registration failed: ${err.message}</p>`;
+            });
+        });
+      })
+      .catch(err => {
+        resultDiv.innerHTML = `<p class="error">An error occurred: ${err.message}</p>`;
       });
-    // }
-  </script>
+  });
+</script>
+
 </body>
 
 </html>
