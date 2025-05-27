@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>BTTC Registered Players</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="stylesheet" href="css/style.css?v=1">
+  <link rel="stylesheet" href="css/handheld.css?v=1" media="handheld">
+  <link href="https://fonts.googleapis.com/css?family=Lobster|PT+Sans+Narrow:400,700" rel="stylesheet">
+  <style>
+    body {
+      background-color: #EBE9E4;
+    }
+    .container {
+      background: #fff;
+      margin: 4rem auto;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      width: 90%;
+      text-align: center;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+      cursor: pointer;
+    }
+    th, td {
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    .Registered {
+      color: green;
+      font-weight: bold;
+    }
+    .Waitlisted {
+      color: orange;
+      font-weight: bold;
+    }
+    th.sortable:hover {
+      background-color: #e2e2e2;
+    }
+    th.sorted-asc::after {
+      content: " \25B2";
+    }
+    th.sorted-desc::after {
+      content: " \25BC";
+    }
+  </style>
+</head>
+
+<body>
+  <div id="header">
+    <div class="container_12 clearfix">
+      <div id="logo" class="grid_6">
+        <a href="index.html" title="Go Home">
+          <img src="images/logo.gif" height="60" alt="BTTC Logo" />
+        </a>
+      </div>
+      <div id="search" class="grid_6"></div>
+    </div>
+    <div class="border">
+      <ul id="nav" class="container_12 clearfix">
+        <li class="grid_2"><a href="index.html" title="Home">Home</a></li>
+        <li class="grid_2"><a href="results.html" title="Weekly Results">Results</a></li>
+        <li class="grid_2"><a href="coaching.html" title="Coaching">Coaching</a></li>
+        <li class="grid_2"><a href="about.html" title="About Us">About Us</a></li>
+        <li class="grid_2"><a href="club_policy.html" title="Club Policy">Club Policy</a></li>
+        <li class="grid_2 last"><a href="more.html" title="More...">More...</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="container">
+    <h3>Round Robin Player Roster</h3>
+    <table>
+      <thead>
+        <tr>
+          <th class="sortable" data-key="full_name">Name</th>
+          <th class="sortable" data-key="status">Status</th>
+          <th class="sortable" data-key="timestamp">Registered At</th>
+        </tr>
+      </thead>
+      <tbody id="rosterBody">
+        <tr><td colspan="3">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbxMf47f2A1nhhERt60t_4Lm7bHAHjpFkyBIN3CBQRltCDTCQjm9A0V2wm20IneHKif9/exec?action=roster"; // Replace with your deployed URL
+    let playerData = [];
+    let currentSort = { key: null, direction: 'asc' };
+
+    fetch(API_URL)
+      .then(res => res.json())
+      .then(data => {
+        playerData = data;
+        renderTable(playerData);
+      })
+      .catch(err => {
+        document.getElementById("rosterBody").innerHTML = `<tr><td colspan='3'>Error loading roster: ${err.message}</td></tr>`;
+      });
+
+    function renderTable(data) {
+      const tbody = document.getElementById("rosterBody");
+      tbody.innerHTML = "";
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='3'>No players registered yet.</td></tr>";
+        return;
+      }
+
+      data.forEach(player => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${player.full_name}</td>
+          <td class="${player.status}">${player.status}</td>
+          <td>${player.timestamp}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.querySelectorAll("th.sortable").forEach(th => {
+      th.addEventListener("click", () => {
+        const key = th.getAttribute("data-key");
+        let direction = 'asc';
+
+        if (currentSort.key === key && currentSort.direction === 'asc') {
+          direction = 'desc';
+        }
+
+        currentSort = { key, direction };
+
+        document.querySelectorAll("th.sortable").forEach(th => {
+          th.classList.remove("sorted-asc", "sorted-desc");
+        });
+        th.classList.add(direction === 'asc' ? "sorted-asc" : "sorted-desc");
+
+        const sorted = [...playerData].sort((a, b) => {
+          let valA = a[key] || "";
+          let valB = b[key] || "";
+
+          if (key === 'timestamp') {
+            valA = new Date(valA);
+            valB = new Date(valB);
+          } else {
+            valA = valA.toString().toLowerCase();
+            valB = valB.toString().toLowerCase();
+          }
+
+          if (valA < valB) return direction === 'asc' ? -1 : 1;
+          if (valA > valB) return direction === 'asc' ? 1 : -1;
+          return 0;
+        });
+
+        renderTable(sorted);
+      });
+    });
+  </script>
+</body>
+
+</html>
