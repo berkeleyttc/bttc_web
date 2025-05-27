@@ -97,6 +97,22 @@
       margin-top: 0.5rem;
       display: inline-block;
     }
+
+    .token-field {
+      width: 70%;
+      margin-top: 0.5rem;
+    }
+
+    .confirm-btn {
+      margin-top: 0.5rem;
+    }
+
+    .token-error {
+      display: block;
+      margin-top: 0.5rem;
+      color: red;
+      font-size: 0.9em;
+    }
   </style>
 </head>
 
@@ -139,100 +155,170 @@
     </a>
   </div>
 
-<script>
-  const scriptUrl = 'https://script.google.com/macros/s/AKfycbwJCSexZFziDn6re023EJ_fiFlmTNfdj9IUMqzORcucGB8fMSMh60gzC7USVTBgRpj9/exec';
-  let players = [];
+  <script>
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbzp3dZljfI492twpi9ruHJ85gE63BTZzoEqZuxqkSWs0U2db1NPj0YlCgbExpdJoJBF/exec';
+    let players = [];
 
-  document.getElementById('lookupForm').addEventListener('submit', function (e) {
-    e.preventDefault();
-    const phone = document.getElementById('phoneInput').value.trim();
-    const resultDiv = document.getElementById('result');
-    const formDiv = document.getElementById('registrationForm');
-    resultDiv.innerHTML = '';
-    formDiv.innerHTML = '';
-    players = [];
+    document.getElementById('lookupForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const phone = document.getElementById('phoneInput').value.trim();
+      const resultDiv = document.getElementById('result');
+      const formDiv = document.getElementById('registrationForm');
+      resultDiv.innerHTML = '';
+      formDiv.innerHTML = '';
+      players = [];
 
-    if (!phone) {
-      resultDiv.innerHTML = `<p class="error">Please enter a phone number.</p>`;
-      return;
-    }
+      if (!phone) {
+        resultDiv.innerHTML = `<p class="error">Please enter a phone number.</p>`;
+        return;
+      }
 
-    fetch(`${scriptUrl}?phone=${encodeURIComponent(phone)}`)
-      .then(res => res.text())
-      .then(text => {
-        let data;
-        try {
-          data = JSON.parse(text);
-        } catch {
-          resultDiv.innerHTML = `<p class="error">Invalid response from server.</p>`;
-          return;
-        }
-
-        if (data.result === "None" || data.length === 0) {
-          resultDiv.innerHTML = `<p class="error">No player found for this phone number.<br />Contact BTTC support at 510-926-6913 (TEXT ONLY)</p>`;
-          return;
-        }
-
-        players = data;
-        let html = `<p class="success">Select your name:</p><form id="registerForm">`;
-        data.forEach((p, i) => {
-          html += `
-            <div class="entry">
-              <label>
-                <input type="radio" name="player" value="${i}" required />
-                ${p.first_name} ${p.last_name} (${p.email})
-              </label>
-            </div>`;
-        });
-
-        html += `
-          <input type="text" id="tokenInput" placeholder="Enter your token" required />
-          <button type="submit">Register</button>
-        </form>`;
-        formDiv.innerHTML = html;
-
-        document.getElementById('registerForm').addEventListener('submit', function (e) {
-          e.preventDefault();
-          const selectedIndex = document.querySelector('input[name="player"]:checked')?.value;
-          const token = document.getElementById('tokenInput').value.trim();
-          const registerResult = document.createElement("div");
-
-          if (selectedIndex === undefined || !token) {
-            registerResult.innerHTML = `<p class="error">Please select your name and enter your token.</p>`;
-            formDiv.appendChild(registerResult);
+      fetch(`${scriptUrl}?phone=${encodeURIComponent(phone)}`)
+        .then(res => res.text())
+        .then(text => {
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch {
+            resultDiv.innerHTML = `<p class="error">Invalid response from server.</p>`;
             return;
           }
 
-          const player = players[selectedIndex];
-          const payload = {
-            first_name: player.first_name,
-            last_name: player.last_name,
-            token: token
-          };
+          if (data.result === "None" || data.length === 0) {
+            resultDiv.innerHTML = `<p class="error">No player found for this phone number.<br />Contact BTTC support at 510-926-6913 (TEXT ONLY)</p>`;
+            return;
+          }
 
-          fetch(scriptUrl, {
-            method: "POST",
-            body: JSON.stringify(payload) // no content-type header (avoid preflight)
-          })
-            .then(r => r.text())
-            .then(text => {
-              try {
-                const data = JSON.parse(text);
-                formDiv.innerHTML = `<p class="${data.success ? 'success' : 'error'}">${data.message}</p>`;
-              } catch {
-                formDiv.innerHTML += `<p class="error">Unexpected server response.</p>`;
-              }
-            })
-            .catch(err => {
-              formDiv.innerHTML += `<p class="error">Registration failed: ${err.message}</p>`;
-            });
+          players = data;
+          let html = `<p class="success">Manage your registration:</p>`;
+          data.forEach((p, i) => {
+            const fullName = `${p.first_name} ${p.last_name}`;
+            const isRegistered = p.is_registered;
+            html += `<div class="entry">`;
+            if (isRegistered) {
+              html += `
+                <p style="color: gray;">
+                  ${fullName} <span style="font-weight: bold;">(Already registered)</span>
+                </p>
+                <div class="unregister-form">
+                  <input type="text" placeholder="Enter your token" class="token-field" />
+                  <button class="confirm-btn" onclick="unregisterPlayer(${i})">Unregister</button>
+                  <span class="token-error"></span>
+                </div>`;
+            } else {
+              html += `
+                <p>
+                  ${fullName}
+                </p>
+                <div class="register-form">
+                  <input type="text" placeholder="Enter your token" class="token-field" />
+                  <button class="confirm-btn" onclick="registerPlayer(${i})">Register</button>
+                  <span class="token-error"></span>
+                </div>`;
+            }
+            html += `</div>`;
+          });
+
+          formDiv.innerHTML = html;
+        })
+        .catch(err => {
+          resultDiv.innerHTML = `<p class="error">An error occurred: ${err.message}</p>`;
         });
+
+    });
+
+    function registerPlayer(index) {
+      const player = players[index];
+      const entry = document.getElementById("registrationForm").querySelectorAll(".entry")[index];
+      const tokenField = entry.querySelector(".register-form .token-field");
+      const errorEl = entry.querySelector(".register-form .token-error");
+      const token = tokenField.value.trim();
+
+      if (!token) {
+        errorEl.textContent = "Please enter your token.";
+        errorEl.style.display = "block";
+        return;
+      }
+
+      const payload = {
+        first_name: player.first_name,
+        last_name: player.last_name,
+        token: token,
+        action: "register"
+      };
+
+      fetch(scriptUrl, {
+        method: "POST",
+        body: JSON.stringify(payload)
       })
-      .catch(err => {
-        resultDiv.innerHTML = `<p class="error">An error occurred: ${err.message}</p>`;
-      });
-  });
-</script>
+        .then(r => r.text())
+        .then(text => {
+          try {
+            const data = JSON.parse(text);
+            if (data.success) {
+              alert(data.message);
+              document.getElementById("lookupForm").dispatchEvent(new Event("submit"));
+            } else {
+              errorEl.textContent = data.message;
+              errorEl.style.display = "block";
+            }
+          } catch {
+            errorEl.textContent = "Unexpected server response.";
+            errorEl.style.display = "block";
+          }
+        })
+        .catch(err => {
+          errorEl.textContent = "Failed to register: " + err.message;
+          errorEl.style.display = "block";
+        });
+    }
+
+    function unregisterPlayer(index) {
+      const player = players[index];
+      const entry = document.getElementById("registrationForm").querySelectorAll(".entry")[index];
+      const tokenField = entry.querySelector(".unregister-form .token-field");
+      const errorEl = entry.querySelector(".unregister-form .token-error");
+      const token = tokenField.value.trim();
+
+      if (!token) {
+        errorEl.textContent = "Please enter your token.";
+        errorEl.style.display = "block";
+        return;
+      }
+
+      const payload = {
+        first_name: player.first_name,
+        last_name: player.last_name,
+        token: token,
+        action: "unregister"
+      };
+
+      fetch(scriptUrl, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      })
+        .then(r => r.text())
+        .then(text => {
+          try {
+            const data = JSON.parse(text);
+            if (data.success) {
+              alert(data.message);
+              document.getElementById("lookupForm").dispatchEvent(new Event("submit"));
+            } else {
+              errorEl.textContent = data.message;
+              errorEl.style.display = "block";
+            }
+          } catch {
+            errorEl.textContent = "Unexpected server response.";
+            errorEl.style.display = "block";
+          }
+        })
+        .catch(err => {
+          errorEl.textContent = "Failed to unregister: " + err.message;
+          errorEl.style.display = "block";
+        });
+    }
+  </script>
 
 </body>
 
