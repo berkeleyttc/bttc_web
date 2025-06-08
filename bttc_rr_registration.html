@@ -113,6 +113,117 @@
       color: red;
       font-size: 0.9em;
     }
+
+    /* Dialog Styles */
+    .dialog-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .dialog-box {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .dialog-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      color: #333;
+    }
+
+    .payment-options {
+      margin-bottom: 1.5rem;
+    }
+
+    .payment-options h4 {
+      margin-bottom: 1rem;
+      color: #555;
+      font-size: 1rem;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+    }
+
+    .radio-option input[type="radio"] {
+      margin-right: 0.5rem;
+      width: auto;
+    }
+
+    .radio-option label {
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    .comments-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .comments-section h4 {
+      margin-bottom: 0.5rem;
+      color: #555;
+      font-size: 1rem;
+    }
+
+    .comments-section textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      resize: vertical;
+      min-height: 80px;
+      box-sizing: border-box;
+    }
+
+    .dialog-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+    }
+
+    .dialog-btn {
+      padding: 0.5rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .dialog-btn-ok {
+      background-color: #198754;
+      color: white;
+    }
+
+    .dialog-btn-ok:hover {
+      background-color: #157347;
+    }
+
+    .dialog-btn-cancel {
+      background-color: #6c757d;
+      color: white;
+    }
+
+    .dialog-btn-cancel:hover {
+      background-color: #5a6268;
+    }
   </style>
 </head>
 
@@ -153,9 +264,57 @@
     </a>
   </div>
 
+  <!-- Registration Dialog -->
+  <div id="registrationDialog" class="dialog-overlay">
+    <div class="dialog-box">
+      <div class="dialog-title">Complete Registration</div>
+      
+      <div class="payment-options">
+        <h4>Payment Method:</h4>
+        <div class="radio-option">
+          <input type="radio" id="payByCash" name="paymentMethod" value="cash">
+          <label for="payByCash">Pay by Cash</label>
+        </div>
+        <div class="radio-option">
+          <input type="radio" id="payByDigital" name="paymentMethod" value="zelle_venmo">
+          <label for="payByDigital">Pay by Zelle/Venmo</label>
+        </div>
+      </div>
+
+      <div class="comments-section">
+        <h4>Comments (optional):</h4>
+        <textarea id="registrationComments" placeholder="Enter any comments or special requests..."></textarea>
+      </div>
+
+      <div class="dialog-buttons">
+        <button class="dialog-btn dialog-btn-cancel" onclick="closeRegistrationDialog()">Cancel</button>
+        <button class="dialog-btn dialog-btn-ok" onclick="confirmRegistration()">Register</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Unregistration Dialog -->
+  <div id="unregistrationDialog" class="dialog-overlay">
+    <div class="dialog-box">
+      <div class="dialog-title">Confirm Unregistration</div>
+      
+      <div class="comments-section">
+        <h4>Reason for unregistering (optional):</h4>
+        <textarea id="unregistrationComments" placeholder="Please let us know why you're unregistering..."></textarea>
+      </div>
+
+      <div class="dialog-buttons">
+        <button class="dialog-btn dialog-btn-cancel" onclick="closeUnregistrationDialog()">Cancel</button>
+        <button class="dialog-btn dialog-btn-ok" onclick="confirmUnregistration()">Unregister</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbzhP9_u4ShN6C8wd7Ro_XR9VukeCI-lPyejCmB-Nn8YbdNNSexeZ0bsETktsR_P8RS-/exec';
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbxdMtAJt2omX8n6wtgOiQcQsmiCy8FIaKMiKpdJ1l9hMdpCoqxWu8WJiXHfzyx0gfs/exec';
     let players = [];
+    let currentRegistrationData = null;
+    let currentUnregistrationData = null;
 
     document.getElementById('lookupForm').addEventListener('submit', function (e) {
       e.preventDefault();
@@ -238,10 +397,45 @@
         return;
       }
 
-      const payload = {
-        first_name: player.first_name,
-        last_name: player.last_name,
+      // Store registration data and show dialog
+      currentRegistrationData = {
+        player: player,
         token: token,
+        errorElement: errorEl
+      };
+
+      // Clear previous selections
+      document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => radio.checked = false);
+      document.getElementById('registrationComments').value = '';
+
+      // Show dialog
+      document.getElementById('registrationDialog').style.display = 'flex';
+    }
+
+    function closeRegistrationDialog() {
+      document.getElementById('registrationDialog').style.display = 'none';
+      currentRegistrationData = null;
+    }
+
+    function confirmRegistration() {
+      if (!currentRegistrationData) return;
+
+      // Get selected payment method
+      const selectedPayment = document.querySelector('input[name="paymentMethod"]:checked');
+      if (!selectedPayment) {
+        alert('Please select a payment method.');
+        return;
+      }
+
+      // Get comments
+      const comments = document.getElementById('registrationComments').value.trim();
+
+      const payload = {
+        first_name: currentRegistrationData.player.first_name,
+        last_name: currentRegistrationData.player.last_name,
+        token: currentRegistrationData.token,
+        payment_method: selectedPayment.value,
+        comments: comments,
         action: "register"
       };
 
@@ -255,19 +449,23 @@
             const data = JSON.parse(text);
             if (data.success) {
               alert(data.message);
+              closeRegistrationDialog();
               document.getElementById("lookupForm").dispatchEvent(new Event("submit"));
             } else {
-              errorEl.textContent = data.message;
-              errorEl.style.display = "block";
+              currentRegistrationData.errorElement.textContent = data.message;
+              currentRegistrationData.errorElement.style.display = "block";
+              closeRegistrationDialog();
             }
           } catch {
-            errorEl.textContent = "Unexpected server response.";
-            errorEl.style.display = "block";
+            currentRegistrationData.errorElement.textContent = "Unexpected server response.";
+            currentRegistrationData.errorElement.style.display = "block";
+            closeRegistrationDialog();
           }
         })
         .catch(err => {
-          errorEl.textContent = "Failed to register: " + err.message;
-          errorEl.style.display = "block";
+          currentRegistrationData.errorElement.textContent = "Failed to register: " + err.message;
+          currentRegistrationData.errorElement.style.display = "block";
+          closeRegistrationDialog();
         });
     }
 
@@ -284,10 +482,36 @@
         return;
       }
 
-      const payload = {
-        first_name: player.first_name,
-        last_name: player.last_name,
+      // Store unregistration data and show dialog
+      currentUnregistrationData = {
+        player: player,
         token: token,
+        errorElement: errorEl
+      };
+
+      // Clear previous comments
+      document.getElementById('unregistrationComments').value = '';
+
+      // Show unregistration dialog
+      document.getElementById('unregistrationDialog').style.display = 'flex';
+    }
+
+    function closeUnregistrationDialog() {
+      document.getElementById('unregistrationDialog').style.display = 'none';
+      currentUnregistrationData = null;
+    }
+
+    function confirmUnregistration() {
+      if (!currentUnregistrationData) return;
+
+      // Get comments
+      const comments = document.getElementById('unregistrationComments').value.trim();
+
+      const payload = {
+        first_name: currentUnregistrationData.player.first_name,
+        last_name: currentUnregistrationData.player.last_name,
+        token: currentUnregistrationData.token,
+        comments: comments,
         action: "unregister"
       };
 
@@ -301,21 +525,39 @@
             const data = JSON.parse(text);
             if (data.success) {
               alert(data.message);
+              closeUnregistrationDialog();
               document.getElementById("lookupForm").dispatchEvent(new Event("submit"));
             } else {
-              errorEl.textContent = data.message;
-              errorEl.style.display = "block";
+              currentUnregistrationData.errorElement.textContent = data.message;
+              currentUnregistrationData.errorElement.style.display = "block";
+              closeUnregistrationDialog();
             }
           } catch {
-            errorEl.textContent = "Unexpected server response.";
-            errorEl.style.display = "block";
+            currentUnregistrationData.errorElement.textContent = "Unexpected server response.";
+            currentUnregistrationData.errorElement.style.display = "block";
+            closeUnregistrationDialog();
           }
         })
         .catch(err => {
-          errorEl.textContent = "Failed to unregister: " + err.message;
-          errorEl.style.display = "block";
+          currentUnregistrationData.errorElement.textContent = "Failed to unregister: " + err.message;
+          currentUnregistrationData.errorElement.style.display = "block";
+          closeUnregistrationDialog();
         });
     }
+
+    // Close dialog when clicking outside of it
+    document.getElementById('registrationDialog').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeRegistrationDialog();
+      }
+    });
+
+    // Close unregistration dialog when clicking outside of it
+    document.getElementById('unregistrationDialog').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeUnregistrationDialog();
+      }
+    });
   </script>
 
 </body>
