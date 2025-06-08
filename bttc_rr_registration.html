@@ -568,7 +568,8 @@
     
     // Developer override for testing - check URL parameters and localStorage
     const urlParams = new URLSearchParams(window.location.search);
-    const devOverride = urlParams.get('dev') === 'true' || localStorage.getItem('devMode') === 'true';
+    // const devOverride = urlParams.get('dev') === 'true' || localStorage.getItem('devMode') === 'true';
+    const devOverride = true;
     
     if (devOverride) {
       console.log('🔧 Developer mode enabled - time restrictions bypassed');
