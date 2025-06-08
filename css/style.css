@@ -253,7 +253,7 @@ img {
 
 @media (max-width: 500px) {
 	body {
-		font-size: 12px;
+		font-size: 13px;
 	}
 }
 
@@ -387,7 +387,7 @@ table { width: 100%; }
 
 @media (max-width: 500px) {
 	#nav {
-		font-size: 140%;
+		font-size: 130%;
 	}
 	#nav li a {
 		padding-left: 0;
