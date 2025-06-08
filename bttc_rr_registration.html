@@ -499,7 +499,7 @@
   </div>
 
   <div class="container" id="lookupContent">
-    <h3>Round Robin Sign-Up</h3>
+    <h2 style="font-family: Arial, sans-serif; font-weight: bold;">Round Robin Sign-Up</h2>
     
     <!-- Registration Status Banner -->
     <div id="statusBanner" class="status-banner">
@@ -765,11 +765,6 @@
 
       players = data;
       let html = `<p class="success">Manage your registration:</p>`;
-      
-      // Add cache indicator if data came from cache
-      // if (fromCache) {
-      //   html += `<div class="cache-indicator">📱 Using cached data (faster lookup)</div>`;
-      // }
       
       data.forEach((p, i) => {
         const fullName = `${p.first_name} ${p.last_name}`;
