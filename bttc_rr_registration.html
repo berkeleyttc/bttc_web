@@ -759,7 +759,9 @@
       formDiv.innerHTML = '';
       
       if (data.result === "None" || data.length === 0) {
-        resultDiv.innerHTML = `<p class="error">No player found for this phone number.<br />Contact BTTC support at 510-926-6913 (TEXT ONLY)</p>`;
+        resultDiv.innerHTML = `<p class="error">No player found for this phone number.<br/>
+        Please signup if you have not already here - <a href="player_signup.html">Player Info Signup</a><br/>
+        Otherwise Contact BTTC support at 510-926-6913 (TEXT ONLY)</p>`;
         return;
       }
 
