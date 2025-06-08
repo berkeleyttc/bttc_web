@@ -197,8 +197,8 @@
 
     /* Status Banner Styles */
     .status-banner {
-      margin-top: 1rem;
-      margin-bottom: 1rem;
+      margin-top: 1.5rem;
+      margin-bottom: 1.5rem;
       padding: 1rem;
       border-radius: 8px;
       text-align: center;
@@ -491,7 +491,7 @@
   </div>
 
   <div class="container" id="lookupContent">
-    <h2 style="font-family: Arial, sans-serif; font-weight: bold;">Round Robin Sign-Up</h2>
+    <h3>Round Robin Sign-Up</h3>
     
     <!-- Registration Status Banner -->
     <div id="statusBanner" class="status-banner">
@@ -560,7 +560,7 @@
   </div>
 
   <script>
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbyNrLetjQ--2rcABMnpWJCa-D3WzHSXf-yUppg26mPqOEtb3O92xrzSbehINa9PKw6c/exec';
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbxfpiKBYFf-kpm3-zTkQtGfCCKft-2_0nYT1ccSWUqQztzXFdP9OnpETDzH6Og4W2py/exec';
     let players = [];
     let currentRegistrationData = null;
     let currentUnregistrationData = null;
@@ -830,7 +830,9 @@
             if (data.success) {
               alert(data.message);
               closeRegistrationDialog();
-              document.getElementById("lookupForm").dispatchEvent(new Event("submit"));
+              // Just clear the form instead of automatically resubmitting
+              document.getElementById('result').innerHTML = '';
+              document.getElementById('registrationForm').innerHTML = '';
             } else {
               currentRegistrationData.errorElement.textContent = data.message;
               currentRegistrationData.errorElement.style.display = "block";
@@ -906,7 +908,9 @@
             if (data.success) {
               alert(data.message);
               closeUnregistrationDialog();
-              document.getElementById("lookupForm").dispatchEvent(new Event("submit"));
+              // Just clear the form instead of automatically resubmitting
+              document.getElementById('result').innerHTML = '';
+              document.getElementById('registrationForm').innerHTML = '';
             } else {
               currentUnregistrationData.errorElement.textContent = data.message;
               currentUnregistrationData.errorElement.style.display = "block";
