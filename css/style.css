@@ -1,6 +1,6 @@
-/* 
+/*
   style.css contains a reset, font normalization and some base styles.
-  
+
   credit is left where credit is due.
   additionally, much inspiration was taken from these projects:
     yui.yahooapis.com/2.8.1/build/base/base.css
@@ -8,7 +8,7 @@
     praegnanz.de/weblog/htmlcssjs-kickstart
 */
 
-/* 
+/*
   html5doctor.com Reset Stylesheet (Eric Meyer's Reset Reloaded + HTML5 baseline)
   v1.4 2009-07-27 | Authors: Eric Meyer & Richard Clark
   html5doctor.com/html-5-reset-stylesheet/
@@ -23,11 +23,11 @@ b, i,
 dl, dt, dd, ol, ul, li,
 fieldset, form, label, legend,
 table, caption, tbody, tfoot, thead, tr, th, td,
-article, aside, figure, footer, header, 
+article, aside, figure, footer, header,
 hgroup, menu, nav, section, menu,
-time, mark, audio, video { margin:0; padding:0; border:0; outline:0; font-size:100%; vertical-align:baseline; background:transparent; }                  
+time, mark, audio, video { margin:0; padding:0; border:0; outline:0; font-size:100%; vertical-align:baseline; background:transparent; }
 
-article, aside, figure, footer, header, 
+article, aside, figure, footer, header,
 hgroup, nav, section { display:block; }
 
 nav ul { list-style:none; }
@@ -71,22 +71,22 @@ table { font-size:inherit; font:100%; }
 select, input, textarea { font:99% sans-serif; }
 
 
-/* normalize monospace sizing 
+/* normalize monospace sizing
  * en.wikipedia.org/wiki/MediaWiki_talk:Common.css/Archive_11#Teletype_style_fix_for_Chrome
  */
 pre, code, kbd, samp { font-family: monospace, sans-serif; }
 
-/* 
- * minimal base styles 
+/*
+ * minimal base styles
  */
 
-/* #444 looks better than black: twitter.com/H_FJ/statuses/11800719859 */ 
+/* #444 looks better than black: twitter.com/H_FJ/statuses/11800719859 */
 body, select, input, textarea { color:#444; }
 
 /* Headers (h1,h2,etc) have no default font-size or margin,
-   you'll want to define those yourself. */ 
- 
-/* www.aestheticallyloyal.com/public/optimize-legibility/ */ 
+   you'll want to define those yourself. */
+
+/* www.aestheticallyloyal.com/public/optimize-legibility/ */
 h1,h2,h3,h4,h5,h6 { font-weight: bold; text-rendering: optimizeLegibility; }
 
 /* maxvoltar.com/archive/-webkit-font-smoothing */
@@ -104,14 +104,14 @@ ol { margin-left:30px; list-style-type: decimal; }
 small { font-size:85%; }
 strong, th { font-weight: bold; }
 
-td, td img { vertical-align:top; } 
+td, td img { vertical-align:top; }
 
 sub { vertical-align: sub; font-size: smaller; }
 sup { vertical-align: super; font-size: smaller; }
 
-pre { 
-  padding: 15px; 
-  
+pre {
+  padding: 15px;
+
   /* www.pathf.com/blogs/2008/05/formatting-quoted-code-in-blog-posts-css21-white-space-pre-wrap/ */
   white-space: pre; /* CSS2 */
   white-space: pre-wrap; /* CSS 2.1 */
@@ -129,31 +129,21 @@ input[type="checkbox"] { vertical-align: bottom; *vertical-align: baseline; }
 label, input[type=button], input[type=submit], button { cursor: pointer; }
 
 
-/* These selection declarations have to be separate.
-   No text-shadow: twitter.com/miketaylr/status/12228805301 
-   Also: hot pink. */
-::-moz-selection{ background: #FF5E99; color:#fff; text-shadow: none; }
-::selection { background:#FF5E99; color:#fff; text-shadow: none; } 
-
-/*  j.mp/webkit-tap-highlight-color */
-a:link { -webkit-tap-highlight-color: #FF5E99; } 
-
-
 /* always force a scrollbar in non-IE */
 html { overflow-y: scroll; }
 
-/* make buttons play nice in IE:    
+/* make buttons play nice in IE:
    www.viget.com/inspire/styling-the-button-element-in-internet-explorer/ */
 button {  width: auto; overflow: visible; }
- 
-/* bicubic resizing for non-native sized IMG: 
+
+/* bicubic resizing for non-native sized IMG:
    code.flickr.com/blog/2008/11/12/on-ui-quality-the-little-things-client-side-image-resizing/ */
 .ie7 img { -ms-interpolation-mode: bicubic; }
 
 
 
-/* 
- * Non-semantic helper classes 
+/*
+ * Non-semantic helper classes
  */
 
 /* for image replacement */
@@ -161,12 +151,12 @@ button {  width: auto; overflow: visible; }
 
 /* Hide for both screenreaders and browsers
    css-discuss.incutio.com/wiki/Screenreader_Visibility */
-.hidden { display:none; visibility:hidden; } 
+.hidden { display:none; visibility:hidden; }
 
-/* Hide only visually, but have it available for screenreaders 
-   www.webaim.org/techniques/css/invisiblecontent/ 
+/* Hide only visually, but have it available for screenreaders
+   www.webaim.org/techniques/css/invisiblecontent/
    Solution from: j.mp/visuallyhidden - Thanks Jonathan Neal! */
-.visuallyhidden { position:absolute !important;    
+.visuallyhidden { position:absolute !important;
   clip: rect(1px 1px 1px 1px); /* IE6, IE7 */
   clip: rect(1px, 1px, 1px, 1px); }
 
@@ -184,7 +174,7 @@ button {  width: auto; overflow: visible; }
 
 
  /* Primary Styles
-    Author: 
+    Author:
  */
 
 
@@ -197,23 +187,23 @@ button {  width: auto; overflow: visible; }
 
 
 
-/* 
+/*
  * print styles
- * inlined to avoid required HTTP connection www.phpied.com/delay-loading-your-print-css/ 
+ * inlined to avoid required HTTP connection www.phpied.com/delay-loading-your-print-css/
  */
 @media print {
   * { background: transparent !important; color: #444 !important; text-shadow: none; }
 
   a, a:visited { color: #444 !important; text-decoration: underline; }
 
-  a:after { content: " (" attr(href) ")"; } 
+  a:after { content: " (" attr(href) ")"; }
 
   abbr:after { content: " (" attr(title) ")"; }
-  
+
   .ir a:after { content: ""; }  /* Don't show links for images */
-  
+
   pre, blockquote { border: 1px solid #999; page-break-inside: avoid; }
-  
+
   img { page-break-inside: avoid; }
 
   @page { margin: 0.5cm; }
@@ -229,23 +219,23 @@ button {  width: auto; overflow: visible; }
  * Media queries for responsive design
  */
 
-@media all and (orientation:portrait) { 
+@media all and (orientation:portrait) {
   /* Style adjustments for portrait mode goes here */
-  
+
 }
 
-@media all and (orientation:landscape) { 
+@media all and (orientation:landscape) {
   /* Style adjustments for landscape mode goes here */
-  
+
 }
 
-/* Grade-A Mobile Browsers (Opera Mobile, iPhone Safari, Android Chrome)  
+/* Grade-A Mobile Browsers (Opera Mobile, iPhone Safari, Android Chrome)
    Consider this: www.cloudfour.com/css-media-query-for-mobile-is-fools-gold/ */
 @media screen and (max-device-width: 480px) {
-  
-  
+
+
   /* Prevent iOS, WinMobile from adjusting font size */
-  html { -webkit-text-size-adjust:none; -ms-text-size-adjust:none; } 
+  html { -webkit-text-size-adjust:none; -ms-text-size-adjust:none; }
 }
 
 /*
@@ -256,13 +246,26 @@ button {  width: auto; overflow: visible; }
 	Licensed under GPL and MIT.
 */
 
+img {
+	max-width: 100%;
+	height: auto;
+}
+
+@media (max-width: 500px) {
+	body {
+		font-size: 12px;
+	}
+}
+
 
 /* Containers
 ----------------------------------------------------------------------------------------------------*/
 .container_12 {
 	margin-left: auto;
 	margin-right: auto;
-	width: 960px;
+	width: 96%;
+	max-width: 960px;
+	box-sizing: border-box;
 }
 
 /* Grid >> Global
@@ -283,8 +286,7 @@ button {  width: auto; overflow: visible; }
 	display:inline;
 	float: left;
 	position: relative;
-	margin-left: 10px;
-	margin-right: 10px;
+	box-sizing: border-box;
 }
 
 /* Grid >> Children (Alpha ~ First, Omega ~ Last)
@@ -302,248 +304,60 @@ button {  width: auto; overflow: visible; }
 ----------------------------------------------------------------------------------------------------*/
 
 .container_12 .grid_1 {
-	width:60px;
+	width: calc(100% * (1/12));
 }
 
 .container_12 .grid_2 {
-	width:140px;
+	width: calc(100% * (2/12));
 }
 
 .container_12 .grid_3 {
-	width:220px;
+	width: calc(100% * (3/12));
 }
 
 .container_12 .grid_4 {
-	width:300px;
+	width: calc(100% * (4/12));
 }
 
 .container_12 .grid_5 {
-	width:380px;
+	width: calc(100% * (5/12));
 }
 
 .container_12 .grid_6 {
-	width:460px;
+	width: calc(100% * (6/12));
 }
 
 .container_12 .grid_7 {
-	width:540px;
+	width: calc(100% * (7/12));
 }
 
 .container_12 .grid_8 {
-	width:620px;
+	width: calc(100% * (8/12));
 }
 
 .container_12 .grid_9 {
-	width:700px;
+	width: calc(100% * (9/12));
 }
 
 .container_12 .grid_10 {
-	width:780px;
+	width: calc(100% * (10/12));
 }
 
 .container_12 .grid_11 {
-	width:860px;
+	width:calc(100% * (11/12));
 }
 
 .container_12 .grid_12 {
-	width:940px;
+	width:100%;
 }
 
 
-
-/* Prefix Extra Space >> 12 Columns
-----------------------------------------------------------------------------------------------------*/
-
-.container_12 .prefix_1 {
-	padding-left:80px;
+@media (max-width: 500px) {
+	.container_12 .grid_6 {
+		width: 100%;
+	}
 }
 
-.container_12 .prefix_2 {
-	padding-left:160px;
-}
-
-.container_12 .prefix_3 {
-	padding-left:240px;
-}
-
-.container_12 .prefix_4 {
-	padding-left:320px;
-}
-
-.container_12 .prefix_5 {
-	padding-left:400px;
-}
-
-.container_12 .prefix_6 {
-	padding-left:480px;
-}
-
-.container_12 .prefix_7 {
-	padding-left:560px;
-}
-
-.container_12 .prefix_8 {
-	padding-left:640px;
-}
-
-.container_12 .prefix_9 {
-	padding-left:720px;
-}
-
-.container_12 .prefix_10 {
-	padding-left:800px;
-}
-
-.container_12 .prefix_11 {
-	padding-left:880px;
-}
-
-
-
-/* Suffix Extra Space >> 12 Columns
-----------------------------------------------------------------------------------------------------*/
-
-.container_12 .suffix_1 {
-	padding-right:80px;
-}
-
-.container_12 .suffix_2 {
-	padding-right:160px;
-}
-
-.container_12 .suffix_3 {
-	padding-right:240px;
-}
-
-.container_12 .suffix_4 {
-	padding-right:320px;
-}
-
-.container_12 .suffix_5 {
-	padding-right:400px;
-}
-
-.container_12 .suffix_6 {
-	padding-right:480px;
-}
-
-.container_12 .suffix_7 {
-	padding-right:560px;
-}
-
-.container_12 .suffix_8 {
-	padding-right:640px;
-}
-
-.container_12 .suffix_9 {
-	padding-right:720px;
-}
-
-.container_12 .suffix_10 {
-	padding-right:800px;
-}
-
-.container_12 .suffix_11 {
-	padding-right:880px;
-}
-
-
-
-/* Push Space >> 12 Columns
-----------------------------------------------------------------------------------------------------*/
-
-.container_12 .push_1 {
-	left:80px;
-}
-
-.container_12 .push_2 {
-	left:160px;
-}
-
-.container_12 .push_3 {
-	left:240px;
-}
-
-.container_12 .push_4 {
-	left:320px;
-}
-
-.container_12 .push_5 {
-	left:400px;
-}
-
-.container_12 .push_6 {
-	left:480px;
-}
-
-.container_12 .push_7 {
-	left:560px;
-}
-
-.container_12 .push_8 {
-	left:640px;
-}
-
-.container_12 .push_9 {
-	left:720px;
-}
-
-.container_12 .push_10 {
-	left:800px;
-}
-
-.container_12 .push_11 {
-	left:880px;
-}
-
-
-
-/* Pull Space >> 12 Columns
-----------------------------------------------------------------------------------------------------*/
-
-.container_12 .pull_1 {
-	left:-80px;
-}
-
-.container_12 .pull_2 {
-	left:-160px;
-}
-
-.container_12 .pull_3 {
-	left:-240px;
-}
-
-.container_12 .pull_4 {
-	left:-320px;
-}
-
-.container_12 .pull_5 {
-	left:-400px;
-}
-
-.container_12 .pull_6 {
-	left:-480px;
-}
-
-.container_12 .pull_7 {
-	left:-560px;
-}
-
-.container_12 .pull_8 {
-	left:-640px;
-}
-
-.container_12 .pull_9 {
-	left:-720px;
-}
-
-.container_12 .pull_10 {
-	left:-800px;
-}
-
-.container_12 .pull_11 {
-	left:-880px;
-}
 
 body { background-color: #EBE9E4; font-family: helvetica, arial, sans-serif; }
 a { color: #627263; }
@@ -555,7 +369,7 @@ table { width: 100%; }
 .currency { color: #009933; }
 .inactive { display: none; }
 
-.border { background: transparent url(../images/shadow-body-5px.png) repeat-y scroll center top; margin: 0 auto; width: 1000px; }
+/* .border { background: transparent url(../images/shadow-body-5px.png) repeat-y scroll center top; margin: 0 auto; width: 1000px; } */
 
 #header { background-color: #6a2a13; }
 #header, #header a { color: #F7F7F7; }
@@ -566,15 +380,25 @@ table { width: 100%; }
 #search .search-form { margin-top: 17px; }
 #search .search-form .search-input { width: 250px; }
 
-#nav { background-color: #8f4723; font-family: "PT Sans Narrow", sans-serif; font-size: 150%; list-style: none; margin-bottom: 0; }
+#nav { display: flex; justify-content: space-evenly; background-color: #8f4723; font-family: "PT Sans Narrow", sans-serif; font-size: 150%; list-style: none; margin-bottom: 0; }
 #nav li { text-align: center; }
-#nav li a { color: #EEEEEE; display: block; padding: 10px; text-decoration: none; text-shadow: 0 -1px 1px rgba(0, 0, 0, 50); }
+#nav li a { color: #EEEEEE; display: block; padding: 10px; text-decoration: none; }
 #nav li a:hover { color: #DAD8D3; }
 
-#main { background: #FFFFFF; border: 1px solid #DEDBD9; border-bottom: 0 none; border-top: 0 none; clear: both; padding: 10px 0; }
+@media (max-width: 500px) {
+	#nav {
+		font-size: 140%;
+	}
+	#nav li a {
+		padding-left: 0;
+		padding-right: 0;
+	}
+}
 
-#announcements { background-color: rgb(255, 200, 200); border-radius: 10px; font-weight: bold; margin: 0 0 15px 0; 
-  padding: 10px; text-align: center; text-shadow: #FFF 0 1px 1px; }
+#main { background: #FFFFFF; border: 1px solid #DEDBD9; border-top: 0 none; clear: both; padding: 10px; }
+
+#announcements { background-color: rgb(255, 200, 200); border-radius: 10px; font-weight: bold; margin: 0 0 15px 0;
+  padding: 10px; text-align: center; }
 
 #closures { background-color: rgb(150, 200, 255); border-radius: 10px; margin: 0 0 15px 0; padding: 10px; }
 
@@ -584,10 +408,22 @@ table .how { width: 640px; }
 th { background-color: #F2EEEC; text-align: left; }
 th, td { border-bottom: 1px solid #DEDBD9; padding: 5px; }
 
-.results th { text-align: center; }
-.results td { border-bottom: 0 none; }
-.results a { border: 1px solid white; border-radius: 8px; display: block; padding: 3px 0; text-align: center; }
-.results a:hover { background-color: #EBE9E4;}
+.results table {
+  max-width: 600px;
+}
+.results thead {
+  border: 1px solid #ccc;
+}
+
+.results th {
+  background-color: initial;
+  border-right: 1px solid #ccc;
+}
+.results th,
+.results td { border-bottom: 0; padding: 2px; text-align: center; }
+
+.results a { display: block; padding: 3px 0; margin: 5px 0; text-decoration: none; background-color: #f1f1f1; color: #0071e3; border-radius: 5px; }
+.results a:hover { background-color: #0071e3; color: white; }
 
 .video { margin-bottom: 10px; }
 .useful_links { margin-bottom: 10px; }
@@ -601,12 +437,7 @@ ul { margin-bottom: 10px; }
 ol li { margin-bottom: 10px; }
 ol .sub { list-style-type: lower-alpha; }
 
-#ad { margin: 20px auto 0; width: 500px; }
-#ad h3 { font-size: 65%; font-weight: normal; text-transform: uppercase; }
-#ad .ad-container { border: 1px solid #DDD; border-radius: 8px; display: block; padding: 10px; text-align: center; width: 100%; }
-#ad .ad-container:hover { background-color: #F0F0F0; }
-
-#footer { background: transparent url(../images/shadow-footer.png) no-repeat scroll center top; height: 10px; }
+/* #footer { background: transparent url(../images/shadow-footer.png) no-repeat scroll center top; height: 10px; } */
 
 #user { width: 250px; }
 
