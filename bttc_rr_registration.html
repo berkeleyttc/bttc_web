@@ -560,7 +560,7 @@
   </div>
 
   <script>
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbxfpiKBYFf-kpm3-zTkQtGfCCKft-2_0nYT1ccSWUqQztzXFdP9OnpETDzH6Og4W2py/exec';
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbyvlp5nw8unWKgJXN2DPZClsVzJALs0mi8Lmhrzupav5RQCRIESp-z0sQUlrxVIlS3Q/exec';
     let players = [];
     let currentRegistrationData = null;
     let currentUnregistrationData = null;
@@ -733,7 +733,7 @@
                 </p>
                 <div class="unregister-form">
                   <input type="text" placeholder="Enter your token" class="token-field" />
-                  <button class="confirm-btn" onclick="unregisterPlayer(${i})">Unregister</button>
+                  <button style="background-color: #dc3545;" class="confirm-btn" onclick="unregisterPlayer(${i})">Unregister</button>
                   <span class="token-error"></span>
                 </div>`;
             } else {
