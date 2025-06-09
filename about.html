@@ -64,28 +64,28 @@
             </li>
             <li>
               <strong>Treasurer:</strong><br>
-              <a href="mailto:terence-chan@sbcglobal.net" class="email" >Terence Chan</a><br>
+              <a href="znvygb:grerapr-puna@foptybony.arg">Terence Chan</a><br>
             </li>
             <li>
               <strong>Coach (USATT certified):</strong><br>
-              <a href="mailto:bl2100@comcast.net" class="email" >Bunny Lee</a> (<a href="coaching.html">coaching page</a>)
+              <a href="znvygb:oy2100@pbzpnfg.arg">Bunny Lee</a> (<a href="coaching.html">coaching page</a>)
             </li>
             <li>
               <strong>Presidents emeritus:</strong><br>
-              <a href="mailto:matan.goldberg@gmail.com">Matan Goldberg</a><br>
-              <a href="mailto:david.h.bernstein@gmail.com">Dave Bernstein</a><br>
-              <a href="#" class="email" >Mike Labins</a><br>
-              <a href="#" class="email" >Mattias Eriksson</a><br>
-              <a href="#" class="email" >Dave Sterner</a><br>
-              <a href="#" class="email" >Shonie Aki</a>
+              <a href="znvygb:zngna.tbyqoret@tznvy.pbz">Matan Goldberg</a><br>
+              <a href="znvygb:qnivq.u.oreafgrva@tznvy.pbz">Dave Bernstein</a><br>
+              Mike Labins<br>
+              Mattias Eriksson<br>
+              Dave Sterner<br>
+              Shonie Aki
             </li>
             <li>
               <strong>Other executive committee members:</strong><br>
-              <a href="mailto:wktang@att.net">Weikuen Tang</a><br>
-              <a href="mailto:dilip.dasilva@exponential.com">Dilip DaSiva</a><br>
-              <a href="mailto:jchenubc@hotmail.com">Jeffrey Chen</a><br>
-              <a href="mailto:afszumilo@aol.com">Anthony Szumilo</a><br>
-              <a href="mailto:mgalvankar@gmail.com">Mohit Galvankar</a><br>
+              <a href="znvygb:jxgnat@ngg.arg">Weikuen Tang</a><br>
+              <a href="znvygb:qvyvc.qnfvyin@rkcbaragvny.pbz">Dilip DaSiva</a><br>
+              <a href="znvygb:wpurahop@ubgznvy.pbz">Jeffrey Chen</a><br>
+              <a href="znvygb:nsfmhzvyb@nby.pbz">Anthony Szumilo</a><br>
+              <a href="znvygb:ztnyinaxne@tznvy.pbz">Mohit Galvankar</a><br>
             </li>
           </ul>
         </div>
@@ -95,8 +95,25 @@
   <div id="footer"></div>
   </div>
 
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
-  <script src="js/email.js"></script>
+  <script>
+    // the emails are simply "encoded" with rot13 so bots don't scrape the emails from the source code
+    // got to here to encode an email with rot13 https://rot13.com/
+    // the functions below decode the hrefs in the email links
+    function rot13(s) {
+      return s.replace(/[a-zA-Z]/g, c => String.fromCharCode((c <= 'Z' ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26));
+    }
+
+    function emailDecode(event) {
+      event.preventDefault();
+      const mailToLink = rot13(event.target.href);
+      window.location.href = mailToLink;
+    }
+
+    document.body.querySelectorAll('a[href^="znvygb:"]').forEach(emailLink => {
+      emailLink.addEventListener('click', emailDecode);
+    });
+  </script>
+
   <script>
     var _gaq = [
       ['_setAccount', 'UA-19208024-1'],
