@@ -1,20 +1,13 @@
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8" />
-  <title>Berkeley Table Tennis Club</title>
+  <title>Register for round robin - BTTC</title>
 
-  <meta name="description" content="The Berkeley Table Tennis Club is a fun, friendly group of people in the San Francisco Bay Area. Come out and play!">
-  <meta name="author" content="Adam Traver">
+  <meta name="description" content="Register for the round robin at Berkeley Table Tennis Club.">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
-  <link rel="shortcut icon" href="/favicon.ico">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-
   <link rel="stylesheet" href="css/style.css?v=1">
-  <link rel="stylesheet" href="css/handheld.css?v=1" media="handheld">
-
   <link href="https://fonts.googleapis.com/css?family=Lobster|PT+Sans+Narrow:400,700" rel="stylesheet">
 
   <style>
@@ -180,7 +173,7 @@
         display: inline-block;
         margin-right: 0.5rem;
       }
-      
+
       .confirm-btn {
         width: auto;
         display: inline-block;
@@ -433,7 +426,7 @@
       #header {
         padding: 0 1rem;
       }
-      
+
       #nav li {
         font-size: 0.9rem;
       }
@@ -452,22 +445,22 @@
         background: #2d2d2d;
         color: #fff;
       }
-      
+
       .dialog-title {
         color: #fff;
       }
-      
+
       .payment-options h4,
       .comments-section h4 {
         color: #ccc;
       }
-      
+
       .comments-section textarea {
         background: #3d3d3d;
         color: #fff;
         border-color: #555;
       }
-      
+
       .radio-option:hover {
         background-color: #3d3d3d;
       }
@@ -486,26 +479,26 @@
       </div>
       <div id="search" class="grid_6"></div>
     </div>
-    <div class="border">
-      <ul id="nav" class="container_12 clearfix">
-        <li class="grid_2"><a href="index.html" title="Home">Home</a></li>
-        <li class="grid_2"><a href="results.html" title="Weekly Results">Results</a></li>
-        <li class="grid_2"><a href="coaching.html" title="Coaching">Coaching</a></li>
-        <li class="grid_2"><a href="about.html" title="About Us">About Us</a></li>
-        <li class="grid_2"><a href="club_policy.html" title="Club Policy">Club Policy</a></li>
-        <li class="grid_2 last"><a href="more.html" title="More...">More...</a></li>
+    <div>
+      <ul id="nav" class="container_12">
+        <li><a href="index.html" title="Home">Home</a></li>
+        <li><a href="results.html" title="Weekly Results">Results</a></li>
+        <li><a href="coaching.html" title="Coaching">Coaching</a></li>
+        <li><a href="about.html" title="About Us">About</a></li>
+        <li><a href="club_policy.html" title="Club Policy">Policy</a></li>
+        <li><a href="more.html" title="More...">More...</a></li>
       </ul>
     </div>
   </div>
 
   <div class="container" id="lookupContent">
     <h2 style="font-family: Arial, sans-serif; font-weight: bold;">Round Robin Sign-Up</h2>
-    
+
     <!-- Registration Status Banner -->
     <div id="statusBanner" class="status-banner">
       <div id="statusMessage">Checking registration status...</div>
     </div>
-    
+
     <div id="registrationContent">
       <p>Enter your phone number (e.g., 5101234567):</p>
       <form id="lookupForm">
@@ -515,7 +508,7 @@
       <div class="result" id="result"></div>
       <div class="result" id="registrationForm"></div>
     </div>
-    
+
     <a href="roster.html" class="roster-link">
       <i class="fas fa-users"></i> VIEW ROSTER
     </a>
@@ -525,7 +518,7 @@
   <div id="registrationDialog" class="dialog-overlay">
     <div class="dialog-box">
       <div class="dialog-title">Complete Registration</div>
-      
+
       <div class="payment-options">
         <h4>Payment Method:</h4>
         <div class="radio-option">
@@ -554,7 +547,7 @@
   <div id="unregistrationDialog" class="dialog-overlay">
     <div class="dialog-box">
       <div class="dialog-title">Confirm Unregistration</div>
-      
+
       <div class="comments-section">
         <h4>Reason for unregistering (optional):</h4>
         <textarea id="unregistrationComments" placeholder="Please let us know why you're unregistering..."></textarea>
@@ -573,14 +566,14 @@
     let currentRegistrationData = null;
     let currentUnregistrationData = null;
     let registrationOpen = false;
-    
+
     // ========================================
     // PHONE LOOKUP CACHING SYSTEM
     // ========================================
     const PhoneCache = {
       storage: new Map(),
       TTL: 5 * 60 * 1000, // 5 minutes cache duration
-      
+
       // Get cached data for a phone number
       get(phone) {
         const cached = this.storage.get(phone);
@@ -590,7 +583,7 @@
         }
         return null;
       },
-      
+
       // Store data in cache
       set(phone, data) {
         this.storage.set(phone, {
@@ -599,20 +592,20 @@
         });
         console.log('💾 Cached data for:', phone);
       },
-      
+
       // Clear all cached data
       clear() {
         this.storage.clear();
         console.log('🗑️ Phone cache cleared');
       },
-      
+
       // Get cache statistics
       getStats() {
         const total = this.storage.size;
         const expired = Array.from(this.storage.values()).filter(
           item => Date.now() - item.timestamp >= this.TTL
         ).length;
-        
+
         return {
           total: total,
           valid: total - expired,
@@ -638,7 +631,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     // const devOverride = urlParams.get('dev') === 'true' || localStorage.getItem('devMode') === 'true';
     const devOverride = true;
-    
+
     if (devOverride) {
       console.log('🔧 Developer mode enabled - time restrictions bypassed');
       // Show dev indicator
@@ -662,21 +655,21 @@
       if (devOverride) {
         return true;
       }
-      
+
       const now = new Date();
       // Convert to PST/PDT timezone
       const pstNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
       const dayOfWeek = pstNow.getDay(); // 0 = Sunday, 5 = Friday
       const hours = pstNow.getHours();
       const minutes = pstNow.getMinutes();
-      
+
       // Only open on Fridays (5) between 00:00 and 18:45
       if (dayOfWeek === 5) {
         if (hours < 18 || (hours === 18 && minutes <= 45)) {
           return true;
         }
       }
-      
+
       return false;
     }
 
@@ -684,7 +677,7 @@
       const now = new Date();
       const pstNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
       const dayOfWeek = pstNow.getDay();
-      
+
       // Calculate days until next Friday
       let daysUntilFriday;
       if (dayOfWeek === 5) {
@@ -695,11 +688,11 @@
         daysUntilFriday = (5 - dayOfWeek + 7) % 7;
         if (daysUntilFriday === 0) daysUntilFriday = 7;
       }
-      
+
       const nextFriday = new Date(pstNow);
       nextFriday.setDate(nextFriday.getDate() + daysUntilFriday);
       nextFriday.setHours(0, 0, 0, 0);
-      
+
       return nextFriday.toLocaleString("en-US", {
         timeZone: "America/Los_Angeles",
         weekday: 'long',
@@ -716,7 +709,7 @@
       const pstNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
       const closingTime = new Date(pstNow);
       closingTime.setHours(18, 45, 0, 0);
-      
+
       return closingTime.toLocaleString("en-US", {
         timeZone: "America/Los_Angeles",
         hour: 'numeric',
@@ -728,9 +721,9 @@
       const statusBanner = document.getElementById('statusBanner');
       const statusMessage = document.getElementById('statusMessage');
       const registrationContent = document.getElementById('registrationContent');
-      
+
       registrationOpen = isRegistrationOpen();
-      
+
       if (registrationOpen) {
         const closingTime = getTodayClosingTime();
         const devModeText = devOverride ? ' (DEV MODE)' : '';
@@ -757,7 +750,7 @@
     function displayPlayerData(data, resultDiv, formDiv, fromCache = false) {
       resultDiv.innerHTML = '';
       formDiv.innerHTML = '';
-      
+
       if (data.result === "None" || data.length === 0) {
         resultDiv.innerHTML = `<p class="error">No player found for this phone number.<br/>
         Please signup if you have not already here - <a href="player_signup.html">Player Info Signup</a><br/>
@@ -767,7 +760,7 @@
 
       players = data;
       let html = `<p class="success">Manage your registration:</p>`;
-      
+
       data.forEach((p, i) => {
         const fullName = `${p.first_name} ${p.last_name}`;
         const isRegistered = p.is_registered;
@@ -804,13 +797,13 @@
     // ========================================
     document.getElementById('lookupForm').addEventListener('submit', function (e) {
       e.preventDefault();
-      
+
       // Check if registration is open before proceeding
       if (!registrationOpen) {
         alert('Registration is currently closed. Please check the status banner above for when it will reopen.');
         return;
       }
-      
+
       const phone = document.getElementById('phoneInput').value.trim();
       const resultDiv = document.getElementById('result');
       const formDiv = document.getElementById('registrationForm');
@@ -847,7 +840,7 @@
 
           // 💾 CACHE THE RESULT for future use
           PhoneCache.set(phone, data);
-          
+
           // Display the data
           displayPlayerData(data, resultDiv, formDiv, false);
         })
@@ -862,7 +855,7 @@
         alert('Registration is currently closed.');
         return;
       }
-      
+
       const player = players[index];
       const entry = document.getElementById("registrationForm").querySelectorAll(".entry")[index];
       const tokenField = entry.querySelector(".register-form .token-field");
@@ -928,11 +921,11 @@
             if (data.success) {
               alert(data.message);
               closeRegistrationDialog();
-              
+
               // 🗑️ CLEAR CACHE after successful registration
               PhoneCache.clear();
               console.log('Cache cleared after successful registration');
-              
+
               // Clear the form
               document.getElementById('result').innerHTML = '';
               document.getElementById('registrationForm').innerHTML = '';
@@ -1011,11 +1004,11 @@
             if (data.success) {
               alert(data.message);
               closeUnregistrationDialog();
-              
+
               // 🗑️ CLEAR CACHE after successful unregistration
               PhoneCache.clear();
               console.log('Cache cleared after successful unregistration');
-              
+
               // Clear the form
               document.getElementById('result').innerHTML = '';
               document.getElementById('registrationForm').innerHTML = '';
@@ -1054,7 +1047,7 @@
     // ========================================
     // CACHE MANAGEMENT FUNCTIONS (for debugging)
     // ========================================
-    
+
     // Function to show cache statistics (for testing)
     window.showCacheStats = function() {
       const stats = PhoneCache.getStats();
@@ -1062,7 +1055,7 @@
       console.log(`Total entries: ${stats.total}`);
       console.log(`Valid entries: ${stats.valid}`);
       console.log(`Expired entries: ${stats.expired}`);
-      
+
       // Show in UI if you want
       alert(`Cache: ${stats.valid} valid entries, ${stats.expired} expired`);
     };
@@ -1076,7 +1069,7 @@
     // Testing function (run in browser console)
     window.testCache = function() {
       console.log('🧪 Testing cache system...');
-      
+
       // Test data
       const testPhone = '5551234567';
       const testData = [{
@@ -1084,17 +1077,17 @@
         last_name: 'Player',
         is_registered: false
       }];
-      
+
       // Test set and get
       PhoneCache.set(testPhone, testData);
       const retrieved = PhoneCache.get(testPhone);
-      
+
       if (retrieved) {
         console.log('✅ Cache set/get working correctly');
       } else {
         console.log('❌ Cache not working');
       }
-      
+
       // Test expiration
       setTimeout(() => {
         const expired = PhoneCache.get(testPhone);
@@ -1104,7 +1097,7 @@
           console.log('❌ Cache expired too early');
         }
       }, 1000);
-      
+
       console.log('Cache test completed');
     };
 
