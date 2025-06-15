@@ -244,6 +244,35 @@
       pointer-events: none;
     }
 
+    /* Capacity Banner Styles */
+    .capacity-banner {
+      margin: 1rem 0;
+      padding: 0.75rem;
+      border-radius: 6px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+
+    .capacity-available {
+      background-color: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    .capacity-full {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .registration-full-message {
+      color: #dc3545;
+      font-weight: bold;
+      margin: 0.5rem 0;
+      font-size: 0.9rem;
+    }
+
     /* Dialog Styles - Mobile Optimized */
     .dialog-overlay {
       position: fixed;
@@ -561,7 +590,7 @@
   </div>
 
   <script>
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbx-i0DHHkLWMzYjgwKrHGA3g7m-jDrIqXkONcRv6_7Wb3psKHmLn9IBsGt0tW5KFFc/exec';
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbyIFO1WEJkp98uvGp8us9FC0ChbcaV0GhwHExOzG4SwUCT_WGABjbOwzLvQu06wNBFJ/exec';
     let players = [];
     let currentRegistrationData = null;
     let currentUnregistrationData = null;
@@ -745,51 +774,102 @@
     }
 
     // ========================================
-    // DISPLAY FUNCTION (separated for caching)
+    // CAPACITY CHECKING SYSTEM
+    // ========================================
+    function checkRegistrationCapacity() {
+      return fetch(`${scriptUrl}?action=capacity`)
+        .then(res => res.json())
+        .then(data => {
+          return {
+            isAtCapacity: data.isAtCapacity || false,
+            confirmedCount: data.confirmedCount || 0,
+            playerCap: data.playerCap || 65,
+            spotsAvailable: data.spotsAvailable || 0
+          };
+        })
+        .catch(err => {
+          console.error('Error checking capacity:', err);
+          return { isAtCapacity: false, confirmedCount: 0, playerCap: 65, spotsAvailable: 0 };
+        });
+    }
+
+    // ========================================
+    // DISPLAY FUNCTION (with capacity checking)
     // ========================================
     function displayPlayerData(data, resultDiv, formDiv, fromCache = false) {
       resultDiv.innerHTML = '';
       formDiv.innerHTML = '';
 
       if (data.result === "None" || data.length === 0) {
-        resultDiv.innerHTML = `<p class="error">No player found for this phone number.<br/>
-        Please signup if you have not already here - <a href="player_signup.html">Player Info Signup</a><br/>
+        resultDiv.innerHTML = `<p class="error">No player found for this phone number.<br/><br/>
+        <a href="player_signup.html" style="font-size: 1.2em; font-weight: bold; color: #0d6efd; text-decoration: underline; display: inline-block; padding: 0.5rem; background-color: #f8f9fa; border-radius: 6px; margin: 0.5rem 0;"> PLAYER INFO SIGNUP</a><br/><br/>
         Otherwise Contact BTTC support at 510-926-6913 (TEXT ONLY)</p>`;
         return;
       }
 
       players = data;
-      let html = `<p class="success">Manage your registration:</p>`;
-
-      data.forEach((p, i) => {
-        const fullName = `${p.first_name} ${p.last_name}`;
-        const isRegistered = p.is_registered;
-        html += `<div class="entry">`;
-        if (isRegistered) {
-          html += `
-            <p style="color: gray;">
-              ${fullName} <span style="font-weight: bold;">(Already registered)</span>
-            </p>
-            <div class="unregister-form">
-              <input type="text" placeholder="Enter your token" class="token-field" />
-              <button style="background-color: #dc3545;" class="confirm-btn" onclick="unregisterPlayer(${i})">Unregister</button>
-              <span class="token-error"></span>
-            </div>`;
+      
+      // Check capacity before showing registration options
+      checkRegistrationCapacity().then(capacityInfo => {
+        let html = `<p class="success">Manage your registration:</p>`;
+        
+        // Show capacity status
+        if (capacityInfo.isAtCapacity) {
+          html += `<div class="capacity-banner capacity-full">
+            <div>🔴 Registration is FULL</div>
+            <div class="status-details">${capacityInfo.confirmedCount}/${capacityInfo.playerCap} spots filled</div>
+          </div>`;
         } else {
-          html += `
-            <p>
-              ${fullName}
-            </p>
-            <div class="register-form">
-              <input type="text" placeholder="Enter your token" class="token-field" />
-              <button class="confirm-btn" onclick="registerPlayer(${i})">Register</button>
-              <span class="token-error"></span>
-            </div>`;
+          html += `<div class="capacity-banner capacity-available">
+            <div>🟢 ${capacityInfo.spotsAvailable} spots available</div>
+            <div class="status-details">${capacityInfo.confirmedCount}/${capacityInfo.playerCap} spots filled</div>
+          </div>`;
         }
-        html += `</div>`;
-      });
 
-      formDiv.innerHTML = html;
+        data.forEach((p, i) => {
+          const fullName = `${p.first_name} ${p.last_name}`;
+          const isRegistered = p.is_registered;
+          html += `<div class="entry">`;
+          
+          if (isRegistered) {
+            html += `
+              <p style="color: gray;">
+                ${fullName} <span style="font-weight: bold;">(Already registered)</span>
+              </p>
+              <div class="unregister-form">
+                <input type="text" placeholder="Enter your PIN" class="token-field" />
+                <button style="background-color: #dc3545;" class="confirm-btn" onclick="unregisterPlayer(${i})">Unregister</button>
+                <span class="token-error"></span>
+              </div>`;
+          } else {
+            // Only show registration option if not at capacity
+            if (capacityInfo.isAtCapacity) {
+              html += `
+                <p style="color: #666;">
+                  ${fullName}
+                </p>
+                <div class="register-form">
+                  <p class="registration-full-message">
+                    ❌ Registration is full (${capacityInfo.confirmedCount}/${capacityInfo.playerCap})
+                  </p>
+                </div>`;
+            } else {
+              html += `
+                <p>
+                  ${fullName}
+                </p>
+                <div class="register-form">
+                  <input type="text" placeholder="Enter your PIN" class="token-field" />
+                  <button class="confirm-btn" onclick="registerPlayer(${i})">Register</button>
+                  <span class="token-error"></span>
+                </div>`;
+            }
+          }
+          html += `</div>`;
+        });
+
+        formDiv.innerHTML = html;
+      });
     }
 
     // ========================================
@@ -856,31 +936,47 @@
         return;
       }
 
-      const player = players[index];
-      const entry = document.getElementById("registrationForm").querySelectorAll(".entry")[index];
-      const tokenField = entry.querySelector(".register-form .token-field");
-      const errorEl = entry.querySelector(".register-form .token-error");
-      const token = tokenField.value.trim();
+      // Check capacity before proceeding
+      checkRegistrationCapacity().then(capacityInfo => {
+        if (capacityInfo.isAtCapacity) {
+          alert(`Registration is full! All ${capacityInfo.playerCap} spots have been taken.`);
+          // Refresh the display to show updated status
+          const phone = document.getElementById('phoneInput').value.trim();
+          if (phone) {
+            // Clear cache and refresh data
+            PhoneCache.clear();
+            document.getElementById('lookupForm').dispatchEvent(new Event('submit'));
+          }
+          return;
+        }
 
-      if (!token) {
-        errorEl.textContent = "Please enter your token.";
-        errorEl.style.display = "block";
-        return;
-      }
+        // Proceed with normal registration flow
+        const player = players[index];
+        const entry = document.getElementById("registrationForm").querySelectorAll(".entry")[index];
+        const tokenField = entry.querySelector(".register-form .token-field");
+        const errorEl = entry.querySelector(".register-form .token-error");
+        const token = tokenField.value.trim();
 
-      // Store registration data and show dialog
-      currentRegistrationData = {
-        player: player,
-        token: token,
-        errorElement: errorEl
-      };
+        if (!token) {
+          errorEl.textContent = "Please enter your PIN.";
+          errorEl.style.display = "block";
+          return;
+        }
 
-      // Clear previous selections
-      document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => radio.checked = false);
-      document.getElementById('registrationComments').value = '';
+        // Store registration data and show dialog
+        currentRegistrationData = {
+          player: player,
+          token: token,
+          errorElement: errorEl
+        };
 
-      // Show dialog
-      document.getElementById('registrationDialog').style.display = 'flex';
+        // Clear previous selections
+        document.querySelectorAll('input[name="paymentMethod"]').forEach(radio => radio.checked = false);
+        document.getElementById('registrationComments').value = '';
+
+        // Show dialog
+        document.getElementById('registrationDialog').style.display = 'flex';
+      });
     }
 
     function closeRegistrationDialog() {
@@ -930,9 +1026,22 @@
               document.getElementById('result').innerHTML = '';
               document.getElementById('registrationForm').innerHTML = '';
             } else {
-              currentRegistrationData.errorElement.textContent = data.message;
-              currentRegistrationData.errorElement.style.display = "block";
-              closeRegistrationDialog();
+              // Handle capacity full scenario
+              if (data.isAtCapacity) {
+                alert(`Registration is full! All ${data.playerCap} spots have been taken.`);
+                closeRegistrationDialog();
+                
+                // Refresh display to show current status
+                const phone = document.getElementById('phoneInput').value.trim();
+                if (phone) {
+                  PhoneCache.clear();
+                  document.getElementById('lookupForm').dispatchEvent(new Event('submit'));
+                }
+              } else {
+                currentRegistrationData.errorElement.textContent = data.message;
+                currentRegistrationData.errorElement.style.display = "block";
+                closeRegistrationDialog();
+              }
             }
           } catch {
             currentRegistrationData.errorElement.textContent = "Unexpected server response.";
@@ -955,7 +1064,7 @@
       const token = tokenField.value.trim();
 
       if (!token) {
-        errorEl.textContent = "Please enter your token.";
+        errorEl.textContent = "Please enter your PIN.";
         errorEl.style.display = "block";
         return;
       }
@@ -1007,11 +1116,14 @@
 
               // 🗑️ CLEAR CACHE after successful unregistration
               PhoneCache.clear();
-              console.log('Cache cleared after successful unregistration');
+              console.log('Cache cleared after successful unregistration - spots may now be available!');
 
-              // Clear the form
-              document.getElementById('result').innerHTML = '';
-              document.getElementById('registrationForm').innerHTML = '';
+              // 🔄 REFRESH THE DISPLAY to show updated capacity
+              const phone = document.getElementById('phoneInput').value.trim();
+              if (phone) {
+                // Auto-refresh to show the newly available spot
+                document.getElementById('lookupForm').dispatchEvent(new Event('submit'));
+              }
             } else {
               currentUnregistrationData.errorElement.textContent = data.message;
               currentUnregistrationData.errorElement.style.display = "block";

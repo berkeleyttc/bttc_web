@@ -290,29 +290,17 @@
     }
 
     .token-section {
-      background: #fff3cd;
+      background: #e7f3ff;
       padding: 1rem;
       border-radius: 8px;
       margin-bottom: 1rem;
-      border: 1px solid #ffeaa7;
+      border: 1px solid #b3d9ff;
     }
 
-    .token-auto {
-      font-weight: bold;
-      color: #856404;
-      margin-bottom: 0.5rem;
-    }
-
-    .checkbox-group {
-      display: flex;
-      align-items: center;
-      margin-top: 0.5rem;
-    }
-
-    .checkbox-group input[type="checkbox"] {
-      margin-right: 0.5rem;
-      width: 18px;
-      height: 18px;
+    .token-section h4 {
+      margin: 0 0 0.5rem 0;
+      color: #0c5460;
+      font-size: 1rem;
     }
 
     .dialog-buttons {
@@ -415,8 +403,9 @@
 
   <div class="container">
     <h1>Complete Your Player Profile</h1>
-    <p class="subtitle">Find yourself in our system and complete your registration information</p>
-    
+    <p class="subtitle">Find yourself in our system and complete your registration information 
+    <a href="bttc_rr_registration.html" class="back-link">← Back to Round Robin Registration</a>
+    </p>
     <div class="search-type">
       <label>
         <input type="radio" name="searchType" value="lastname" checked> Search by Last Name
@@ -434,8 +423,6 @@
     </form>
 
     <div class="result" id="searchResults"></div>
-
-    <a href="bttc_rr_registration.html" class="back-link">← Back to Round Robin Registration</a>
   </div>
 
   <!-- Player Information Dialog -->
@@ -461,25 +448,12 @@
           <div class="validation-error" id="emailError"></div>
         </div>
 
-        <div class="form-group">
-          <label for="birthYear">Birth Year *</label>
-          <input type="number" id="birthYear" placeholder="e.g., 1990" min="1920" max="2010" required />
-          <div class="help-text">Used for age group categorization</div>
-          <div class="validation-error" id="birthYearError"></div>
-        </div>
-
         <div class="token-section">
-          <div class="token-auto" id="autoTokenDisplay">
-            Your auto-generated token will appear here
-          </div>
-          <div class="checkbox-group">
-            <input type="checkbox" id="customToken">
-            <label for="customToken">I want to use my own token</label>
-          </div>
-          <div class="form-group" id="customTokenGroup" style="display: none; margin-top: 1rem;">
-            <label for="customTokenInput">Custom Token</label>
-            <input type="text" id="customTokenInput" placeholder="Enter your preferred token" maxlength="10" />
-            <div class="help-text">6 digit numbers only</div>
+          <h4>Create Your Personal PIN</h4>
+          <div class="form-group">
+            <label for="userToken">Personal PIN *</label>
+            <input type="text" id="userToken" placeholder="Enter your 6-digit PIN" maxlength="6" required />
+            <div class="help-text">Choose a 6-digit PIN that you'll remember (numbers only)</div>
             <div class="validation-error" id="tokenError"></div>
           </div>
         </div>
@@ -493,7 +467,7 @@
   </div>
 
   <script>
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbwZImJ6101TuLM1xYva-df2ZxWHJlFLzFLAmrDcupVNvnMi1OMMsv5EUdKjG7NHapIsCw/exec';
+    const scriptUrl = 'https://script.google.com/macros/s/AKfycbyUJzuGDmy7sqwsBJfpOe624jkKVNM6Vnhfg2M1cNN5pw0m90FcgtK6Bjlo4UFA0eL1Ig/exec';
     let selectedPlayer = null;
     let searchResults = [];
 
@@ -510,37 +484,6 @@
         document.getElementById('searchResults').innerHTML = '';
       });
     });
-
-    // Auto-generate token when phone/birth year change
-    function updateAutoToken() {
-      const phone = document.getElementById('phoneNumber').value;
-      const birthYear = document.getElementById('birthYear').value;
-      const autoTokenDisplay = document.getElementById('autoTokenDisplay');
-      
-      if (phone.length >= 4 && birthYear.length === 4) {
-        const last4Phone = phone.slice(-4);
-        const last2Year = birthYear.slice(-2);
-        const autoToken = last4Phone + last2Year;
-        autoTokenDisplay.textContent = `Auto-generated token: ${autoToken}`;
-      } else {
-        autoTokenDisplay.textContent = 'Your auto-generated token will appear here';
-      }
-    }
-
-    // Toggle custom token input
-    document.getElementById('customToken').addEventListener('change', function() {
-      const customTokenGroup = document.getElementById('customTokenGroup');
-      if (this.checked) {
-        customTokenGroup.style.display = 'block';
-      } else {
-        customTokenGroup.style.display = 'none';
-        document.getElementById('customTokenInput').value = '';
-      }
-    });
-
-    // Update auto token when inputs change
-    document.getElementById('phoneNumber').addEventListener('input', updateAutoToken);
-    document.getElementById('birthYear').addEventListener('input', updateAutoToken);
 
     // Search form submission
     document.getElementById('searchForm').addEventListener('submit', function(e) {
@@ -585,7 +528,7 @@
         if (data.total_found > 0 && data.available_for_signup === 0) {
           resultsDiv.innerHTML = '<div class="info">Found players matching your search, but they have already completed their signup. If this is incorrect, please contact BTTC support.</div>';
         } else {
-          resultsDiv.innerHTML = '<div class="error">No players found. Please check your spelling or contact BTTC support.</div>';
+          resultsDiv.innerHTML = '<div class="error">No players found. Please check your spelling or contact BTTC support at 510-926-6913 (TEXT ONLY)</div>';
         }
         return;
       }
@@ -627,8 +570,6 @@
 
       // Clear form
       document.getElementById('playerForm').reset();
-      document.getElementById('customTokenGroup').style.display = 'none';
-      document.getElementById('autoTokenDisplay').textContent = 'Your auto-generated token will appear here';
       clearValidationErrors();
       
       // Show dialog
@@ -651,13 +592,7 @@
       return emailRegex.test(email);
     }
 
-    function validateBirthYear(year) {
-      const currentYear = new Date().getFullYear();
-      const numYear = parseInt(year);
-      return numYear >= 1920 && numYear <= currentYear - 5; // At least 5 years old
-    }
-
-    function validateCustomToken(token) {
+    function validateToken(token) {
       const tokenRegex = /^\d{6}$/;
       return tokenRegex.test(token);
     }
@@ -687,9 +622,7 @@
       // Get form values
       const phone = document.getElementById('phoneNumber').value.trim();
       const email = document.getElementById('email').value.trim();
-      const birthYear = document.getElementById('birthYear').value.trim();
-      const useCustomToken = document.getElementById('customToken').checked;
-      const customToken = document.getElementById('customTokenInput').value.trim();
+      const userToken = document.getElementById('userToken').value.trim();
 
       // Validate phone
       if (!validatePhone(phone)) {
@@ -703,29 +636,13 @@
         isValid = false;
       }
 
-      // Validate birth year
-      if (!validateBirthYear(birthYear)) {
-        showValidationError('birthYear', 'Please enter a valid birth year (1920-' + (new Date().getFullYear() - 5) + ')');
-        isValid = false;
-      }
-
-      // Validate custom token if used
-      if (useCustomToken && !validateCustomToken(customToken)) {
-        showValidationError('token', 'Token must be 6 digits, letters and numbers only');
+      // Validate token
+      if (!validateToken(userToken)) {
+        showValidationError('token', 'PIN must be exactly 6 digits');
         isValid = false;
       }
 
       if (!isValid) return;
-
-      // Generate final token
-      let finalToken;
-      if (useCustomToken) {
-        finalToken = customToken;
-      } else {
-        const last4Phone = phone.slice(-4);
-        const last2Year = birthYear.slice(-2);
-        finalToken = last4Phone + last2Year;
-      }
 
       // Submit data
       const submitBtn = document.getElementById('submitBtn');
@@ -739,8 +656,7 @@
         last_name: selectedPlayer.last_name,
         phone_number: phone,
         email: email,
-        birth_year: parseInt(birthYear),
-        token: finalToken
+        token: userToken
       };
 
       fetch(scriptUrl, {
