@@ -355,7 +355,7 @@ img {
 
 body { background-color: #EBE9E4; font-family: helvetica, arial, sans-serif; }
 a { color: #627263; }
-p { margin-bottom: 10px; }
+p { margin-bottom: 1em; max-width: 52em; }
 h1 { font-family: "PT Sans Narrow", sans-serif; font-size: 300%; margin-bottom: 10px; }
 h2 { font-family: "Lobster", cursive; font-size: 170%; margin-bottom: 10px; }
 table { width: 100%; }
@@ -392,7 +392,20 @@ table { width: 100%; }
 #main { background: #FFFFFF; border: 1px solid #DEDBD9; border-top: 0 none; clear: both; padding: 10px; }
 
 #announcements { background-color: rgb(255, 200, 200); border-radius: 10px; font-weight: bold; margin: 0 0 15px 0;
-  padding: 10px; text-align: center; }
+  padding: 20px 5vw; text-align: center; }
+
+#announcements p {
+  margin: 0 auto;
+  padding: 1em 0;
+}
+
+#announcements p:not(:last-child) {
+  border-bottom: 1px solid;
+}
+
+.notice-red {
+  color: #A90A08;
+}
 
 #closures { background-color: rgb(150, 200, 255); border-radius: 10px; margin: 0 0 15px 0; padding: 10px; }
 
