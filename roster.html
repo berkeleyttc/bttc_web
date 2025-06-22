@@ -52,6 +52,20 @@
     th.sorted-desc::after {
       content: " \25BC";
     }
+
+
+    .back-link {
+      display: inline-block;
+      margin-top: 2rem;
+      color: #0d6efd;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
   </style>
 </head>
 
@@ -78,13 +92,15 @@
   </div>
 
   <div class="container">
+    <a href="bttc_rr_registration.html" class="back-link">← Back to Round Robin Registration</a>  
+    <p></p>
     <h3>Round Robin Player Roster</h3>
     <table>
       <thead>
         <tr>
-          <th class="sortable" data-key="full_name">Name</th>
-          <th class="sortable" data-key="status">Status</th>
-          <th class="sortable" data-key="timestamp">Registered At</th>
+          <th class="sortable" data-key="registered_at">Registered At</th>
+          <th class="sortable" data-key="full_name">Full Name</th>
+          <th class="sortable" data-key="rating">BTTC Rating</th>
         </tr>
       </thead>
       <tbody id="rosterBody">
@@ -92,9 +108,9 @@
       </tbody>
     </table>
   </div>
-
+  <script src="config.js"></script>
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbzhP9_u4ShN6C8wd7Ro_XR9VukeCI-lPyejCmB-Nn8YbdNNSexeZ0bsETktsR_P8RS-/exec?action=roster"; // Replace with your deployed URL
+    const API_URL = `${config.scriptUrl}/rr/roster`; // Replace with your deployed URL
     let playerData = [];
     let currentSort = { key: null, direction: 'asc' };
 
@@ -120,9 +136,9 @@
       data.forEach(player => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
+          <td>${player.registered_at}</td>
           <td>${player.full_name}</td>
-          <td class="${player.status}">${player.status}</td>
-          <td>${player.timestamp}</td>
+          <td>${player.rating}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -148,7 +164,7 @@
           let valA = a[key] || "";
           let valB = b[key] || "";
 
-          if (key === 'timestamp') {
+          if (key === 'registered_at') {
             valA = new Date(valA);
             valB = new Date(valB);
           } else {

@@ -588,9 +588,9 @@
       </div>
     </div>
   </div>
-
+  <script src="config.js"></script>
   <script>
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbyIFO1WEJkp98uvGp8us9FC0ChbcaV0GhwHExOzG4SwUCT_WGABjbOwzLvQu06wNBFJ/exec';
+    const scriptUrl = `${config.scriptUrl}`;
     let players = [];
     let currentRegistrationData = null;
     let currentUnregistrationData = null;
@@ -777,14 +777,14 @@
     // CAPACITY CHECKING SYSTEM
     // ========================================
     function checkRegistrationCapacity() {
-      return fetch(`${scriptUrl}?action=capacity`)
+      return fetch(`${scriptUrl}/rr/capacity`)
         .then(res => res.json())
         .then(data => {
           return {
-            isAtCapacity: data.isAtCapacity || false,
-            confirmedCount: data.confirmedCount || 0,
-            playerCap: data.playerCap || 65,
-            spotsAvailable: data.spotsAvailable || 0
+            isAtCapacity: data.roster_full || false,
+            confirmedCount: data.confirmed_count || 0,
+            playerCap: data.player_cap || 65,
+            spotsAvailable: data.spots_available || 0
           };
         })
         .catch(err => {
@@ -828,6 +828,7 @@
 
         data.forEach((p, i) => {
           const fullName = `${p.first_name} ${p.last_name}`;
+          const bttcID = `${p.bttc_id}`;
           const isRegistered = p.is_registered;
           html += `<div class="entry">`;
           
@@ -907,7 +908,7 @@
       formDiv.innerHTML = '';
       players = [];
 
-      fetch(`${scriptUrl}?phone=${encodeURIComponent(phone)}`)
+      fetch(`${scriptUrl}/rr/search?phone=${encodeURIComponent(phone)}`)
         .then(res => res.text())
         .then(text => {
           let data;
@@ -998,16 +999,19 @@
       const comments = document.getElementById('registrationComments').value.trim();
 
       const payload = {
+        bttc_id: currentRegistrationData.player.bttc_id,
         first_name: currentRegistrationData.player.first_name,
         last_name: currentRegistrationData.player.last_name,
         token: currentRegistrationData.token,
         payment_method: selectedPayment.value,
-        comments: comments,
-        action: "register"
+        comments: comments
       };
 
-      fetch(scriptUrl, {
+      fetch(`${scriptUrl}/rr/register`, {
         method: "POST",
+                headers: {
+            "Content-Type": "application/json"
+      },
         body: JSON.stringify(payload)
       })
         .then(r => r.text())
@@ -1095,15 +1099,18 @@
       const comments = document.getElementById('unregistrationComments').value.trim();
 
       const payload = {
+        bttc_id: currentUnregistrationData.player.bttc_id,
         first_name: currentUnregistrationData.player.first_name,
         last_name: currentUnregistrationData.player.last_name,
         token: currentUnregistrationData.token,
-        comments: comments,
-        action: "unregister"
+        comments: comments
       };
 
-      fetch(scriptUrl, {
+      fetch(`${scriptUrl}/rr/unregister`, {
         method: "POST",
+                headers: {
+            "Content-Type": "application/json"
+      },
         body: JSON.stringify(payload)
       })
         .then(r => r.text())

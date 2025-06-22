@@ -404,7 +404,6 @@
   <div class="container">
     <h1>Complete Your Player Profile</h1>
     <p class="subtitle">Find yourself in our system and complete your registration information 
-    <a href="bttc_rr_registration.html" class="back-link">← Back to Round Robin Registration</a>
     </p>
     <div class="search-type">
       <label>
@@ -465,9 +464,9 @@
       </form>
     </div>
   </div>
-
+  <script src="config.js"></script>
   <script>
-    const scriptUrl = 'https://script.google.com/macros/s/AKfycbyUJzuGDmy7sqwsBJfpOe624jkKVNM6Vnhfg2M1cNN5pw0m90FcgtK6Bjlo4UFA0eL1Ig/exec';
+    const scriptUrl = `${config.scriptUrl}`;
     let selectedPlayer = null;
     let searchResults = [];
 
@@ -500,7 +499,7 @@
 
       resultsDiv.innerHTML = '<div class="info">Searching...</div>';
 
-      const url = `${scriptUrl}?action=player_search&type=${searchType}&value=${encodeURIComponent(searchValue)}`;
+      const url = `${scriptUrl}/player/search?type=${searchType}&value=${encodeURIComponent(searchValue)}`;
       
       fetch(url)
         .then(res => res.text())
@@ -650,7 +649,6 @@
       submitBtn.textContent = 'Submitting...';
 
       const payload = {
-        action: 'player_signup',
         bttc_id: selectedPlayer.bttc_id,
         first_name: selectedPlayer.first_name,
         last_name: selectedPlayer.last_name,
@@ -659,8 +657,13 @@
         token: userToken
       };
 
-      fetch(scriptUrl, {
+      const url = `${scriptUrl}/player/signup`;
+
+      fetch(url, {
         method: 'POST',
+        headers: {
+            "Content-Type": "application/json"
+      },
         body: JSON.stringify(payload)
       })
         .then(res => res.text())
