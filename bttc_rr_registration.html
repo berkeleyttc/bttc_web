@@ -230,13 +230,6 @@
       font-weight: normal;
     }
 
-    /* Cache indicator styles */
-    .cache-indicator {
-      font-size: 0.75rem;
-      color: #6c757d;
-      margin-top: 0.25rem;
-      font-style: italic;
-    }
 
     /* Disable form when registration is closed */
     .registration-disabled {
@@ -596,65 +589,6 @@
     let currentUnregistrationData = null;
     let registrationOpen = false;
 
-    // ========================================
-    // PHONE LOOKUP CACHING SYSTEM
-    // ========================================
-    const PhoneCache = {
-      storage: new Map(),
-      TTL: 5 * 60 * 1000, // 5 minutes cache duration
-
-      // Get cached data for a phone number
-      get(phone) {
-        const cached = this.storage.get(phone);
-        if (cached && Date.now() - cached.timestamp < this.TTL) {
-          console.log('📱 Using cached data for:', phone);
-          return cached.data;
-        }
-        return null;
-      },
-
-      // Store data in cache
-      set(phone, data) {
-        this.storage.set(phone, {
-          data: data,
-          timestamp: Date.now()
-        });
-        console.log('💾 Cached data for:', phone);
-      },
-
-      // Clear all cached data
-      clear() {
-        this.storage.clear();
-        console.log('🗑️ Phone cache cleared');
-      },
-
-      // Get cache statistics
-      getStats() {
-        const total = this.storage.size;
-        const expired = Array.from(this.storage.values()).filter(
-          item => Date.now() - item.timestamp >= this.TTL
-        ).length;
-
-        return {
-          total: total,
-          valid: total - expired,
-          expired: expired
-        };
-      }
-    };
-
-    // Clean up expired entries periodically
-    setInterval(() => {
-      const stats = PhoneCache.getStats();
-      if (stats.expired > 0) {
-        PhoneCache.storage.forEach((value, key) => {
-          if (Date.now() - value.timestamp >= PhoneCache.TTL) {
-            PhoneCache.storage.delete(key);
-          }
-        });
-        console.log(`🧹 Cleaned up ${stats.expired} expired cache entries`);
-      }
-    }, 60000); // Clean every minute
 
     // Developer override for testing - check URL parameters and localStorage
     const urlParams = new URLSearchParams(window.location.search);
@@ -675,8 +609,6 @@
     // Check registration status on page load
     document.addEventListener('DOMContentLoaded', function() {
       checkRegistrationStatus();
-      // Update status every minute
-      setInterval(checkRegistrationStatus, 60000);
     });
 
     function isRegistrationOpen() {
@@ -796,7 +728,7 @@
     // ========================================
     // DISPLAY FUNCTION (with capacity checking)
     // ========================================
-    function displayPlayerData(data, resultDiv, formDiv, fromCache = false) {
+    function displayPlayerData(data, resultDiv, formDiv) {
       resultDiv.innerHTML = '';
       formDiv.innerHTML = '';
 
@@ -893,17 +825,6 @@
         resultDiv.innerHTML = `<p class="error">Please enter a phone number.</p>`;
         return;
       }
-
-      // 🎯 CHECK CACHE FIRST - This saves API calls!
-      const cachedData = PhoneCache.get(phone);
-      if (cachedData) {
-        console.log('🚀 Cache hit! No API call needed');
-        displayPlayerData(cachedData, resultDiv, formDiv, true);
-        return; // Exit early - no API call made!
-      }
-
-      // Cache miss - need to make API call
-      console.log('📞 Cache miss - making API call for:', phone);
       resultDiv.innerHTML = 'Looking up player data...';
       formDiv.innerHTML = '';
       players = [];
@@ -919,11 +840,8 @@
             return;
           }
 
-          // 💾 CACHE THE RESULT for future use
-          PhoneCache.set(phone, data);
-
           // Display the data
-          displayPlayerData(data, resultDiv, formDiv, false);
+          displayPlayerData(data, resultDiv, formDiv);
         })
         .catch(err => {
           resultDiv.innerHTML = `<p class="error">An error occurred: ${err.message}</p>`;
@@ -944,8 +862,6 @@
           // Refresh the display to show updated status
           const phone = document.getElementById('phoneInput').value.trim();
           if (phone) {
-            // Clear cache and refresh data
-            PhoneCache.clear();
             document.getElementById('lookupForm').dispatchEvent(new Event('submit'));
           }
           return;
@@ -1022,10 +938,6 @@
               alert(data.message);
               closeRegistrationDialog();
 
-              // 🗑️ CLEAR CACHE after successful registration
-              PhoneCache.clear();
-              console.log('Cache cleared after successful registration');
-
               // Clear the form
               document.getElementById('result').innerHTML = '';
               document.getElementById('registrationForm').innerHTML = '';
@@ -1038,7 +950,6 @@
                 // Refresh display to show current status
                 const phone = document.getElementById('phoneInput').value.trim();
                 if (phone) {
-                  PhoneCache.clear();
                   document.getElementById('lookupForm').dispatchEvent(new Event('submit'));
                 }
               } else {
@@ -1121,10 +1032,6 @@
               alert(data.message);
               closeUnregistrationDialog();
 
-              // 🗑️ CLEAR CACHE after successful unregistration
-              PhoneCache.clear();
-              console.log('Cache cleared after successful unregistration - spots may now be available!');
-
               // 🔄 REFRESH THE DISPLAY to show updated capacity
               const phone = document.getElementById('phoneInput').value.trim();
               if (phone) {
@@ -1162,63 +1069,6 @@
         closeUnregistrationDialog();
       }
     });
-
-    // ========================================
-    // CACHE MANAGEMENT FUNCTIONS (for debugging)
-    // ========================================
-
-    // Function to show cache statistics (for testing)
-    window.showCacheStats = function() {
-      const stats = PhoneCache.getStats();
-      console.log('📊 Cache Statistics:');
-      console.log(`Total entries: ${stats.total}`);
-      console.log(`Valid entries: ${stats.valid}`);
-      console.log(`Expired entries: ${stats.expired}`);
-
-      // Show in UI if you want
-      alert(`Cache: ${stats.valid} valid entries, ${stats.expired} expired`);
-    };
-
-    // Function to manually clear cache (for testing)
-    window.clearCache = function() {
-      PhoneCache.clear();
-      alert('Cache cleared!');
-    };
-
-    // Testing function (run in browser console)
-    window.testCache = function() {
-      console.log('🧪 Testing cache system...');
-
-      // Test data
-      const testPhone = '5551234567';
-      const testData = [{
-        first_name: 'Test',
-        last_name: 'Player',
-        is_registered: false
-      }];
-
-      // Test set and get
-      PhoneCache.set(testPhone, testData);
-      const retrieved = PhoneCache.get(testPhone);
-
-      if (retrieved) {
-        console.log('✅ Cache set/get working correctly');
-      } else {
-        console.log('❌ Cache not working');
-      }
-
-      // Test expiration
-      setTimeout(() => {
-        const expired = PhoneCache.get(testPhone);
-        if (expired) {
-          console.log('✅ Cache still valid (as expected)');
-        } else {
-          console.log('❌ Cache expired too early');
-        }
-      }, 1000);
-
-      console.log('Cache test completed');
-    };
 
   </script>
 
