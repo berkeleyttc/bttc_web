@@ -217,6 +217,12 @@
 			color: white;
 		}
 
+		&.shared {
+			background-color: #777;
+			outline-color: #777;
+			color: white;
+		}
+
 		&.rotated:before {
 			writing-mode: vertical-rl;
 		}
