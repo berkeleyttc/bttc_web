@@ -99,18 +99,6 @@
 		margin-top: 1em;
 	}
 
-
-	@keyframes yellowflash-bg {
-		from {
-			background: yellow;
-		}
-
-		to {
-			background: transparent;
-		}
-	}
-
-
 	.name-section {
 		scroll-margin: 3rem;
 
@@ -262,5 +250,16 @@
 		top: 2vh;
 		right: 1rem;
 		margin-top: 0.35rem;
+	}
+}
+
+
+@keyframes yellowflash-bg {
+	from {
+		background: yellow;
+	}
+
+	to {
+		background: transparent;
 	}
 }
