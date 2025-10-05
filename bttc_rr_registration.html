@@ -7,8 +7,8 @@
   <meta name="description" content="Register for the round robin at Berkeley Table Tennis Club.">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
-  <link rel="stylesheet" href="css/style.css?v=1">
   <link href="https://fonts.googleapis.com/css?family=Lobster|PT+Sans+Narrow:400,700" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css?v=1">
 
   <style>
     * {
@@ -531,7 +531,7 @@
     <div id="registrationContent">
       <p>Enter your phone number (e.g., 5101234567):</p>
       <form id="lookupForm">
-        <input type="text" id="phoneInput" name="phone" placeholder="Enter phone number" required />
+        <input type="tel" maxlength="16" id="phoneInput" name="phone" placeholder="Enter phone number" required />
         <button type="submit" id="lookupButton">Lookup</button>
       </form>
       <div class="result" id="result"></div>
@@ -808,11 +808,11 @@
       }
 
       players = data;
-      
+
       // Check capacity before showing registration options
       checkRegistrationCapacity().then(capacityInfo => {
         let html = `<p class="success">Manage your registration:</p>`;
-        
+
         // Show capacity status
         if (capacityInfo.isAtCapacity) {
           html += `<div class="capacity-banner capacity-full">
@@ -831,7 +831,7 @@
           const bttcID = `${p.bttc_id}`;
           const isRegistered = p.is_registered;
           html += `<div class="entry">`;
-          
+
           if (isRegistered) {
             html += `
               <p style="color: gray;">
@@ -885,7 +885,7 @@
         return;
       }
 
-      const phone = document.getElementById('phoneInput').value.trim();
+      const phone = document.getElementById('phoneInput').value.trim().replace(/^1|\D/g, '');
       const resultDiv = document.getElementById('result');
       const formDiv = document.getElementById('registrationForm');
 
@@ -942,7 +942,7 @@
         if (capacityInfo.isAtCapacity) {
           alert(`Registration is full! All ${capacityInfo.playerCap} spots have been taken.`);
           // Refresh the display to show updated status
-          const phone = document.getElementById('phoneInput').value.trim();
+          const phone = document.getElementById('phoneInput').value.trim().replace(/^1|\D/g, '');
           if (phone) {
             // Clear cache and refresh data
             PhoneCache.clear();
@@ -1034,9 +1034,9 @@
               if (data.isAtCapacity) {
                 alert(`Registration is full! All ${data.playerCap} spots have been taken.`);
                 closeRegistrationDialog();
-                
+
                 // Refresh display to show current status
-                const phone = document.getElementById('phoneInput').value.trim();
+                const phone = document.getElementById('phoneInput').value.trim().replace(/^1|\D/g, '');
                 if (phone) {
                   PhoneCache.clear();
                   document.getElementById('lookupForm').dispatchEvent(new Event('submit'));
@@ -1126,7 +1126,7 @@
               console.log('Cache cleared after successful unregistration - spots may now be available!');
 
               // 🔄 REFRESH THE DISPLAY to show updated capacity
-              const phone = document.getElementById('phoneInput').value.trim();
+              const phone = document.getElementById('phoneInput').value.trim().replace(/^1|\D/g, '');
               if (phone) {
                 // Auto-refresh to show the newly available spot
                 document.getElementById('lookupForm').dispatchEvent(new Event('submit'));
