@@ -708,37 +708,35 @@
     // ========================================
     // CAPACITY CHECKING SYSTEM
     // ========================================
-    function checkRegistrationCapacity(eventId = null) {
-      const url = eventId
-        ? `${scriptUrl}/rr/capacity?event_id=${encodeURIComponent(eventId)}`
-        : `${scriptUrl}/rr/capacity`;
+    function checkRegistrationCapacity(eventId) {
+      var url = eventId
+        ? scriptUrl + '/rr/capacity?event_id=' + encodeURIComponent(eventId)
+        : scriptUrl + '/rr/capacity';
 
-      try {
-        const res = fetch(url, {
-          method: 'POST',            // <-- API expects POST
-          // no body needed; event_id is passed as query param if provided
-          // headers are optional since there is no body
+      return fetch(url, { method: 'POST' })
+        .then(function (res) {
+          if (!res.ok) {
+            return res.clone().text().then(function (t) {
+              throw new Error('Capacity check failed: ' + res.status + ' ' + res.statusText + ' ' + t);
+            });
+          }
+          return res.json();
+        })
+        .then(function (data) {
+          return {
+            isAtCapacity: !!data.roster_full,
+            confirmedCount: Number(data.confirmed_count || 0),
+            playerCap: Number(data.player_cap || 65),
+            spotsAvailable: Number(data.spots_available || 0),
+            eventOpen: !!data.event_open
+          };
+        })
+        .catch(function (err) {
+          console.error('Error checking capacity:', err);
+          return { isAtCapacity: false, confirmedCount: 0, playerCap: 65, spotsAvailable: 0, eventOpen: false };
         });
-
-        if (!res.ok) {
-          // Surface useful info for 4xx/5xx (e.g., 404 when no event)
-          const text = res.text().catch(() => '');
-          throw new Error(`Capacity check failed: ${res.status} ${res.statusText} ${text}`);
-        }
-
-        const data = res.json();
-
-        return {
-          isAtCapacity: Boolean(data.roster_full),
-          confirmedCount: Number(data.confirmed_count || 0),
-          playerCap: Number(data.player_cap || 65),
-          spotsAvailable: Number(data.spots_available || 0),
-        };
-      } catch (err) {
-        console.error('Error checking capacity:', err);
-        return { isAtCapacity: false, confirmedCount: 0, playerCap: 65, spotsAvailable: 0 };
-      }
     }
+
 
     // ========================================
     // DISPLAY FUNCTION (with capacity checking)
