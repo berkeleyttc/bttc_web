@@ -1,6 +1,6 @@
 const BTTC_API_URL = process.env.BTTC_API_URL;
 
-const BTTC_API_TOKEN = process.env.BTTC_API_TOKEN;
+const BTTC_API_KEY = process.env.BTTC_API_KEY;
 
 exports.handler = async (event, context) => {
   // Enable CORS for all origins
@@ -49,7 +49,7 @@ exports.handler = async (event, context) => {
         'Origin': BTTC_API_URL, // Required by the API for origin validation
         'Referer': `${BTTC_API_URL}/`,
         // Always include the hidden API token using the correct header name
-        'X-API-Key': BTTC_API_TOKEN,
+        'X-API-Key': BTTC_API_KEY,
         // Forward any additional authorization headers if present (for user auth)
         ...(event.headers['x-user-auth'] && { 'X-User-Auth': event.headers['x-user-auth'] }),
         ...(event.headers['content-type'] && { 'Content-Type': event.headers['content-type'] }),

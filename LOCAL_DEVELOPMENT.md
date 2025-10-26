@@ -21,7 +21,7 @@
 2. **Edit `.env` file** with your actual values:
    ```env
    BTTC_API_URL=http://0.0.0.0:8080/
-   BTTC_API_TOKEN=your-actual-secret-token
+   BTTC_API_KEY=your-actual-secret-token
    ```
 
 ## Running Locally
@@ -67,4 +67,4 @@ Note: When running locally with `netlify dev`, it will automatically proxy to `h
 - **Functions not loading**: Make sure Node.js is installed and you're in the project directory
 - **Environment variables not working**: Ensure `.env` file exists and has correct values
 - **CORS errors**: The function handles CORS automatically
-- **API connection errors**: Check that `BTTC_API_URL` and `BTTC_API_TOKEN` are correct in `.env`
+- **API connection errors**: Check that `BTTC_API_URL` and `BTTC_API_KEY` are correct in `.env`
