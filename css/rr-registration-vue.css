@@ -1,0 +1,375 @@
+/* Vue.js Specific Styles for BTTC Registration */
+
+/* Vue.js App Container */
+#vue-registration-app {
+  min-height: 100vh;
+}
+
+/* Vue.js Component Transitions */
+.vue-fade-enter-active,
+.vue-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.vue-fade-enter-from,
+.vue-fade-leave-to {
+  opacity: 0;
+}
+
+/* Vue.js Form Enhancements */
+.vue-form-group {
+  margin-bottom: 1rem;
+}
+
+.vue-form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  color: #555;
+}
+
+.vue-form-group input,
+.vue-form-group textarea {
+  width: 100%;
+  padding: 0.875rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.3s ease;
+}
+
+.vue-form-group input:focus,
+.vue-form-group textarea:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+}
+
+/* Vue.js Error States */
+.vue-error {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.vue-error-input {
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25) !important;
+}
+
+/* Vue.js Loading States */
+.vue-loading {
+  opacity: 0.6;
+  pointer-events: none;
+  position: relative;
+}
+
+.vue-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #0d6efd;
+  border-radius: 50%;
+  animation: vue-spin 1s linear infinite;
+}
+
+@keyframes vue-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Vue.js Reactive Classes */
+.vue-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.vue-hidden {
+  display: none !important;
+}
+
+.vue-visible {
+  display: block !important;
+}
+
+/* Vue.js Component Spacing */
+.vue-component {
+  margin-bottom: 1rem;
+}
+
+.vue-component:last-child {
+  margin-bottom: 0;
+}
+
+/* Vue.js Dialog Enhancements */
+.vue-dialog-overlay {
+  backdrop-filter: blur(2px);
+  transition: backdrop-filter 0.3s ease;
+}
+
+.vue-dialog-box {
+  transform: scale(1);
+  transition: transform 0.3s ease;
+}
+
+.vue-dialog-box.vue-dialog-enter {
+  transform: scale(0.9);
+}
+
+.vue-dialog-box.vue-dialog-leave {
+  transform: scale(1.1);
+}
+
+/* Vue.js Button States */
+.vue-btn {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.vue-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.vue-btn.vue-btn-loading {
+  color: transparent;
+}
+
+.vue-btn.vue-btn-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: vue-spin 1s linear infinite;
+}
+
+/* Vue.js Input Enhancements */
+.vue-input-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.vue-input-group input {
+  flex: 1;
+  margin-right: 0.5rem;
+}
+
+.vue-input-group button {
+  flex-shrink: 0;
+}
+
+/* Vue.js List Animations */
+.vue-list-item {
+  transition: all 0.3s ease;
+}
+
+.vue-list-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Vue.js Status Indicators */
+.vue-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.vue-status-indicator.vue-status-success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.vue-status-indicator.vue-status-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.vue-status-indicator.vue-status-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.vue-status-indicator.vue-status-info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+/* Vue.js Mobile Optimizations */
+@media (max-width: 480px) {
+  .vue-dialog-box {
+    margin: 0.5rem;
+    width: calc(100% - 1rem);
+  }
+  
+  .vue-form-group input,
+  .vue-form-group textarea {
+    padding: 1rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  .vue-btn {
+    padding: 1rem;
+    font-size: 1.1rem;
+    min-height: 48px;
+  }
+}
+
+/* Vue.js Accessibility */
+.vue-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.vue-focus-visible {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+
+/* Vue.js Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .vue-dialog-box {
+    background: #2d2d2d;
+    color: #fff;
+  }
+  
+  .vue-form-group input,
+  .vue-form-group textarea {
+    background: #3d3d3d;
+    color: #fff;
+    border-color: #555;
+  }
+  
+  .vue-form-group input:focus,
+  .vue-form-group textarea:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+  }
+}
+
+/* Vue.js Animation Classes */
+.vue-slide-enter-active,
+.vue-slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.vue-slide-enter-from {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.vue-slide-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.vue-scale-enter-active,
+.vue-scale-leave-active {
+  transition: all 0.3s ease;
+}
+
+.vue-scale-enter-from {
+  transform: scale(0.8);
+  opacity: 0;
+}
+
+.vue-scale-leave-to {
+  transform: scale(1.2);
+  opacity: 0;
+}
+
+/* Vue.js Specific Enhancements */
+.vue-component {
+  will-change: transform;
+}
+
+.vue-component.vue-component-active {
+  transform: translateZ(0);
+}
+
+/* Vue.js Performance Optimizations */
+.vue-lazy-load {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.vue-lazy-load.vue-loaded {
+  opacity: 1;
+}
+
+/* Vue.js Custom Properties */
+:root {
+  --vue-primary-color: #0d6efd;
+  --vue-success-color: #198754;
+  --vue-danger-color: #dc3545;
+  --vue-warning-color: #ffc107;
+  --vue-info-color: #0dcaf0;
+  --vue-light-color: #f8f9fa;
+  --vue-dark-color: #212529;
+  --vue-border-radius: 8px;
+  --vue-transition: all 0.3s ease;
+}
+
+/* Vue.js Utility Classes */
+.vue-text-center { text-align: center; }
+.vue-text-left { text-align: left; }
+.vue-text-right { text-align: right; }
+.vue-text-justify { text-align: justify; }
+
+.vue-d-flex { display: flex; }
+.vue-d-block { display: block; }
+.vue-d-inline { display: inline; }
+.vue-d-inline-block { display: inline-block; }
+.vue-d-none { display: none; }
+
+.vue-justify-content-start { justify-content: flex-start; }
+.vue-justify-content-center { justify-content: center; }
+.vue-justify-content-end { justify-content: flex-end; }
+.vue-justify-content-between { justify-content: space-between; }
+.vue-justify-content-around { justify-content: space-around; }
+
+.vue-align-items-start { align-items: flex-start; }
+.vue-align-items-center { align-items: center; }
+.vue-align-items-end { align-items: flex-end; }
+.vue-align-items-stretch { align-items: stretch; }
+
+.vue-flex-column { flex-direction: column; }
+.vue-flex-row { flex-direction: row; }
+.vue-flex-wrap { flex-wrap: wrap; }
+.vue-flex-nowrap { flex-wrap: nowrap; }
+
+.vue-gap-1 { gap: 0.25rem; }
+.vue-gap-2 { gap: 0.5rem; }
+.vue-gap-3 { gap: 1rem; }
+.vue-gap-4 { gap: 1.5rem; }
+.vue-gap-5 { gap: 3rem; }
