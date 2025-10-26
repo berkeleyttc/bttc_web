@@ -1,3 +1,3 @@
 const config = {
-    scriptUrl: 'https://bttc-api.fly.dev'
+    scriptUrl: '/.netlify/functions/api'
 };
