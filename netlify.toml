@@ -3,3 +3,10 @@
 
 [functions]
   node_bundler = "esbuild"
+
+[context.production]
+  # Production environment variables are set in Netlify dashboard
+
+[context.deploy-preview]
+  # Use production environment variables for all preview deployments
+  # This ensures that preview URLs work with the API
