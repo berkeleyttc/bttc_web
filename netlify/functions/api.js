@@ -2,22 +2,7 @@ const BTTC_API_URL = process.env.BTTC_API_URL;
 const BTTC_API_KEY = process.env.BTTC_API_KEY;
 
 exports.handler = async (event, context) => {
-  // Validate environment variables
-  if (!BTTC_API_URL || !BTTC_API_KEY) {
-    console.error('Missing environment variables:', {
-      BTTC_API_URL: !!BTTC_API_URL,
-      BTTC_API_KEY: !!BTTC_API_KEY
-    });
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        error: 'Configuration error',
-        code: 'MISSING_ENV_VARS'
-      }),
-    };
-  }
-
+  
   // Enable CORS for all origins
   const headers = {
     'Access-Control-Allow-Origin': '*',
