@@ -1,9 +1,111 @@
 /**
- * BTTC Round Robin Registration - Vue.js Version
- * Converted from vanilla JavaScript to Vue.js 3
+ * BTTC Round Robin Registration - Vue.js
+ * 
+ * Simple and elegant registration form with easy-to-debug code.
+ * All functions include console.debug/warn/error logging for debugging.
+ * 
+ * @file js/rr-registration-vue.js
  */
 
 const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
+
+// ========================================
+// ERROR HANDLING UTILITY
+// ========================================
+
+/**
+ * Converts errors to user-friendly messages
+ * @param {Error|object} error - The error object
+ * @param {string} context - Context of the operation (for debugging)
+ * @returns {string} - User-friendly error message
+ */
+const getErrorMessage = (error, context = 'operation') => {
+  console.debug('[ErrorHandler] Processing error:', { error, context });
+  
+  const errorMessage = error?.message || String(error || '');
+  const errorName = error?.name || '';
+  
+  // Network errors (API down, connection refused, timeout, etc.)
+  if (
+    error instanceof TypeError ||
+    errorName === 'TypeError' ||
+    errorMessage.includes('Failed to fetch') ||
+    errorMessage.includes('NetworkError') ||
+    errorMessage.includes('Network request failed') ||
+    errorMessage.includes('ERR_INTERNET_DISCONNECTED') ||
+    errorMessage.includes('ERR_CONNECTION_REFUSED') ||
+    errorMessage.includes('ERR_CONNECTION_TIMED_OUT') ||
+    errorMessage.includes('ERR_TIMED_OUT') ||
+    errorMessage.includes('Load failed')
+  ) {
+    console.warn('[ErrorHandler] Network error detected');
+    return 'Unable to connect to the server. The registration service may be temporarily unavailable. Please try again in a few moments or contact BTTC support at 510-926-6913 (TEXT ONLY).';
+  }
+  
+  // HTTP response errors
+  if (error && error.response) {
+    const status = error.response.status;
+    console.debug('[ErrorHandler] HTTP error:', status);
+    
+    if (status === 0) {
+      return 'Connection error: The server is unreachable. Please try again later or contact BTTC support at 510-926-6913 (TEXT ONLY).';
+    }
+    if (status >= 500) {
+      return 'Server error: The registration service is experiencing technical difficulties. Please try again in a few moments or contact BTTC support at 510-926-6913 (TEXT ONLY).';
+    }
+    if (status === 404) {
+      return 'Service not found. Please contact BTTC support at 510-926-6913 (TEXT ONLY).';
+    }
+    if (status === 503) {
+      return 'Service unavailable: The registration service is temporarily down for maintenance. Please try again later or contact BTTC support at 510-926-6913 (TEXT ONLY).';
+    }
+  }
+  
+  // Generic error fallback
+  if (error && error.message) {
+    console.debug('[ErrorHandler] Generic error:', error.message);
+    return `An error occurred during ${context}: ${error.message}. Please try again or contact BTTC support at 510-926-6913 (TEXT ONLY).`;
+  }
+  
+  console.warn('[ErrorHandler] Unknown error format');
+  return `An unexpected error occurred during ${context}. Please try again or contact BTTC support at 510-926-6913 (TEXT ONLY).`;
+};
+
+/**
+ * Handles API response and checks for errors
+ * @param {Response} response - Fetch API response
+ * @returns {Promise<object>} - Parsed JSON data
+ * @throws {Error} - If response is not OK or JSON parsing fails
+ */
+const handleApiResponse = async (response) => {
+  console.debug('[ApiHandler] Response status:', response.status, response.statusText);
+  
+  if (!response.ok) {
+    let errorMessage = 'Server error';
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+      console.debug('[ApiHandler] Error data:', errorData);
+    } catch {
+      // If response is not JSON, use status text
+      errorMessage = response.statusText || `HTTP ${response.status}`;
+      console.debug('[ApiHandler] Non-JSON error response');
+    }
+    
+    const error = new Error(errorMessage);
+    error.response = response;
+    throw error;
+  }
+  
+  try {
+    const data = await response.json();
+    console.debug('[ApiHandler] Response parsed successfully');
+    return data;
+  } catch (jsonError) {
+    console.error('[ApiHandler] JSON parse error:', jsonError);
+    throw new Error('Invalid response from server. Please try again.');
+  }
+};
 
 // ========================================
 // REGISTRATION STATUS COMPONENT
@@ -73,56 +175,161 @@ const PlayerLookup = {
   },
   emits: ['player-found', 'lookup-error'],
   setup(props, { emit }) {
+    // State
     const phoneInput = ref('');
     const isLookingUp = ref(false);
+    const phoneError = ref('');
 
+    /**
+     * Validates phone number format
+     * @param {string} phone - Raw phone input
+     * @returns {object} - { valid: boolean, phone?: string, message?: string }
+     */
+    const validatePhone = (phone) => {
+      console.debug('[PlayerLookup] Validating phone:', phone);
+      
+      // Remove all non-digits
+      const digitsOnly = phone.replace(/\D/g, '');
+      
+      // Remove leading 1 if present
+      const cleaned = digitsOnly.replace(/^1/, '');
+      
+      // Check if empty
+      if (!cleaned) {
+        console.debug('[PlayerLookup] Phone validation failed: empty');
+        return { valid: false, message: 'Please enter a phone number.' };
+      }
+      
+      // Check length
+      if (cleaned.length < 10) {
+        console.debug('[PlayerLookup] Phone validation failed: too short', cleaned.length);
+        return { valid: false, message: 'Phone number must be at least 10 digits.' };
+      }
+      
+      if (cleaned.length > 10) {
+        console.debug('[PlayerLookup] Phone validation failed: too long', cleaned.length);
+        return { valid: false, message: 'Phone number must be exactly 10 digits.' };
+      }
+      
+      // Validate area code (can't start with 0 or 1)
+      const areaCode = cleaned.substring(0, 3);
+      if (areaCode[0] === '0' || areaCode[0] === '1') {
+        console.debug('[PlayerLookup] Phone validation failed: invalid area code', areaCode);
+        return { valid: false, message: 'Invalid area code. Area codes cannot start with 0 or 1.' };
+      }
+      
+      // Validate exchange code (can't start with 0 or 1)
+      const exchangeCode = cleaned.substring(3, 6);
+      if (exchangeCode[0] === '0' || exchangeCode[0] === '1') {
+        console.debug('[PlayerLookup] Phone validation failed: invalid exchange code', exchangeCode);
+        return { valid: false, message: 'Invalid phone number format.' };
+      }
+      
+      console.debug('[PlayerLookup] Phone validation passed:', cleaned);
+      return { valid: true, phone: cleaned };
+    };
+
+    /**
+     * Handles form submission
+     */
     const handleSubmit = async (e) => {
       e.preventDefault();
+      console.debug('[PlayerLookup] Form submitted');
       
+      // Check registration status
       if (!props.registrationOpen) {
+        console.debug('[PlayerLookup] Registration is closed');
         alert('Registration is currently closed. Please check the status banner above for when it will reopen.');
         return;
       }
 
-      const phone = phoneInput.value.trim().replace(/^1|\D/g, '');
-      
-      if (!phone) {
-        emit('lookup-error', 'Please enter a phone number.');
+      // Validate phone number
+      const validation = validatePhone(phoneInput.value);
+      if (!validation.valid) {
+        console.warn('[PlayerLookup] Validation failed:', validation.message);
+        phoneError.value = validation.message;
+        emit('lookup-error', validation.message);
         return;
       }
+      
+      // Clear previous errors
+      phoneError.value = '';
+      const phone = validation.phone;
+      console.debug('[PlayerLookup] Starting lookup for phone:', phone);
 
+      // Set loading state
       isLookingUp.value = true;
       
       try {
-        const response = await fetch(`${config.scriptUrl}/rr/search?phone=${encodeURIComponent(phone)}`);
-        const data = await response.json();
+        // Make API request
+        const url = `${config.scriptUrl}/rr/search?phone=${encodeURIComponent(phone)}`;
+        console.debug('[PlayerLookup] Fetching:', url);
+        
+        const response = await fetch(url);
+        const data = await handleApiResponse(response);
+        
+        console.debug('[PlayerLookup] Response received:', data);
         emit('player-found', data);
+        
       } catch (error) {
-        emit('lookup-error', `An error occurred: ${error.message}`);
+        console.error('[PlayerLookup] Lookup error:', error);
+        const friendlyMessage = getErrorMessage(error, 'player lookup');
+        emit('lookup-error', friendlyMessage);
       } finally {
         isLookingUp.value = false;
+        console.debug('[PlayerLookup] Lookup completed');
       }
     };
 
     return {
       phoneInput,
       isLookingUp,
+      phoneError,
       handleSubmit
     };
   },
   template: `
     <div class="registration-content">
-      <p>Enter your phone number (e.g., 5101234567):</p>
-      <form @submit="handleSubmit">
-        <input 
-          v-model="phoneInput"
-          type="tel" 
-          maxlength="16" 
-          placeholder="Enter phone number" 
-          required 
-        />
-        <button type="submit" :disabled="isLookingUp">
-          {{ isLookingUp ? 'Looking up...' : 'Lookup' }}
+      <div class="lookup-header">
+        <h3 class="lookup-title">Find Your Player Account</h3>
+        <p class="lookup-description">Enter your phone number to look up your player account</p>
+      </div>
+      <form @submit="handleSubmit" class="lookup-form">
+        <div class="input-wrapper">
+          <label for="phone-lookup" class="input-label">Phone Number</label>
+          <div class="input-container" :class="{ 'input-error': phoneError }">
+            <span class="input-prefix">+1</span>
+            <input 
+              id="phone-lookup"
+              v-model="phoneInput"
+              type="tel" 
+              maxlength="16" 
+              placeholder="(510) 123-4567" 
+              class="phone-input"
+              :class="{ 'input-loading': isLookingUp, 'input-error': phoneError }"
+              required 
+              :disabled="isLookingUp"
+              @input="phoneError = ''"
+            />
+            <span v-if="isLookingUp" class="input-spinner"></span>
+          </div>
+          <p v-if="phoneError" class="input-error-text">{{ phoneError }}</p>
+          <p v-else class="input-hint">Enter your 10-digit phone number (e.g., 5101234567)</p>
+        </div>
+        <button 
+          type="submit" 
+          class="lookup-button"
+          :class="{ 'button-loading': isLookingUp }"
+          :disabled="isLookingUp"
+        >
+          <span v-if="!isLookingUp" class="button-text">
+            <span class="button-icon">🔍</span>
+            Lookup Player
+          </span>
+          <span v-else class="button-text">
+            <span class="button-spinner"></span>
+            Looking up...
+          </span>
         </button>
       </form>
     </div>
@@ -446,16 +653,17 @@ const RegistrationApp = {
     const checkRegistrationCapacity = async () => {
       try {
         const response = await fetch(`${config.scriptUrl}/rr/capacity`, { method: 'POST' });
-        const data = await response.json();
+        const data = await handleApiResponse(response);
         capacity.value = {
           isAtCapacity: !!data.roster_full,
           confirmedCount: Number(data.confirmed_count || 0),
-          playerCap: Number(data.player_cap || 65),
+          playerCap: Number(data.player_cap || 64),
           spotsAvailable: Number(data.spots_available || 0),
           eventOpen: !!data.event_open
         };
       } catch (err) {
         console.error('Error checking capacity:', err);
+        // Don't show error to user for capacity check failures, just use defaults
         capacity.value = { isAtCapacity: false, confirmedCount: 0, playerCap: 65, spotsAvailable: 0, eventOpen: false };
       }
     };
@@ -535,7 +743,7 @@ const RegistrationApp = {
           body: JSON.stringify(payload)
         });
 
-        const result = await response.json();
+        const result = await handleApiResponse(response);
         
         if (result.success) {
           alert(result.message);
@@ -551,7 +759,8 @@ const RegistrationApp = {
           showRegistrationDialog.value = false;
         }
       } catch (err) {
-        players.value[index].registerError = "Failed to register: " + err.message;
+        const friendlyMessage = getErrorMessage(err, 'registration');
+        players.value[index].registerError = friendlyMessage;
         showRegistrationDialog.value = false;
       }
     };
@@ -574,7 +783,7 @@ const RegistrationApp = {
           body: JSON.stringify(payload)
         });
 
-        const result = await response.json();
+        const result = await handleApiResponse(response);
         
         if (result.success) {
           alert(result.message);
@@ -582,14 +791,22 @@ const RegistrationApp = {
           // Refresh the display
           const phone = document.querySelector('input[type="tel"]')?.value?.trim().replace(/^1|\D/g, '');
           if (phone) {
-            handlePlayerFound(await fetch(`${config.scriptUrl}/rr/search?phone=${encodeURIComponent(phone)}`).then(r => r.json()));
+            try {
+              const refreshResponse = await fetch(`${config.scriptUrl}/rr/search?phone=${encodeURIComponent(phone)}`);
+              const refreshData = await handleApiResponse(refreshResponse);
+              handlePlayerFound(refreshData);
+            } catch (refreshErr) {
+              console.error('Error refreshing player data:', refreshErr);
+              // Don't show error for background refresh
+            }
           }
         } else {
           players.value[index].unregisterError = result.message;
           showUnregistrationDialog.value = false;
         }
       } catch (err) {
-        players.value[index].unregisterError = "Failed to unregister: " + err.message;
+        const friendlyMessage = getErrorMessage(err, 'unregistration');
+        players.value[index].unregisterError = friendlyMessage;
         showUnregistrationDialog.value = false;
       }
     };
@@ -597,14 +814,6 @@ const RegistrationApp = {
     // Lifecycle
     onMounted(() => {
       checkRegistrationStatus();
-      
-      if (devOverride) {
-        console.log('🔧 Developer mode enabled - time restrictions bypassed');
-        const devIndicator = document.createElement('div');
-        devIndicator.innerHTML = '🔧 DEV MODE - Time restrictions disabled';
-        devIndicator.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#ff6b6b;color:white;text-align:center;padding:5px;font-weight:bold;z-index:9999;';
-        document.body.prepend(devIndicator);
-      }
     });
 
     return {
@@ -659,9 +868,12 @@ const RegistrationApp = {
         @unregister-player="handleUnregisterPlayer"
       />
 
-      <a href="roster.html" class="roster-link">
-        <i class="fas fa-users"></i> VIEW ROSTER
-      </a>
+      <div class="roster-section">
+        <a href="roster.html" class="roster-link-button">
+          <span class="roster-text">View Registered Players</span>
+          <span class="roster-subtext">See current registrations</span>
+        </a>
+      </div>
 
       <registration-dialog 
         :show="showRegistrationDialog"
@@ -683,8 +895,28 @@ const RegistrationApp = {
 // ========================================
 // CREATE VUE APP
 // ========================================
-createApp({
+const app = createApp({
   components: {
     RegistrationApp
+  },
+  errorHandler: (err, instance, info) => {
+    // Handle Vue component errors gracefully
+    console.error('Vue error:', err, info);
+    // Don't show Vue internal errors to users - they're already handled in components
   }
-}).mount('#vue-registration-app');
+});
+
+// Mount the app
+app.mount('#vue-registration-app');
+
+// Handle unhandled promise rejections (network errors, etc.)
+window.addEventListener('unhandledrejection', (event) => {
+  // If it's a network error, we've already handled it in our try-catch blocks
+  // But this catches any edge cases
+  const error = event.reason;
+  if (error && (error instanceof TypeError || error?.message?.includes('fetch'))) {
+    // This is likely already handled by our error handlers, so we can prevent default
+    event.preventDefault();
+    console.error('Unhandled network error (likely already handled):', error);
+  }
+});
