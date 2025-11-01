@@ -39,7 +39,10 @@ const getErrorMessage = (error, context = 'operation') => {
     errorMessage.includes('Load failed')
   ) {
     console.warn('[ErrorHandler] Network error detected');
-    return 'Unable to connect to the server. The registration service may be temporarily unavailable. Please try again in a few moments or contact BTTC support at 510-926-6913 (TEXT ONLY).';
+    const supportContact = typeof ENV !== 'undefined' 
+      ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
+      : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
+    return `Unable to connect to the server. The registration service may be temporarily unavailable. Please try again in a few moments or ${supportContact}.`;
   }
   
   // HTTP response errors
@@ -47,28 +50,62 @@ const getErrorMessage = (error, context = 'operation') => {
     const status = error.response.status;
     console.debug('[ErrorHandler] HTTP error:', status);
     
+    const supportContact = typeof ENV !== 'undefined' 
+      ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
+      : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
+    
     if (status === 0) {
-      return 'Connection error: The server is unreachable. Please try again later or contact BTTC support at 510-926-6913 (TEXT ONLY).';
+      return `Connection error: The server is unreachable. Please try again later or ${supportContact}.`;
     }
     if (status >= 500) {
-      return 'Server error: The registration service is experiencing technical difficulties. Please try again in a few moments or contact BTTC support at 510-926-6913 (TEXT ONLY).';
+      return `Server error: The registration service is experiencing technical difficulties. Please try again in a few moments or ${supportContact}.`;
     }
     if (status === 404) {
-      return 'Service not found. Please contact BTTC support at 510-926-6913 (TEXT ONLY).';
+      return `Service not found. Please ${supportContact}.`;
     }
     if (status === 503) {
-      return 'Service unavailable: The registration service is temporarily down for maintenance. Please try again later or contact BTTC support at 510-926-6913 (TEXT ONLY).';
+      return `Service unavailable: The registration service is temporarily down for maintenance. Please try again later or ${supportContact}.`;
     }
   }
   
   // Generic error fallback
   if (error && error.message) {
     console.debug('[ErrorHandler] Generic error:', error.message);
-    return `An error occurred during ${context}: ${error.message}. Please try again or contact BTTC support at 510-926-6913 (TEXT ONLY).`;
+    const supportContact = typeof ENV !== 'undefined' 
+      ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
+      : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
+    return `An error occurred during ${context}: ${error.message}. Please try again or ${supportContact}.`;
   }
   
   console.warn('[ErrorHandler] Unknown error format');
-  return `An unexpected error occurred during ${context}. Please try again or contact BTTC support at 510-926-6913 (TEXT ONLY).`;
+  const supportContact = typeof ENV !== 'undefined' 
+    ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
+    : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
+  return `An unexpected error occurred during ${context}. Please try again or ${supportContact}.`;
+};
+
+/**
+ * Creates fetch options with API headers if configured
+ * @param {object} options - Original fetch options
+ * @returns {object} - Fetch options with headers
+ */
+const getFetchOptions = (options = {}) => {
+  const apiKey = typeof ENV !== 'undefined' ? ENV.API_KEY : '';
+  
+  // If API_KEY is configured, add X-API-Key header
+  if (apiKey) {
+    const headers = new Headers(options.headers || {});
+    headers.set('X-API-Key', apiKey);
+    
+    console.debug('[ApiHandler] Adding X-API-Key header to request');
+    
+    return {
+      ...options,
+      headers: headers
+    };
+  }
+  
+  return options;
 };
 
 /**
@@ -167,6 +204,46 @@ const CapacityBanner = {
 };
 
 // ========================================
+// PHONE HISTORY UTILITY
+// ========================================
+const PHONE_HISTORY_KEY = 'bttc_phone_history';
+const MAX_HISTORY_ITEMS = 10;
+
+/**
+ * Get phone number history from localStorage
+ * @returns {string[]} Array of phone numbers
+ */
+const getPhoneHistory = () => {
+  try {
+    const history = localStorage.getItem(PHONE_HISTORY_KEY);
+    return history ? JSON.parse(history) : [];
+  } catch (err) {
+    console.warn('[PhoneHistory] Error loading history:', err);
+    return [];
+  }
+};
+
+/**
+ * Save phone number to history
+ * @param {string} phone - Phone number to save (cleaned, 10 digits)
+ */
+const savePhoneToHistory = (phone) => {
+  try {
+    const history = getPhoneHistory();
+    // Remove if already exists (to move to top)
+    const filtered = history.filter(p => p !== phone);
+    // Add to beginning
+    filtered.unshift(phone);
+    // Keep only max items
+    const trimmed = filtered.slice(0, MAX_HISTORY_ITEMS);
+    localStorage.setItem(PHONE_HISTORY_KEY, JSON.stringify(trimmed));
+    console.debug('[PhoneHistory] Saved phone to history:', phone);
+  } catch (err) {
+    console.warn('[PhoneHistory] Error saving history:', err);
+  }
+};
+
+// ========================================
 // PLAYER LOOKUP COMPONENT
 // ========================================
 const PlayerLookup = {
@@ -179,6 +256,7 @@ const PlayerLookup = {
     const phoneInput = ref('');
     const isLookingUp = ref(false);
     const phoneError = ref('');
+    const phoneHistory = ref([]);
 
     /**
      * Validates phone number format
@@ -201,14 +279,15 @@ const PlayerLookup = {
       }
       
       // Check length
-      if (cleaned.length < 10) {
+      const requiredLength = typeof ENV !== 'undefined' ? ENV.PHONE_NUMBER_LENGTH : 10;
+      if (cleaned.length < requiredLength) {
         console.debug('[PlayerLookup] Phone validation failed: too short', cleaned.length);
-        return { valid: false, message: 'Phone number must be at least 10 digits.' };
+        return { valid: false, message: `Phone number must be at least ${requiredLength} digits.` };
       }
       
-      if (cleaned.length > 10) {
+      if (cleaned.length > requiredLength) {
         console.debug('[PlayerLookup] Phone validation failed: too long', cleaned.length);
-        return { valid: false, message: 'Phone number must be exactly 10 digits.' };
+        return { valid: false, message: `Phone number must be exactly ${requiredLength} digits.` };
       }
       
       // Validate area code (can't start with 0 or 1)
@@ -262,13 +341,21 @@ const PlayerLookup = {
       
       try {
         // Make API request
-        const url = `${config.scriptUrl}/rr/search?phone=${encodeURIComponent(phone)}`;
+        const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
+        const url = `${apiUrl}/rr/search?phone=${encodeURIComponent(phone)}`;
         console.debug('[PlayerLookup] Fetching:', url);
         
-        const response = await fetch(url);
+        const fetchOptions = getFetchOptions();
+        const response = await fetch(url, fetchOptions);
         const data = await handleApiResponse(response);
         
         console.debug('[PlayerLookup] Response received:', data);
+        
+        // Save phone to history on successful lookup
+        savePhoneToHistory(phone);
+        // Refresh history list
+        phoneHistory.value = getPhoneHistory();
+        
         emit('player-found', data);
         
       } catch (error) {
@@ -281,10 +368,17 @@ const PlayerLookup = {
       }
     };
 
+    // Load phone history on mount
+    onMounted(() => {
+      phoneHistory.value = getPhoneHistory();
+      console.debug('[PlayerLookup] Loaded phone history:', phoneHistory.value.length, 'items');
+    });
+
     return {
       phoneInput,
       isLookingUp,
       phoneError,
+      phoneHistory,
       handleSubmit
     };
   },
@@ -307,10 +401,17 @@ const PlayerLookup = {
               placeholder="(510) 123-4567" 
               class="phone-input"
               :class="{ 'input-loading': isLookingUp, 'input-error': phoneError }"
+              list="phone-history-list"
+              autocomplete="tel"
               required 
               :disabled="isLookingUp"
               @input="phoneError = ''"
             />
+            <datalist id="phone-history-list">
+              <option v-for="phone in phoneHistory" :key="phone" :value="phone">
+                {{ phone }}
+              </option>
+            </datalist>
             <span v-if="isLookingUp" class="input-spinner"></span>
           </div>
           <p v-if="phoneError" class="input-error-text">{{ phoneError }}</p>
@@ -571,13 +672,24 @@ const RegistrationApp = {
     UnregistrationDialog
   },
   setup() {
+    // Load constants from ENV first
+    const devOverride = typeof ENV !== 'undefined' ? ENV.DEV_OVERRIDE : false;
+    const registrationDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_DAY : 5;
+    const closingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_HOUR : 18;
+    const closingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_MINUTE : 45;
+    const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
+    const defaultPlayerCap = typeof ENV !== 'undefined' ? ENV.DEFAULT_PLAYER_CAP : 64;
+    const fallbackPlayerCap = typeof ENV !== 'undefined' ? ENV.FALLBACK_PLAYER_CAP : 65;
+    const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
+    const supportMethod = typeof ENV !== 'undefined' ? ENV.SUPPORT_METHOD : 'TEXT ONLY';
+    
     // Reactive state
     const players = ref([]);
     const registrationOpen = ref(false);
     const capacity = ref({
       isAtCapacity: false,
       confirmedCount: 0,
-      playerCap: 65,
+      playerCap: fallbackPlayerCap,
       spotsAvailable: 0
     });
     const showRegistrationDialog = ref(false);
@@ -585,16 +697,15 @@ const RegistrationApp = {
     const currentRegistrationData = ref(null);
     const currentUnregistrationData = ref(null);
     const error = ref('');
-    const devOverride = true; // Keep the same dev override logic
 
     // Computed properties
     const closingTime = computed(() => {
       const now = new Date();
-      const pstNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
+      const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
       const closingTime = new Date(pstNow);
-      closingTime.setHours(18, 45, 0, 0);
+      closingTime.setHours(closingHour, closingMinute, 0, 0);
       return closingTime.toLocaleString("en-US", {
-        timeZone: "America/Los_Angeles",
+        timeZone: timezone,
         hour: 'numeric',
         minute: '2-digit'
       });
@@ -602,23 +713,23 @@ const RegistrationApp = {
 
     const nextOpening = computed(() => {
       const now = new Date();
-      const pstNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
+      const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
       const dayOfWeek = pstNow.getDay();
       
-      let daysUntilFriday;
-      if (dayOfWeek === 5) {
-        daysUntilFriday = 7;
+      let daysUntilRegistrationDay;
+      if (dayOfWeek === registrationDay) {
+        daysUntilRegistrationDay = 7;
       } else {
-        daysUntilFriday = (5 - dayOfWeek + 7) % 7;
-        if (daysUntilFriday === 0) daysUntilFriday = 7;
+        daysUntilRegistrationDay = (registrationDay - dayOfWeek + 7) % 7;
+        if (daysUntilRegistrationDay === 0) daysUntilRegistrationDay = 7;
       }
 
-      const nextFriday = new Date(pstNow);
-      nextFriday.setDate(nextFriday.getDate() + daysUntilFriday);
-      nextFriday.setHours(0, 0, 0, 0);
+      const nextRegistrationDay = new Date(pstNow);
+      nextRegistrationDay.setDate(nextRegistrationDay.getDate() + daysUntilRegistrationDay);
+      nextRegistrationDay.setHours(0, 0, 0, 0);
 
-      return nextFriday.toLocaleString("en-US", {
-        timeZone: "America/Los_Angeles",
+      return nextRegistrationDay.toLocaleString("en-US", {
+        timeZone: timezone,
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -633,13 +744,13 @@ const RegistrationApp = {
       if (devOverride) return true;
 
       const now = new Date();
-      const pstNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
+      const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
       const dayOfWeek = pstNow.getDay();
       const hours = pstNow.getHours();
       const minutes = pstNow.getMinutes();
 
-      if (dayOfWeek === 5) {
-        if (hours < 18 || (hours === 18 && minutes <= 45)) {
+      if (dayOfWeek === registrationDay) {
+        if (hours < closingHour || (hours === closingHour && minutes <= closingMinute)) {
           return true;
         }
       }
@@ -652,19 +763,32 @@ const RegistrationApp = {
 
     const checkRegistrationCapacity = async () => {
       try {
-        const response = await fetch(`${config.scriptUrl}/rr/capacity`, { method: 'POST' });
+        const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
+        const fetchOptions = getFetchOptions({ method: 'POST' });
+        const response = await fetch(`${apiUrl}/rr/capacity`, fetchOptions);
         const data = await handleApiResponse(response);
         capacity.value = {
           isAtCapacity: !!data.roster_full,
           confirmedCount: Number(data.confirmed_count || 0),
-          playerCap: Number(data.player_cap || 64),
+          playerCap: Number(data.player_cap || defaultPlayerCap),
           spotsAvailable: Number(data.spots_available || 0),
           eventOpen: !!data.event_open
         };
+        // Clear any previous capacity errors on success
+        if (error.value && error.value.includes('capacity')) {
+          error.value = '';
+        }
       } catch (err) {
-        console.error('Error checking capacity:', err);
-        // Don't show error to user for capacity check failures, just use defaults
-        capacity.value = { isAtCapacity: false, confirmedCount: 0, playerCap: 65, spotsAvailable: 0, eventOpen: false };
+        console.error('[RegistrationApp] Error checking capacity:', err);
+        // Set capacity defaults to prevent UI issues
+        capacity.value = { isAtCapacity: false, confirmedCount: 0, playerCap: fallbackPlayerCap, spotsAvailable: 0, eventOpen: false };
+        
+        // Clear players list to hide registration section
+        players.value = [];
+        
+        // Escalate to support - show user-friendly error message
+        const friendlyMessage = getErrorMessage(err, 'capacity check');
+        error.value = `Unable to check registration capacity. ${friendlyMessage}`;
       }
     };
 
@@ -737,11 +861,13 @@ const RegistrationApp = {
           comments: data.comments
         };
 
-        const response = await fetch(`${config.scriptUrl}/rr/register`, {
+        const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
+        const fetchOptions = getFetchOptions({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
+        const response = await fetch(`${apiUrl}/rr/register`, fetchOptions);
 
         const result = await handleApiResponse(response);
         
@@ -777,11 +903,13 @@ const RegistrationApp = {
           comments: data.comments
         };
 
-        const response = await fetch(`${config.scriptUrl}/rr/unregister`, {
+        const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
+        const fetchOptions = getFetchOptions({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
+        const response = await fetch(`${apiUrl}/rr/unregister`, fetchOptions);
 
         const result = await handleApiResponse(response);
         
@@ -792,7 +920,9 @@ const RegistrationApp = {
           const phone = document.querySelector('input[type="tel"]')?.value?.trim().replace(/^1|\D/g, '');
           if (phone) {
             try {
-              const refreshResponse = await fetch(`${config.scriptUrl}/rr/search?phone=${encodeURIComponent(phone)}`);
+              const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
+              const refreshFetchOptions = getFetchOptions();
+              const refreshResponse = await fetch(`${apiUrl}/rr/search?phone=${encodeURIComponent(phone)}`, refreshFetchOptions);
               const refreshData = await handleApiResponse(refreshResponse);
               handlePlayerFound(refreshData);
             } catch (refreshErr) {
@@ -833,7 +963,9 @@ const RegistrationApp = {
       handleRegisterPlayer,
       handleUnregisterPlayer,
       confirmRegistration,
-      confirmUnregistration
+      confirmUnregistration,
+      supportPhone,
+      supportMethod
     };
   },
   template: `
@@ -858,10 +990,11 @@ const RegistrationApp = {
         <a href="player_signup.html" class="signup-link">
           PLAYER INFO SIGNUP
         </a>
-        <p>Otherwise Contact BTTC support at 510-926-6913 (TEXT ONLY)</p>
+        <p>Otherwise Contact BTTC support at {{ supportPhone }} ({{ supportMethod }})</p>
       </div>
 
       <player-list 
+        v-if="!error || !error.includes('capacity')"
         :players="players"
         :capacity="capacity"
         @register-player="handleRegisterPlayer"

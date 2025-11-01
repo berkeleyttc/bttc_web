@@ -464,9 +464,9 @@
       </form>
     </div>
   </div>
-  <script src="config.js"></script>
+  <script src="env.js"></script>
   <script>
-    const scriptUrl = `${config.scriptUrl}`;
+    const scriptUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
     let selectedPlayer = null;
     let searchResults = [];
 

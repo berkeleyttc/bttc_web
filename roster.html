@@ -108,9 +108,10 @@
       </tbody>
     </table>
   </div>
-  <script src="config.js"></script>
+  <script src="env.js"></script>
   <script>
-    const API_URL = `${config.scriptUrl}/rr/roster`; // Replace with your deployed URL
+    const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
+    const API_URL = `${apiUrl}/rr/roster`;
     let playerData = [];
     let currentSort = { key: null, direction: 'asc' };
 
