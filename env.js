@@ -31,6 +31,9 @@ const ENV = {
   DEFAULT_PLAYER_CAP: 64,
   FALLBACK_PLAYER_CAP: 65,
   
+  // Cache Settings (Time To Live in seconds)
+  CACHE_TTL_ROSTER: 60,      // Roster cache TTL in seconds (default: 45s, range: 30-60s)
+  
   // Phone Validation
   PHONE_NUMBER_LENGTH: 10,
   PHONE_COUNTRY_CODE: 1,

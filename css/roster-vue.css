@@ -104,6 +104,14 @@
 }
 
 /* Player Count */
+/* Last Updated Text */
+.last-updated {
+  color: #6c757d;
+  font-size: 0.85em;
+  font-style: italic;
+  margin-left: 0.5rem;
+}
+
 .player-count {
   text-align: left;
   margin-bottom: 1rem;

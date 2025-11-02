@@ -193,6 +193,7 @@ const handleApiResponse = async (response) => {
   }
 };
 
+
 // ========================================
 // REGISTRATION STATUS COMPONENT
 // ========================================
@@ -244,9 +245,62 @@ const RegistrationStatus = {
 // ========================================
 // CAPACITY BANNER COMPONENT
 // ========================================
+
+/**
+ * CapacityBanner Component
+ * 
+ * PURPOSE: Displays capacity information with last updated timestamp
+ * 
+ * PROPS:
+ * - capacity: Object with capacity info (isAtCapacity, confirmedCount, playerCap, spotsAvailable)
+ * - lastUpdated: Timestamp when capacity was last fetched (optional)
+ */
 const CapacityBanner = {
   props: {
-    capacity: Object
+    capacity: Object,
+    lastUpdated: Number  // Timestamp in milliseconds, optional
+  },
+  methods: {
+    /**
+     * Formats a timestamp into a user-friendly "last updated" string
+     * Shows relative time for recent updates (e.g., "5 seconds ago") or formatted time for older
+     */
+    formatLastUpdated(timestamp) {
+      if (!timestamp) return '';
+      
+      const now = Date.now();
+      const age = now - timestamp;
+      const seconds = Math.floor(age / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      
+      // Show relative time for recent updates (within 1 hour)
+      if (seconds < 60) {
+        return seconds <= 1 ? 'just now' : `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
+      } else if (minutes < 60) {
+        return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+      } else if (hours < 1) {
+        return 'about an hour ago';
+      }
+      
+      // For older data, show formatted time
+      const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
+      const date = new Date(timestamp);
+      return date.toLocaleString("en-US", {
+        timeZone: timezone,
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+  },
+  computed: {
+    capacityClass() {
+      return this.capacity.isAtCapacity ? 'capacity-full' : 'capacity-available';
+    },
+    lastUpdatedText() {
+      return this.formatLastUpdated(this.lastUpdated);
+    }
   },
   template: `
     <div class="capacity-banner" :class="capacityClass">
@@ -258,14 +312,12 @@ const CapacityBanner = {
       </div>
       <div class="status-details">
         {{ capacity.confirmedCount }}/{{ capacity.playerCap }} spots filled
+        <span v-if="lastUpdatedText" class="capacity-last-updated">
+          • Updated {{ lastUpdatedText }}
+        </span>
       </div>
     </div>
-  `,
-  computed: {
-    capacityClass() {
-      return this.capacity.isAtCapacity ? 'capacity-full' : 'capacity-available';
-    }
-  }
+  `
 };
 
 // ========================================
@@ -584,8 +636,9 @@ const PlayerLookup = {
  */
 const PlayerList = {
   props: {
-    players: Array,   // Array of player objects from search
-    capacity: Object // Capacity info: { isAtCapacity, confirmedCount, playerCap, spotsAvailable }
+    players: Array,        // Array of player objects from search
+    capacity: Object,      // Capacity info: { isAtCapacity, confirmedCount, playerCap, spotsAvailable }
+    capacityLastUpdated: Number  // Timestamp when capacity was last fetched (optional)
   },
   emits: ['register-player', 'unregister-player'],
   setup(props, { emit }) {
@@ -617,7 +670,7 @@ const PlayerList = {
   template: `
     <div v-if="players.length > 0" class="result">
       <p class="success">Manage your registration:</p>
-      <capacity-banner :capacity="capacity" />
+      <capacity-banner :capacity="capacity" :last-updated="props.capacityLastUpdated" />
       
       <div v-for="(player, index) in players" :key="player.bttc_id || index" class="entry">
         <div v-if="player.is_registered">
@@ -940,6 +993,7 @@ const RegistrationApp = {
       playerCap: fallbackPlayerCap,             // Maximum capacity
       spotsAvailable: 0                         // Available spots
     });
+    const capacityLastUpdated = ref(null);       // Timestamp when capacity was last fetched
     const showRegistrationDialog = ref(false);    // Controls registration dialog visibility
     const showUnregistrationDialog = ref(false); // Controls unregistration dialog visibility
     const currentRegistrationData = ref(null);  // Player being registered (for dialog)
@@ -1082,26 +1136,53 @@ const RegistrationApp = {
       registrationOpen.value = isRegistrationOpen();
     };
 
+    /**
+     * Checks registration capacity (no caching)
+     * 
+     * FLOW:
+     * 1. Fetch from API (no caching)
+     * 2. Update capacity state
+     * 3. On error: Set defaults
+     * 
+     * NOTE: Capacity data is always fetched fresh (no caching)
+     */
     const checkRegistrationCapacity = async () => {
+      // Always fetch fresh capacity data (no caching)
+      await fetchFreshCapacity();
+    };
+    
+    /**
+     * Fetches fresh capacity data from API (no caching)
+     */
+    const fetchFreshCapacity = async () => {
       try {
         const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
         const fetchOptions = getFetchOptions({ method: 'POST' });
         const response = await fetch(`${apiUrl}/rr/capacity`, fetchOptions);
         const data = await handleApiResponse(response);
-        capacity.value = {
+        
+        const capacityData = {
           isAtCapacity: !!data.roster_full,
           confirmedCount: Number(data.confirmed_count || 0),
           playerCap: Number(data.player_cap || defaultPlayerCap),
           spotsAvailable: Number(data.spots_available || 0),
           eventOpen: !!data.event_open
         };
+        
+        const now = Date.now();
+        
+        // Update state with fresh data and timestamp
+        capacity.value = capacityData;
+        capacityLastUpdated.value = now;
+        
         // Clear any previous capacity errors on success
         if (error.value && error.value.includes('capacity')) {
           error.value = '';
         }
       } catch (err) {
-        // Set capacity defaults to prevent UI issues
+        // On error, set defaults
         capacity.value = { isAtCapacity: false, confirmedCount: 0, playerCap: fallbackPlayerCap, spotsAvailable: 0, eventOpen: false };
+        capacityLastUpdated.value = null;
         
         // Clear players list to hide registration section
         players.value = [];
@@ -1344,6 +1425,7 @@ const RegistrationApp = {
       players,
       registrationOpen,
       capacity,
+      capacityLastUpdated,
       showRegistrationDialog,
       showUnregistrationDialog,
       currentRegistrationData,
@@ -1409,6 +1491,7 @@ const RegistrationApp = {
         v-if="registrationOpen && (!error || !error.includes('capacity'))"
         :players="players"
         :capacity="capacity"
+        :capacity-last-updated="capacityLastUpdated"
         @register-player="handleRegisterPlayer"
         @unregister-player="handleUnregisterPlayer"
       />
