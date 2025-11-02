@@ -1136,6 +1136,28 @@ const RegistrationApp = {
       players.value = [];
     };
 
+    /**
+     * Validates PIN/token format
+     * Must be exactly 6 digits (numbers only)
+     * 
+     * @param {string} token - PIN to validate
+     * @returns {object} - { valid: boolean, message?: string }
+     */
+    const validateToken = (token) => {
+      if (!token || token.trim() === '') {
+        return { valid: false, message: 'Please enter your PIN.' };
+      }
+      
+      const trimmedToken = token.trim();
+      const tokenRegex = /^\d{6}$/;
+      
+      if (!tokenRegex.test(trimmedToken)) {
+        return { valid: false, message: 'PIN must be exactly 6 digits.' };
+      }
+      
+      return { valid: true };
+    };
+
     const handleRegisterPlayer = (index) => {
       if (!registrationOpen.value) {
         alert('Registration is currently closed.');
@@ -1149,10 +1171,15 @@ const RegistrationApp = {
 
       const player = players.value[index];
       
-      if (!player.registerToken) {
-        player.registerError = "Please enter your PIN.";
+      // Validate PIN before making API call
+      const tokenValidation = validateToken(player.registerToken);
+      if (!tokenValidation.valid) {
+        player.registerError = tokenValidation.message;
         return;
       }
+      
+      // Clear any previous errors
+      player.registerError = '';
 
       currentRegistrationData.value = { player, index };
       showRegistrationDialog.value = true;
@@ -1160,10 +1187,16 @@ const RegistrationApp = {
 
     const handleUnregisterPlayer = (index) => {
       const player = players.value[index];
-      if (!player.unregisterToken) {
-        player.unregisterError = "Please enter your PIN.";
+      
+      // Validate PIN before making API call
+      const tokenValidation = validateToken(player.unregisterToken);
+      if (!tokenValidation.valid) {
+        player.unregisterError = tokenValidation.message;
         return;
       }
+      
+      // Clear any previous errors
+      player.unregisterError = '';
 
       currentUnregistrationData.value = { player, index };
       showUnregistrationDialog.value = true;
@@ -1179,11 +1212,19 @@ const RegistrationApp = {
       const { player, index } = currentRegistrationData.value;
       
       try {
+        // Validate token again before API call (extra safety check)
+        const tokenValidation = validateToken(player.registerToken);
+        if (!tokenValidation.valid) {
+          players.value[index].registerError = tokenValidation.message;
+          showRegistrationDialog.value = false;
+          return;
+        }
+        
         const payload = {
           bttc_id: player.bttc_id,
           first_name: player.first_name,
           last_name: player.last_name,
-          token: player.registerToken,
+          token: player.registerToken.trim(), // Trim token before sending
           payment_method: data.paymentMethod,
           comments: data.comments
         };
@@ -1203,7 +1244,22 @@ const RegistrationApp = {
         if (result.success) {
           alert(result.message);
           showRegistrationDialog.value = false;
-          players.value = [];
+          
+          // Update local state instead of clearing and forcing a new lookup
+          // Mark the player as registered in the local players array
+          if (players.value[index]) {
+            players.value[index].is_registered = true;
+            // Clear any PIN/token fields
+            players.value[index].registerToken = '';
+            players.value[index].unregisterToken = '';
+            players.value[index].registerError = '';
+            players.value[index].unregisterError = '';
+          }
+          
+          // Refresh capacity after registration to get updated count
+          // This is necessary to update the spots available counter
+          await checkRegistrationCapacity();
+          
           error.value = '';
         } else {
           if (result.isAtCapacity) {
@@ -1224,11 +1280,19 @@ const RegistrationApp = {
       const { player, index } = currentUnregistrationData.value;
       
       try {
+        // Validate token again before API call (extra safety check)
+        const tokenValidation = validateToken(player.unregisterToken);
+        if (!tokenValidation.valid) {
+          players.value[index].unregisterError = tokenValidation.message;
+          showUnregistrationDialog.value = false;
+          return;
+        }
+        
         const payload = {
           bttc_id: player.bttc_id,
           first_name: player.first_name,
           last_name: player.last_name,
-          token: player.unregisterToken,
+          token: player.unregisterToken.trim(), // Trim token before sending
           comments: data.comments
         };
 
@@ -1245,19 +1309,21 @@ const RegistrationApp = {
         if (result.success) {
           alert(result.message);
           showUnregistrationDialog.value = false;
-          // Refresh the display
-          const phone = document.querySelector('input[type="tel"]')?.value?.trim().replace(/^1|\D/g, '');
-          if (phone) {
-            try {
-              const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
-              const refreshFetchOptions = getFetchOptions();
-              const refreshResponse = await fetch(`${apiUrl}/rr/search?phone=${encodeURIComponent(phone)}`, refreshFetchOptions);
-              const refreshData = await handleApiResponse(refreshResponse);
-              handlePlayerFound(refreshData);
-            } catch (refreshErr) {
-              // Silent fail for background refresh
-            }
+          
+          // Update local state instead of making another API call
+          // Mark the player as unregistered in the local players array
+          if (players.value[index]) {
+            players.value[index].is_registered = false;
+            // Clear any PIN/token fields
+            players.value[index].unregisterToken = '';
+            players.value[index].registerToken = '';
+            players.value[index].registerError = '';
+            players.value[index].unregisterError = '';
           }
+          
+          // Refresh capacity after unregistration to get updated count
+          // This is necessary to update the spots available counter
+          await checkRegistrationCapacity();
         } else {
           players.value[index].unregisterError = result.message;
           showUnregistrationDialog.value = false;
