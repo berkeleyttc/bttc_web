@@ -1,0 +1,528 @@
+// BTTC Round Robin Roster
+// Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse
+
+const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+const CACHE_KEYS = {
+  ROSTER: 'bttc_roster_cache'
+};
+
+// Cache TTL configuration (in milliseconds)
+// Defaults from ENV or fallback to reasonable defaults
+const CACHE_TTL = {
+  ROSTER: (typeof ENV !== 'undefined' && ENV.CACHE_TTL_ROSTER ? ENV.CACHE_TTL_ROSTER : 45) * 1000    // Default: 45 seconds
+};
+
+const getCachedData = (cacheKey, ttl) => {
+  try {
+    const cached = sessionStorage.getItem(cacheKey);
+    if (!cached) return null;
+    
+    const { data, timestamp } = JSON.parse(cached);
+    const now = Date.now();
+    const age = now - timestamp;
+    
+    // Check if cache is still valid (within TTL)
+    if (age < ttl) {
+      return { data, timestamp };
+    }
+    
+    // Cache expired, remove it
+    sessionStorage.removeItem(cacheKey);
+    return null;
+  } catch (err) {
+    // Cache corrupted or unavailable, remove it
+    try {
+      sessionStorage.removeItem(cacheKey);
+    } catch {
+      // Ignore cleanup errors
+    }
+    return null;
+  }
+};
+
+const setCachedData = (cacheKey, data) => {
+  try {
+    const cacheEntry = {
+      data: data,
+      timestamp: Date.now()
+    };
+    sessionStorage.setItem(cacheKey, JSON.stringify(cacheEntry));
+  } catch (err) {
+    // sessionStorage unavailable or quota exceeded, silently fail
+    // Cache is a performance optimization, not critical functionality
+  }
+};
+
+const clearCache = (cacheKey) => {
+  try {
+    sessionStorage.removeItem(cacheKey);
+  } catch {
+    // Ignore errors
+  }
+};
+
+const RosterApp = {
+  setup() {
+    // Load configuration constants from ENV (or use defaults)
+    const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
+    const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
+    const supportMethod = typeof ENV !== 'undefined' ? ENV.SUPPORT_METHOD : 'TEXT ONLY';
+    const defaultPlayerCap = typeof ENV !== 'undefined' ? ENV.DEFAULT_PLAYER_CAP : 64;
+    const fallbackPlayerCap = typeof ENV !== 'undefined' ? ENV.FALLBACK_PLAYER_CAP : 65;
+    
+    // API endpoint for fetching roster
+    const API_URL = `${apiUrl}/rr/roster`;
+    
+    // Application state
+    const players = ref([]);          // Array of player objects from API
+    const loading = ref(true);        // Loading state during API calls
+    const error = ref('');            // Error message to display
+    const capacity = ref({
+      isAtCapacity: false,             // Whether event is at capacity
+      confirmedCount: 0,              // Number of confirmed registrations
+      playerCap: fallbackPlayerCap,   // Maximum capacity
+      spotsAvailable: 0               // Available spots remaining
+    });
+    const lastUpdated = ref({
+      roster: null,                    // Timestamp when roster was last fetched
+      capacity: null                   // Timestamp when capacity was last fetched
+    });
+    const currentSort = reactive({
+      key: null,                       // Column key being sorted (e.g., 'first_name', 'registered_at')
+      direction: 'asc'                 // Sort direction: 'asc' or 'desc'
+    });
+
+    // NOTE: Capacity is now included in /rr/roster response
+    // No need for separate /rr/capacity calls anymore
+
+    /**
+     * Fetches roster data from the API with caching
+     * 
+     * FLOW:
+     * 1. Check cache first - if valid (< 45 seconds), use cached data immediately
+     * 2. Set loading state (shows loading indicator)
+     * 3. If cache expired/missing, fetch from API
+     * 4. Validate response format (new API: { roster: [], capacity: {} }, legacy: array)
+     * 5. Extract roster array from response
+     * 6. Extract capacity from response (new API includes capacity, no separate call needed)
+     * 7. Update cache with fresh roster data
+     * 8. Set players state and capacity state
+     * 9. On error: Try cached data, then show user-friendly error message
+     * 10. Always: Reset loading state
+     * 
+     * CACHING: Roster data cached for 45 seconds to reduce API calls on page refresh
+     * API: New API returns { roster: [], capacity: {} } - capacity included, no separate /capacity call needed
+     */
+    const fetchRoster = async () => {
+      // Check cache first
+      const cachedResult = getCachedData(CACHE_KEYS.ROSTER, CACHE_TTL.ROSTER);
+      if (cachedResult && Array.isArray(cachedResult.data)) {
+        // Use cached data immediately (no loading state for instant display)
+        players.value = cachedResult.data;
+        lastUpdated.value.roster = cachedResult.timestamp;
+        loading.value = false;  // Reset loading state when using cache
+        
+        // NOTE: Capacity is now included in roster response, but cached roster doesn't have capacity
+        // Capacity will be fetched when cache expires and fresh roster is fetched
+        // Or user can refresh to get capacity with roster
+        
+        // Cache is valid, no API call needed
+        return;
+      }
+      
+      // No valid cache, fetch from API with loading state
+      await fetchFreshRoster();
+    };
+    
+    /**
+     * Fetches fresh roster data from API and updates cache
+     */
+    const fetchFreshRoster = async () => {
+      loading.value = true;  // Show loading indicator
+      error.value = '';      // Clear previous errors
+      
+      try {
+        // Fetch roster from API
+        const response = await fetch(API_URL, getFetchOptions());
+        const data = await handleApiResponse(response);
+        
+        // New API response structure: { roster: [], capacity: {} }
+        // Handle both new format (object with roster key) and legacy format (direct array) for backward compatibility
+        const rosterData = Array.isArray(data) ? data : (data.roster || []);
+        
+        // Validate response format (should be array of players)
+        if (!Array.isArray(rosterData)) {
+          throw new Error('Invalid roster data format received from server.');
+        }
+        
+        const now = Date.now();
+        
+        // Update cache with fresh data (store just the roster array)
+        setCachedData(CACHE_KEYS.ROSTER, rosterData);
+        
+        // Set players state with fresh data and timestamp
+        players.value = rosterData;
+        lastUpdated.value.roster = now;
+        
+        // Extract capacity from roster response (new API always includes capacity)
+        if (data.capacity) {
+          const capacityData = {
+            isAtCapacity: !!data.capacity.roster_full,
+            confirmedCount: Number(data.capacity.confirmed_count || 0),
+            playerCap: Number(data.capacity.player_cap || defaultPlayerCap),
+            spotsAvailable: Number(data.capacity.spots_available || 0)
+          };
+          
+          capacity.value = capacityData;
+          lastUpdated.value.capacity = now;
+        } else {
+          // If capacity not included (should not happen with new API), continue without capacity
+        }
+      } catch (err) {
+        // On error, try to use cached data as fallback (even if expired)
+        const cachedResult = getCachedData(CACHE_KEYS.ROSTER, CACHE_TTL.ROSTER * 2); // Allow stale cache on error
+        if (cachedResult && Array.isArray(cachedResult.data)) {
+          players.value = cachedResult.data;
+          lastUpdated.value.roster = cachedResult.timestamp;
+          // NOTE: Capacity not available from cached data, will be shown when fresh roster is fetched
+          return;
+        }
+        
+        // No cache available, show error
+        error.value = getErrorMessage(err, 'loading roster');
+        players.value = [];
+        lastUpdated.value.roster = null;
+      } finally {
+        // Always reset loading state (even on error)
+        loading.value = false;
+      }
+    };
+
+    /**
+     * Sorts the roster by the specified column
+     * 
+     * BEHAVIOR:
+     * - Clicking same column toggles sort direction (asc ↔ desc)
+     * - Clicking different column sets it as sort key with asc direction
+     * - Handles date sorting for 'registered_at' column
+     * - Handles string sorting for other columns (case-insensitive)
+     * 
+     * SORT LOGIC:
+     * - First click: Sort ascending
+     * - Second click (same column): Sort descending
+     * - Click different column: Sort ascending
+     * 
+     * @param {string} key - The column key to sort by (e.g., 'first_name', 'bttc_id', 'registered_at')
+     */
+    const sortBy = (key) => {
+      // Toggle sort direction if clicking the same column
+      // Otherwise, start with ascending
+      if (currentSort.key === key && currentSort.direction === 'asc') {
+        currentSort.direction = 'desc';
+      } else {
+        currentSort.direction = 'asc';
+      }
+      
+      // Set the current sort key
+      currentSort.key = key;
+      
+      // Sort the players array (create copy to avoid mutating original)
+      const sorted = [...players.value].sort((a, b) => {
+        let valA = a[key] || '';
+        let valB = b[key] || '';
+        
+        // Handle date sorting for 'registered_at' column
+        // Convert to Date objects for proper date comparison
+        if (key === 'registered_at') {
+          valA = new Date(valA);
+          valB = new Date(valB);
+        } else {
+          // String comparison for other fields (case-insensitive)
+          valA = valA.toString().toLowerCase();
+          valB = valB.toString().toLowerCase();
+        }
+        
+        // Compare values based on sort direction
+        if (valA < valB) {
+          return currentSort.direction === 'asc' ? -1 : 1;
+        }
+        if (valA > valB) {
+          return currentSort.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+      
+      players.value = sorted;
+    };
+
+    /**
+     * Gets the CSS class for a column header based on current sort state
+     * 
+     * BEHAVIOR:
+     * - If column is not currently sorted: returns 'sortable'
+     * - If column is sorted ascending: returns 'sortable sorted-asc'
+     * - If column is sorted descending: returns 'sortable sorted-desc'
+     * 
+     * Used to style column headers with sort indicators (arrows).
+     * 
+     * @param {string} key - The column key (e.g., 'first_name', 'bttc_id', 'registered_at')
+     * @returns {string} - CSS class name(s) for the column header
+     */
+    const getSortClass = (key) => {
+      // If this column is not currently being sorted, just show it's sortable
+      if (currentSort.key !== key) {
+        return 'sortable';
+      }
+      // If this column is being sorted, add direction class
+      return currentSort.direction === 'asc' ? 'sortable sorted-asc' : 'sortable sorted-desc';
+    };
+
+    /**
+     * Formats a date string in PST/PDT timezone for user-friendly display
+     * 
+     * FLOW:
+     * 1. Parse date string from API (ISO format)
+     * 2. Convert to PST/PDT timezone (America/Los_Angeles)
+     * 3. Format with user-friendly format: MM/DD/YYYY, HH:MM:SS AM/PM PST/PDT
+     * 4. Handle invalid dates gracefully (return original string)
+     * 
+     * WHY: API returns dates in UTC/ISO format, but users expect PST/PDT times
+     * 
+     * @param {string} dateString - Date string from API (ISO format)
+     * @returns {string} - Formatted date string in PST/PDT (e.g., "01/15/2024, 2:30:45 PM PST")
+     */
+    const formatDatePST = (dateString) => {
+      if (!dateString) {
+        return '';
+      }
+
+      try {
+        const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
+        const date = new Date(dateString);
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          return dateString; // Return original if invalid
+        }
+
+        // Format date in PST/PDT timezone
+        const formatted = date.toLocaleString("en-US", {
+          timeZone: timezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: 'numeric',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+
+        // Get timezone abbreviation (PST/PDT)
+        const timezoneAbbr = date.toLocaleTimeString("en-US", {
+          timeZone: timezone,
+          timeZoneName: 'short'
+        }).split(' ').pop() || 'PST';
+
+        // Combine formatted date with timezone
+        const result = `${formatted} ${timezoneAbbr}`;
+        
+        return result;
+      } catch (err) {
+        return dateString; // Return original on error
+      }
+    };
+
+    // Fetch roster when component mounts (when page loads)
+    onMounted(() => {
+      fetchRoster();
+    });
+
+    // Computed properties (derived state from reactive data)
+    
+    /**
+     * Computed: Whether there are any players in the roster
+     * Used to conditionally show/hide roster table
+     */
+    const hasPlayers = computed(() => players.value.length > 0);
+    
+    /**
+     * Computed: Total number of players registered
+     * Used in display: "X players registered"
+     */
+    const playerCount = computed(() => players.value.length);
+    
+    /**
+     * Computed: Number of spots remaining before event reaches capacity
+     * Calculated as: playerCap - confirmedCount
+     * Returns 0 if already at/over capacity
+     * Used in capacity banner display
+     */
+    const spotsRemaining = computed(() => {
+      return Math.max(0, capacity.value.playerCap - capacity.value.confirmedCount);
+    });
+    
+    /**
+     * Formats a timestamp into a user-friendly "last updated" string
+     * Shows relative time for recent updates (e.g., "5 seconds ago") or formatted time for older
+     * 
+     * @param {number|null} timestamp - Timestamp in milliseconds, or null if no data
+     * @returns {string} - Formatted "last updated" string
+     */
+    const formatLastUpdated = (timestamp) => {
+      if (!timestamp) return '';
+      
+      const now = Date.now();
+      const age = now - timestamp;
+      const seconds = Math.floor(age / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      
+      // Show relative time for recent updates (within 1 hour)
+      if (seconds < 60) {
+        return seconds <= 1 ? 'just now' : `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
+      } else if (minutes < 60) {
+        return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+      } else if (hours < 1) {
+        return 'about an hour ago';
+      }
+      
+      // For older data, show formatted time
+      const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
+      const date = new Date(timestamp);
+      return date.toLocaleString("en-US", {
+        timeZone: timezone,
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+    };
+    
+    /**
+     * Computed: Formatted "last updated" string for roster data
+     */
+    const rosterLastUpdated = computed(() => {
+      if (!lastUpdated.value.roster) return '';
+      return formatLastUpdated(lastUpdated.value.roster);
+    });
+    
+    /**
+     * Computed: Formatted "last updated" string for capacity data
+     */
+    const capacityLastUpdated = computed(() => {
+      if (!lastUpdated.value.capacity) return '';
+      return formatLastUpdated(lastUpdated.value.capacity);
+    });
+
+    return {
+      players,
+      loading,
+      error,
+      capacity,
+      currentSort,
+      hasPlayers,
+      playerCount,
+      spotsRemaining,
+      rosterLastUpdated,
+      capacityLastUpdated,
+      sortBy,
+      getSortClass,
+      formatDatePST,
+      fetchRoster,
+      supportPhone,
+      supportMethod
+    };
+  },
+  template: `
+    <div class="roster-container">
+      <a href="bttc_rr_registration_vue.html" class="back-link">← Back to Round Robin Registration</a>
+      <h3>Round Robin Registered Players</h3>
+      
+      <div v-if="loading" class="loading-message">
+        Loading roster...
+      </div>
+      
+      <div v-else-if="error" class="error-message">
+        <p>{{ error }}</p>
+        <p>If the problem persists, please contact BTTC support at {{ supportPhone }} ({{ supportMethod }})</p>
+      </div>
+      
+      <div v-else-if="!hasPlayers" class="empty-message">
+        <p>No players registered yet.</p>
+      </div>
+      
+      <div v-else class="roster-table-container">
+        <p class="player-count">
+          {{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} registered
+          <span v-if="capacity.playerCap > 0">
+            • {{ capacity.confirmedCount }}/{{ capacity.playerCap }} capacity
+            <span v-if="spotsRemaining > 0">• {{ spotsRemaining }} spot{{ spotsRemaining !== 1 ? 's' : '' }} remaining</span>
+            <span v-else class="capacity-full-text">• Full</span>
+          </span>
+          <span v-if="rosterLastUpdated" class="last-updated">
+            • Updated {{ rosterLastUpdated }}
+          </span>
+        </p>
+        <table class="roster-table">
+          <thead>
+            <tr>
+              <th 
+                :class="getSortClass('registered_at')" 
+                @click="sortBy('registered_at')"
+              >
+                Registered At
+              </th>
+              <th 
+                :class="getSortClass('full_name')" 
+                @click="sortBy('full_name')"
+              >
+                Full Name
+              </th>
+              <th 
+                :class="getSortClass('rating')" 
+                @click="sortBy('rating')"
+              >
+                BTTC Rating
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(player, index) in players" :key="index">
+              <td>{{ formatDatePST(player.registered_at) }}</td>
+              <td>{{ player.full_name }}</td>
+              <td>{{ player.rating }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+};
+
+// ========================================
+// CREATE VUE APP
+// ========================================
+const app = createApp({
+  components: {
+    RosterApp
+  },
+  errorHandler: (err, instance, info) => {
+    // Handle Vue component errors gracefully
+    // Don't show Vue internal errors to users - they're already handled in components
+  }
+});
+
+// Mount the app
+app.mount('#vue-roster-app');
+
+// Handle unhandled promise rejections (network errors, etc.)
+window.addEventListener('unhandledrejection', (event) => {
+  // If it's a network error, we've already handled it in our try-catch blocks
+  // But this catches any edge cases
+  const error = event.reason;
+  if (error && (error instanceof TypeError || error?.message?.includes('fetch'))) {
+    // This is likely already handled by our error handlers, so we can prevent default
+    event.preventDefault();
+  }
+});
+
