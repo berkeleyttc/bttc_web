@@ -83,7 +83,9 @@ const RosterApp = {
       confirmedCount: 0,              // Number of confirmed registrations
       playerCap: fallbackPlayerCap,   // Maximum capacity
       spotsAvailable: 0,              // Available spots remaining
-      eventOpen: true                 // Whether event is accepting registrations
+      eventOpen: true,                // Whether event is accepting registrations
+      eventDate: null,                // Event date (ISO format YYYY-MM-DD)
+      eventType: null                 // Event type (e.g., "rr", "tournament", "group_training")
     });
     const lastUpdated = ref({
       roster: null,                    // Timestamp when roster was last fetched
@@ -177,7 +179,9 @@ const RosterApp = {
             confirmedCount: Number(data.capacity.confirmed_count || 0),
             playerCap: Number(data.capacity.player_cap || defaultPlayerCap),
             spotsAvailable: Number(data.capacity.spots_available || 0),
-            eventOpen: !!data.capacity.event_open
+            eventOpen: !!data.capacity.event_open,
+            eventDate: data.capacity.event_date || null,
+            eventType: data.capacity.event_type || null
           };
           
           capacity.value = capacityData;
@@ -314,13 +318,13 @@ const RosterApp = {
      * FLOW:
      * 1. Parse date string from API (ISO format)
      * 2. Convert to PST/PDT timezone (America/Los_Angeles)
-     * 3. Format with user-friendly format: MM/DD/YYYY, HH:MM:SS AM/PM PST/PDT
+     * 3. Format with user-friendly format: Nov 1, 2025, HH:MM:SS AM/PM PST/PDT
      * 4. Handle invalid dates gracefully (return original string)
      * 
      * WHY: API returns dates in UTC/ISO format, but users expect PST/PDT times
      * 
      * @param {string} dateString - Date string from API (ISO format)
-     * @returns {string} - Formatted date string in PST/PDT (e.g., "01/15/2024, 2:30:45 PM PST")
+     * @returns {string} - Formatted date string in PST/PDT (e.g., "Nov 1, 2025, 2:30:45 PM PST")
      */
     const formatDatePST = (dateString) => {
       if (!dateString) {
@@ -340,8 +344,8 @@ const RosterApp = {
         const formatted = date.toLocaleString("en-US", {
           timeZone: timezone,
           year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
+          month: 'short',
+          day: 'numeric',
           hour: 'numeric',
           minute: '2-digit',
           second: '2-digit',
@@ -443,6 +447,35 @@ const RosterApp = {
       if (!lastUpdated.value.capacity) return '';
       return formatLastUpdated(lastUpdated.value.capacity);
     });
+    
+    /**
+     * Computed: Formatted event date in user-friendly format
+     * Converts ISO date (YYYY-MM-DD) to "Month Day, Year" format (e.g., "Nov 2, 2025")
+     * Returns empty string if no event date available
+     */
+    const formattedEventDate = computed(() => {
+      if (!capacity.value.eventDate) return '';
+      
+      try {
+        const date = new Date(capacity.value.eventDate + 'T00:00:00'); // Add time to avoid timezone issues
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          return '';
+        }
+        
+        // Format date as "Month Day, Year" (e.g., "Nov 2, 2025")
+        const formatted = date.toLocaleDateString("en-US", {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        
+        return formatted;
+      } catch (err) {
+        return '';
+      }
+    });
 
     return {
       players,
@@ -455,6 +488,7 @@ const RosterApp = {
       spotsRemaining,
       rosterLastUpdated,
       capacityLastUpdated,
+      formattedEventDate,
       sortBy,
       getSortClass,
       formatDatePST,
@@ -466,7 +500,10 @@ const RosterApp = {
   template: `
     <div class="roster-container">
       <a href="bttc_rr_registration_vue.html" class="back-link">← Back to Round Robin Registration</a>
-      <h3>Round Robin Registered Players</h3>
+      <h3>
+        Round Robin Registered Players
+        <span v-if="formattedEventDate"> - {{ formattedEventDate }}</span>
+      </h3>
       
       <div v-if="loading" class="loading-message">
         Loading roster...
