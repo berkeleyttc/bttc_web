@@ -218,6 +218,18 @@ const PlayerSearch = {
     });
 
     /**
+     * Handles input for BTTC ID - only allows numeric characters
+     * Filters out any non-numeric input when searching by BTTC ID
+     */
+    const handleInput = (e) => {
+      if (searchType.value === 'bttcid') {
+        // Remove any non-numeric characters
+        const numericOnly = e.target.value.replace(/\D/g, '');
+        searchInput.value = numericOnly;
+      }
+    };
+
+    /**
      * Handles search form submission
      * 
      * FLOW:
@@ -236,6 +248,14 @@ const PlayerSearch = {
       if (!searchValue) {
         emit('search-error', 'Please enter a search term.');
         return;
+      }
+
+      // Validate BTTC ID is numeric if searching by BTTC ID
+      if (searchType.value === 'bttcid') {
+        if (!/^\d+$/.test(searchValue)) {
+          emit('search-error', 'BTTC ID must contain only numbers.');
+          return;
+        }
       }
 
       // Set loading state to disable form and show spinner
@@ -269,7 +289,8 @@ const PlayerSearch = {
       searchInput,
       isSearching,
       searchPlaceholder,
-      handleSubmit
+      handleSubmit,
+      handleInput
     };
   },
   template: `
@@ -289,11 +310,14 @@ const PlayerSearch = {
       <form @submit="handleSubmit">
         <div class="search-container">
           <input 
-            type="text" 
+            :type="searchType === 'bttcid' ? 'tel' : 'text'"
+            :inputmode="searchType === 'bttcid' ? 'numeric' : 'text'"
+            :pattern="searchType === 'bttcid' ? '[0-9]*' : undefined"
             v-model="searchInput"
             :placeholder="searchPlaceholder"
             required 
             :disabled="isSearching"
+            @input="handleInput"
           />
           <button type="submit" :disabled="isSearching">
             <span v-if="!isSearching">Search</span>
@@ -360,24 +384,22 @@ const PlayerResults = {
       <div class="info">Click on your name to complete your registration:</div>
       
       <div 
-        v-for="player in players" 
+        v-for="player in players"
         :key="player.bttc_id"
         class="player-result"
-        :class="{ 'selected': player.already_signed_up }"
+        :class="{ 'selected': player.already_signed_up, 'already-signed-up': player.already_signed_up }"
         @click="selectPlayer(player)"
-        :style="{ cursor: player.already_signed_up ? 'not-allowed' : 'pointer', opacity: player.already_signed_up ? 0.6 : 1 }"
       >
         <div class="player-name">{{ player.first_name }} {{ player.last_name }}</div>
         <div class="player-id">BTTC ID: {{ player.bttc_id }}</div>
-        <div v-if="player.already_signed_up" style="color: #198754; font-weight: bold; margin-top: 0.5rem;">
+        <div v-if="player.already_signed_up" class="player-signed-up">
           ✓ Already signed up
         </div>
       </div>
 
       <div 
         v-if="totalFound > availableForSignup"
-        class="info" 
-        style="margin-top: 1rem; font-size: 0.9rem;"
+        class="info"
       >
         Found {{ totalFound }} total matches, showing {{ availableForSignup }} available for signup.
       </div>
@@ -713,13 +735,17 @@ const PlayerSignupApp = {
 
       // Handle case where search found no players
       if (!data.players || data.players.length === 0) {
+        // Get support contact information from ENV
+        const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
+        const supportMethod = typeof ENV !== 'undefined' ? ENV.SUPPORT_METHOD : 'TEXT ONLY';
+        
         // Distinguish between "no matches" and "all matches already signed up"
         if (data.total_found > 0 && data.available_for_signup === 0) {
           // Found players but they've all completed signup
-          error.value = 'Found players matching your search, but they have already completed their signup. If this is incorrect, please contact BTTC support.';
+          error.value = `Found players matching your search, but they have already completed their signup. If this is incorrect, please contact BTTC support at ${supportPhone} (${supportMethod})`;
         } else {
           // No players found matching search
-          error.value = 'No players found. Please check your spelling or contact BTTC support at 510-926-6913 (TEXT ONLY)';
+          error.value = `No players found. Please check your spelling or contact BTTC support at ${supportPhone} (${supportMethod})`;
         }
         searchResults.value = [];
         return;

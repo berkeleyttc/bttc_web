@@ -675,9 +675,9 @@ const PlayerList = {
       
       <div v-for="(player, index) in players" :key="player.bttc_id || index" class="entry">
         <div v-if="player.is_registered">
-          <p style="color: gray;">
+          <p class="player-registered">
             {{ player.first_name }} {{ player.last_name }} 
-            <span style="font-weight: bold;">(Already registered)</span>
+            <span class="player-registered-label">(Already registered)</span>
           </p>
           <div class="unregister-form">
             <input 
@@ -688,8 +688,7 @@ const PlayerList = {
             />
             <button 
               type="button"
-              style="background-color: #dc3545;" 
-              class="confirm-btn" 
+              class="confirm-btn unregister-btn" 
               @click="unregisterPlayer(index)"
             >
               Unregister
@@ -698,7 +697,7 @@ const PlayerList = {
           </div>
         </div>
         <div v-else>
-          <p v-if="capacity.isAtCapacity" style="color: #666;">
+          <p v-if="capacity.isAtCapacity" class="player-capacity-limited">
             {{ player.first_name }} {{ player.last_name }}
           </p>
           <p v-else>
@@ -1460,7 +1459,7 @@ const RegistrationApp = {
         </a>
       </div>
 
-      <h2 style="font-family: Arial, sans-serif; font-weight: bold;">Round Robin Registration</h2>
+      <h2>Round Robin Registration</h2>
 
       <registration-status 
         :is-open="registrationOpen"

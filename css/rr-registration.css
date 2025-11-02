@@ -44,6 +44,16 @@ body {
   max-width: 500px;
   width: calc(100% - 2rem);
   text-align: center;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+/* Consistent heading styles */
+.container h2 {
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  font-weight: 700;
+  font-size: 1.75rem;
+  color: #212529;
+  margin: 0 0 1.5rem 0;
 }
 
 /* Mobile-first responsive adjustments */
@@ -305,6 +315,23 @@ button:active {
 .entry p {
   margin: 0.5rem 0;
   word-wrap: break-word;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+/* Player status text styles */
+.entry .player-registered {
+  color: #6c757d;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.entry .player-registered-label {
+  font-weight: 700;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.entry .player-capacity-limited {
+  color: #666;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
 .result {
@@ -345,7 +372,7 @@ button:active {
   font-weight: bold;
   color: #dc3545;
   margin: 0 0 0.75rem 0;
-  font-family: Arial, sans-serif;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
 .error-message {
@@ -517,6 +544,19 @@ button:active {
 .confirm-btn {
   margin-top: 0.5rem;
   width: 100%;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+/* Unregister button - red/danger style */
+.confirm-btn.unregister-btn {
+  background-color: #dc3545;
+  color: #ffffff;
+  border-color: #dc3545;
+}
+
+.confirm-btn.unregister-btn:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
 }
 
 @media (min-width: 481px) {

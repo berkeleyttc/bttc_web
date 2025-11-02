@@ -37,6 +37,7 @@ body {
   max-width: 600px;
   width: calc(100% - 2rem);
   text-align: center;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
 @media (max-width: 480px) {
@@ -51,12 +52,15 @@ body {
 h1 {
   color: #333;
   margin-bottom: 0.5rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  font-weight: 700;
 }
 
 .subtitle {
   color: #666;
   margin-bottom: 2rem;
   font-size: 1.1rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
 form {
@@ -171,6 +175,12 @@ button:disabled {
   text-align: left;
   cursor: pointer;
   transition: background-color 0.2s;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.player-result.already-signed-up {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .player-result:hover {
@@ -187,12 +197,21 @@ button:disabled {
   font-weight: bold;
   font-size: 1.1rem;
   color: #333;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
 .player-id {
   color: #666;
   font-size: 0.9rem;
   margin-top: 0.25rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.player-signed-up {
+  color: #198754;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
 .result {
@@ -223,6 +242,9 @@ button:disabled {
   padding: 1rem;
   border-radius: 8px;
   border: 1px solid #bee5eb;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
 /* Dialog Styles */
