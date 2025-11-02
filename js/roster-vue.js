@@ -13,11 +13,10 @@
  *   └── RosterTable: Displays player roster with sorting
  * 
  * APPLICATION FLOW:
- * 1. App loads → Fetches roster from /rr/roster API endpoint
- * 2. After roster loaded → Fetches capacity from /rr/capacity endpoint
- * 3. Displays roster → Table with player names, BTTC IDs, registration times
- * 4. User clicks column header → Sorts table by that column
- * 5. Displays capacity → Shows spots remaining, full status
+ * 1. App loads → Fetches roster from /rr/roster API endpoint (includes capacity in response)
+ * 2. Displays roster → Table with player names, BTTC IDs, registration times
+ * 3. User clicks column header → Sorts table by that column
+ * 4. Displays capacity → Shows spots remaining, full status (from roster response)
  * 
  * FEATURES:
  * - Sortable table columns (name, BTTC ID, registered time)
@@ -294,11 +293,10 @@ const clearCache = (cacheKey) => {
  * 
  * APPLICATION FLOW:
  * 1. Component mounts → fetchRoster() is called
- * 2. Fetch roster → GET /rr/roster endpoint
- * 3. After roster loaded → fetchCapacity() is called
- * 4. Fetch capacity → POST /rr/capacity endpoint
- * 5. Display data → Shows roster table with capacity banner
- * 6. User clicks column → sortBy() sorts the table
+ * 2. Fetch roster → GET /rr/roster endpoint (response includes { roster: [], capacity: {} })
+ * 3. Extract roster and capacity from response
+ * 4. Display data → Shows roster table with capacity banner
+ * 5. User clicks column → sortBy() sorts the table
  * 
  * FEATURES:
  * - Sortable columns (name, BTTC ID, registered_at)
@@ -337,55 +335,8 @@ const RosterApp = {
       direction: 'asc'                 // Sort direction: 'asc' or 'desc'
     });
 
-    /**
-     * Fetches capacity data from the API (no caching)
-     * 
-     * FLOW:
-     * 1. Fetch from API (no caching)
-     * 2. Parse response data (roster_full, confirmed_count, player_cap, spots_available)
-     * 3. Update capacity state
-     * 4. On error: Set defaults
-     * 
-     * WHY: Called after fetchRoster() to get real-time capacity information
-     * NOTE: Capacity data is always fetched fresh (no caching)
-     */
-    const fetchCapacity = async () => {
-      // Always fetch fresh capacity data (no caching)
-      await fetchFreshCapacity();
-    };
-    
-    /**
-     * Fetches fresh capacity data from API (no caching)
-     */
-    const fetchFreshCapacity = async () => {
-      try {
-        const fetchOptions = getFetchOptions({ method: 'POST' });
-        const response = await fetch(`${apiUrl}/rr/capacity`, fetchOptions);
-        const data = await handleApiResponse(response);
-        
-        const capacityData = {
-          isAtCapacity: !!data.roster_full,
-          confirmedCount: Number(data.confirmed_count || 0),
-          playerCap: Number(data.player_cap || defaultPlayerCap),
-          spotsAvailable: Number(data.spots_available || 0)
-        };
-        
-        const now = Date.now();
-        
-        // Update state with fresh data and timestamp
-        capacity.value = capacityData;
-        lastUpdated.value.capacity = now;
-      } catch (err) {
-        // On error, set defaults
-        capacity.value = { 
-          isAtCapacity: false, 
-          confirmedCount: 0, 
-          playerCap: fallbackPlayerCap, 
-          spotsAvailable: 0 
-        };
-        lastUpdated.value.capacity = null;
-      }
-    };
+    // NOTE: Capacity is now included in /rr/roster response
+    // No need for separate /rr/capacity calls anymore
 
     /**
      * Fetches roster data from the API with caching
@@ -394,14 +345,16 @@ const RosterApp = {
      * 1. Check cache first - if valid (< 45 seconds), use cached data immediately
      * 2. Set loading state (shows loading indicator)
      * 3. If cache expired/missing, fetch from API
-     * 4. Validate response is an array
-     * 5. Update cache with fresh data
-     * 6. Set players state
-     * 7. Fetch capacity information (capacity check depends on roster being loaded)
-     * 8. On error: Try cached data, then show user-friendly error message
-     * 9. Always: Reset loading state
+     * 4. Validate response format (new API: { roster: [], capacity: {} }, legacy: array)
+     * 5. Extract roster array from response
+     * 6. Extract capacity from response (new API includes capacity, no separate call needed)
+     * 7. Update cache with fresh roster data
+     * 8. Set players state and capacity state
+     * 9. On error: Try cached data, then show user-friendly error message
+     * 10. Always: Reset loading state
      * 
      * CACHING: Roster data cached for 45 seconds to reduce API calls on page refresh
+     * API: New API returns { roster: [], capacity: {} } - capacity included, no separate /capacity call needed
      */
     const fetchRoster = async () => {
       // Check cache first
@@ -412,13 +365,9 @@ const RosterApp = {
         lastUpdated.value.roster = cachedResult.timestamp;
         loading.value = false;  // Reset loading state when using cache
         
-        try {
-          // Fetch capacity for cached roster
-          await fetchCapacity();
-        } catch (err) {
-          // If capacity fetch fails, still show roster data
-          // Error is handled in fetchCapacity, just continue
-        }
+        // NOTE: Capacity is now included in roster response, but cached roster doesn't have capacity
+        // Capacity will be fetched when cache expires and fresh roster is fetched
+        // Or user can refresh to get capacity with roster
         
         // Cache is valid, no API call needed
         return;
@@ -440,30 +389,45 @@ const RosterApp = {
         const response = await fetch(API_URL, getFetchOptions());
         const data = await handleApiResponse(response);
         
+        // New API response structure: { roster: [], capacity: {} }
+        // Handle both new format (object with roster key) and legacy format (direct array) for backward compatibility
+        const rosterData = Array.isArray(data) ? data : (data.roster || []);
+        
         // Validate response format (should be array of players)
-        if (!Array.isArray(data)) {
+        if (!Array.isArray(rosterData)) {
           throw new Error('Invalid roster data format received from server.');
         }
         
         const now = Date.now();
         
-        // Update cache with fresh data
-        setCachedData(CACHE_KEYS.ROSTER, data);
+        // Update cache with fresh data (store just the roster array)
+        setCachedData(CACHE_KEYS.ROSTER, rosterData);
         
         // Set players state with fresh data and timestamp
-        players.value = data;
+        players.value = rosterData;
         lastUpdated.value.roster = now;
         
-        // Fetch capacity information after roster is loaded
-        // Capacity endpoint may depend on roster being loaded first
-        await fetchCapacity();
+        // Extract capacity from roster response (new API always includes capacity)
+        if (data.capacity) {
+          const capacityData = {
+            isAtCapacity: !!data.capacity.roster_full,
+            confirmedCount: Number(data.capacity.confirmed_count || 0),
+            playerCap: Number(data.capacity.player_cap || defaultPlayerCap),
+            spotsAvailable: Number(data.capacity.spots_available || 0)
+          };
+          
+          capacity.value = capacityData;
+          lastUpdated.value.capacity = now;
+        } else {
+          // If capacity not included (should not happen with new API), continue without capacity
+        }
       } catch (err) {
         // On error, try to use cached data as fallback (even if expired)
         const cachedResult = getCachedData(CACHE_KEYS.ROSTER, CACHE_TTL.ROSTER * 2); // Allow stale cache on error
         if (cachedResult && Array.isArray(cachedResult.data)) {
           players.value = cachedResult.data;
           lastUpdated.value.roster = cachedResult.timestamp;
-          await fetchCapacity();
+          // NOTE: Capacity not available from cached data, will be shown when fresh roster is fetched
           return;
         }
         

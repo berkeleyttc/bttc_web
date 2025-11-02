@@ -399,10 +399,10 @@ const savePhoneToHistory = (phone) => {
  * BEHAVIOR:
  * - Phone number input with autocomplete from localStorage history
  * - Validates phone number format (10 digits, valid area/exchange codes)
- * - Makes API call to /rr/search?phone=... endpoint
+ * - Makes API call to /rr/search?phone=... endpoint (returns { players: [], capacity: {} })
  * - Saves successful lookups to phone history for future use
  * - Shows loading state during API call
- * - Emits 'player-found' with results or 'lookup-error' on failure
+ * - Emits 'player-found' with results (includes players and capacity) or 'lookup-error' on failure
  * 
  * VALIDATION RULES:
  * - Removes all non-digits
@@ -664,13 +664,14 @@ const PlayerList = {
 
     return {
       registerPlayer,
-      unregisterPlayer
+      unregisterPlayer,
+      capacityLastUpdated: props.capacityLastUpdated  // Expose prop to template
     };
   },
   template: `
     <div v-if="players.length > 0" class="result">
       <p class="success">Manage your registration:</p>
-      <capacity-banner :capacity="capacity" :last-updated="props.capacityLastUpdated" />
+      <capacity-banner :capacity="capacity" :last-updated="capacityLastUpdated" />
       
       <div v-for="(player, index) in players" :key="player.bttc_id || index" class="entry">
         <div v-if="player.is_registered">
@@ -1136,72 +1137,21 @@ const RegistrationApp = {
       registrationOpen.value = isRegistrationOpen();
     };
 
-    /**
-     * Checks registration capacity (no caching)
-     * 
-     * FLOW:
-     * 1. Fetch from API (no caching)
-     * 2. Update capacity state
-     * 3. On error: Set defaults
-     * 
-     * NOTE: Capacity data is always fetched fresh (no caching)
-     */
-    const checkRegistrationCapacity = async () => {
-      // Always fetch fresh capacity data (no caching)
-      await fetchFreshCapacity();
-    };
-    
-    /**
-     * Fetches fresh capacity data from API (no caching)
-     */
-    const fetchFreshCapacity = async () => {
-      try {
-        const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
-        const fetchOptions = getFetchOptions({ method: 'POST' });
-        const response = await fetch(`${apiUrl}/rr/capacity`, fetchOptions);
-        const data = await handleApiResponse(response);
-        
-        const capacityData = {
-          isAtCapacity: !!data.roster_full,
-          confirmedCount: Number(data.confirmed_count || 0),
-          playerCap: Number(data.player_cap || defaultPlayerCap),
-          spotsAvailable: Number(data.spots_available || 0),
-          eventOpen: !!data.event_open
-        };
-        
-        const now = Date.now();
-        
-        // Update state with fresh data and timestamp
-        capacity.value = capacityData;
-        capacityLastUpdated.value = now;
-        
-        // Clear any previous capacity errors on success
-        if (error.value && error.value.includes('capacity')) {
-          error.value = '';
-        }
-      } catch (err) {
-        // On error, set defaults
-        capacity.value = { isAtCapacity: false, confirmedCount: 0, playerCap: fallbackPlayerCap, spotsAvailable: 0, eventOpen: false };
-        capacityLastUpdated.value = null;
-        
-        // Clear players list to hide registration section
-        players.value = [];
-        
-        // Escalate to support - show user-friendly error message
-        const friendlyMessage = getErrorMessage(err, 'capacity check');
-        error.value = `Unable to check registration capacity. ${friendlyMessage}`;
-      }
-    };
+    // NOTE: Capacity is now included in all API responses (search, register, unregister)
+    // No need for separate /rr/capacity calls anymore
 
     const handlePlayerFound = (data) => {
-      if (data.result === "None" || data.length === 0) {
+      // New API response structure: { players: [], capacity: {} }
+      const playerList = Array.isArray(data) ? data : (data.players || []);
+      
+      if (data.result === "None" || playerList.length === 0) {
         error.value = 'No player found for this phone number.';
         players.value = [];
         return;
       }
 
       error.value = '';
-      players.value = data.map(player => ({
+      players.value = playerList.map(player => ({
         ...player,
         registerToken: '',
         unregisterToken: '',
@@ -1209,7 +1159,28 @@ const RegistrationApp = {
         unregisterError: ''
       }));
       
-      checkRegistrationCapacity();
+      // Extract capacity from search response (new API always includes capacity)
+      if (data.capacity) {
+        const capacityData = {
+          isAtCapacity: !!data.capacity.roster_full,
+          confirmedCount: Number(data.capacity.confirmed_count || 0),
+          playerCap: Number(data.capacity.player_cap || defaultPlayerCap),
+          spotsAvailable: Number(data.capacity.spots_available || 0),
+          eventOpen: !!data.capacity.event_open
+        };
+        
+        const now = Date.now();
+        capacity.value = capacityData;
+        capacityLastUpdated.value = now;
+        
+        // Clear any previous capacity errors on success
+        if (error.value && error.value.includes('capacity')) {
+          error.value = '';
+        }
+      } else {
+        // If capacity not included (should not happen with new API), show error
+        error.value = 'Capacity information is missing from the response. Please refresh and try again.';
+      }
     };
 
     const handleLookupError = (errorMessage) => {
@@ -1337,9 +1308,27 @@ const RegistrationApp = {
             players.value[index].unregisterError = '';
           }
           
-          // Refresh capacity after registration to get updated count
-          // This is necessary to update the spots available counter
-          await checkRegistrationCapacity();
+          // Extract capacity from registration response (new API always includes capacity)
+          if (result.capacity) {
+            const capacityData = {
+              isAtCapacity: !!result.capacity.roster_full,
+              confirmedCount: Number(result.capacity.confirmed_count || 0),
+              playerCap: Number(result.capacity.player_cap || defaultPlayerCap),
+              spotsAvailable: Number(result.capacity.spots_available || 0),
+              eventOpen: !!result.capacity.event_open
+            };
+            
+            const now = Date.now();
+            capacity.value = capacityData;
+            capacityLastUpdated.value = now;
+            
+            // Clear any previous capacity errors on success
+            if (error.value && error.value.includes('capacity')) {
+              error.value = '';
+            }
+          } else {
+            // If capacity not included (should not happen with new API), continue without capacity
+          }
           
           error.value = '';
         } else {
@@ -1402,9 +1391,27 @@ const RegistrationApp = {
             players.value[index].unregisterError = '';
           }
           
-          // Refresh capacity after unregistration to get updated count
-          // This is necessary to update the spots available counter
-          await checkRegistrationCapacity();
+          // Extract capacity from unregistration response (new API always includes capacity)
+          if (result.capacity) {
+            const capacityData = {
+              isAtCapacity: !!result.capacity.roster_full,
+              confirmedCount: Number(result.capacity.confirmed_count || 0),
+              playerCap: Number(result.capacity.player_cap || defaultPlayerCap),
+              spotsAvailable: Number(result.capacity.spots_available || 0),
+              eventOpen: !!result.capacity.event_open
+            };
+            
+            const now = Date.now();
+            capacity.value = capacityData;
+            capacityLastUpdated.value = now;
+            
+            // Clear any previous capacity errors on success
+            if (error.value && error.value.includes('capacity')) {
+              error.value = '';
+            }
+          } else {
+            // If capacity not included (should not happen with new API), continue without capacity
+          }
         } else {
           players.value[index].unregisterError = result.message;
           showUnregistrationDialog.value = false;
