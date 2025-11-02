@@ -53,7 +53,21 @@ body {
   font-weight: 700;
   font-size: 1.75rem;
   color: #212529;
+  margin: 0 0 0.5rem 0;
+}
+
+/* Page header with description */
+.page-header {
+  margin-bottom: 2rem;
+  padding-bottom: 0;
+}
+
+.page-description {
+  color: #6c757d;
+  font-size: 1rem;
   margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
 /* Mobile-first responsive adjustments */
@@ -79,12 +93,32 @@ form {
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin: 1.5rem 0;
+  margin: 2rem 0;
+  border-top: 2px solid #dee2e6;
+  border-left: 1px solid #e9ecef;
+  border-right: 1px solid #e9ecef;
+  border-bottom: 1px solid #e9ecef;
 }
 
 .lookup-header {
-  text-align: center;
   margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  position: relative;
+}
+
+/* When collapsed, show button on right */
+.lookup-header:has(.lookup-toggle-btn) {
+  text-align: left;
+}
+
+/* When not collapsed (no toggle button), center the title */
+.lookup-header:not(:has(.lookup-toggle-btn)) {
+  justify-content: center;
+  text-align: center;
 }
 
 .lookup-title {
@@ -93,6 +127,49 @@ form {
   color: #212529;
   margin: 0.5rem 0;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+/* Collapsed link - minimal footprint, no container styling */
+.lookup-collapsed-link {
+  text-align: center;
+  margin: 0.5rem 0;
+}
+
+.lookup-toggle-link {
+  color: #0d6efd;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  display: inline-block;
+}
+
+.lookup-toggle-link:hover {
+  color: #0b5ed7;
+  text-decoration: underline;
+}
+
+/* Collapsed state for registration content - remove all styling */
+.registration-content.lookup-collapsed {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.lookup-form-container {
+  /* Smooth transition when collapsing/expanding */
+  transition: opacity 0.2s ease, max-height 0.3s ease;
+}
+
+/* Mobile adjustments for collapsed state */
+@media (max-width: 480px) {
+  .lookup-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .lookup-description {
@@ -298,12 +375,36 @@ button:active {
 }
 
 .entry {
-  border: 1px solid #ddd;
-  background: #fafafa;
-  padding: 1rem;
+  border: 2px solid #e9ecef;
+  background: #ffffff;
+  padding: 1.5rem;
   border-radius: 8px;
-  margin-top: 1rem;
+  margin-top: 1.25rem;
   text-align: left;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s ease;
+}
+
+.entry:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.entry-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.player-name-heading {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #212529;
+  margin: 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.entry-content {
+  margin-top: 0.75rem;
 }
 
 @media (max-width: 480px) {
@@ -319,13 +420,25 @@ button:active {
 }
 
 /* Player status text styles */
-.entry .player-registered {
-  color: #6c757d;
+.player-registered-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
-.entry .player-registered-label {
-  font-weight: 700;
+.status-icon {
+  font-size: 1.25rem;
+  color: #198754;
+}
+
+.player-registered-label {
+  font-weight: 600;
+  color: #198754;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
@@ -334,8 +447,71 @@ button:active {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
+.pin-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.5rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.register-form,
+.unregister-form {
+  margin-top: 1rem;
+}
+
+.register-form.full-message {
+  padding: 1rem;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.registration-full-message {
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+  color: #856404;
+  font-size: 1rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.full-message-hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #856404;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
 .result {
-  margin-top: 1.5rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #dee2e6;
+  position: relative;
+}
+
+.result::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #adb5bd 20%, #adb5bd 80%, transparent);
+  opacity: 0.4;
+}
+
+.result-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.result-subtitle {
+  color: #6c757d;
+  font-size: 0.95rem;
+  margin: 0.25rem 0 0 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
 .error {
@@ -346,11 +522,27 @@ button:active {
 .success {
   color: #198754;
   font-weight: bold;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
 }
 
 /* Error Section - Prominent Design */
 .error-section {
   margin: 2rem 0;
+  padding-top: 1.5rem;
+  border-top: 2px solid #dee2e6;
+  position: relative;
+}
+
+.error-section::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #adb5bd 20%, #adb5bd 80%, transparent);
+  opacity: 0.4;
 }
 
 .error-content {
@@ -426,14 +618,26 @@ button:active {
 .signup-section {
   margin: 2rem 0;
   padding-top: 1.5rem;
-  border-top: 1px solid #e9ecef;
+  border-top: 2px solid #dee2e6;
   text-align: center;
+  position: relative;
+}
+
+.signup-section::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #adb5bd 20%, #adb5bd 80%, transparent);
+  opacity: 0.4;
 }
 
 .error-support {
   margin-top: 2rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid #dee2e6;
 }
 
 .support-text {
@@ -479,9 +683,21 @@ button:active {
 
 /* Roster Section - Distinct from registration form */
 .roster-section {
-  margin: 0 0 2rem 0;
-  border-bottom: 2px solid #e9ecef;
+  margin: 0 0 2.5rem 0;
+  border-bottom: 2px solid #ced4da;
   padding-bottom: 2rem;
+  position: relative;
+}
+
+.roster-section::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #adb5bd 20%, #adb5bd 80%, transparent);
+  opacity: 0.5;
 }
 
 .roster-link-button {
@@ -530,8 +746,14 @@ button:active {
 
 .token-field {
   width: 100%;
-  margin-top: 0.5rem;
-  margin-bottom: 0.5rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0.75rem;
+  padding: 0.875rem;
+  font-size: 1.1rem;
+  text-align: center;
+  letter-spacing: 0.5rem;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
 }
 
 /* Mobile token field adjustments */
@@ -585,10 +807,14 @@ button:active {
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
   padding: 1rem;
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
   border-radius: 8px;
   text-align: center;
   font-weight: bold;
   font-size: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 @media (max-width: 480px) {

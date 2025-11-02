@@ -422,6 +422,7 @@ const PlayerLookup = {
     const isLookingUp = ref(false);   // Loading state during API call
     const phoneError = ref('');       // Validation/error message
     const phoneHistory = ref([]);     // Phone history from localStorage for autocomplete
+    const collapsed = ref(false);     // Whether the search form is minimized/collapsed
 
     /**
      * Validates and normalizes phone number format
@@ -525,6 +526,12 @@ const PlayerLookup = {
         // Refresh history list in UI
         phoneHistory.value = getPhoneHistory();
         
+        // Collapse the search form after successful lookup (only if players found)
+        const playerList = Array.isArray(data) ? data : (data.players || []);
+        if (playerList.length > 0 && data.result !== "None") {
+          collapsed.value = true;
+        }
+        
         // Emit results to parent component
         emit('player-found', data);
         
@@ -535,6 +542,19 @@ const PlayerLookup = {
       } finally {
         // Always reset loading state (even on error)
         isLookingUp.value = false;
+      }
+    };
+
+    /**
+     * Toggles the collapsed state of the search form
+     * 
+     * When expanding, clears any errors to provide a fresh start
+     */
+    const toggleCollapse = () => {
+      collapsed.value = !collapsed.value;
+      // Clear errors when expanding to provide a fresh start
+      if (!collapsed.value) {
+        phoneError.value = '';
       }
     };
 
@@ -549,60 +569,78 @@ const PlayerLookup = {
       isLookingUp,
       phoneError,
       phoneHistory,
-      handleSubmit
+      collapsed,
+      handleSubmit,
+      toggleCollapse
     };
   },
   template: `
-    <div class="registration-content">
-      <div class="lookup-header">
-        <h3 class="lookup-title">Find Your Player Account</h3>
-        <p class="lookup-description">Enter your phone number to look up your player account</p>
-      </div>
-      <form @submit="handleSubmit" class="lookup-form">
-        <div class="input-wrapper">
-          <label for="phone-lookup" class="input-label">Phone Number</label>
-          <div class="input-container" :class="{ 'input-error': phoneError }">
-            <span class="input-prefix">+1</span>
-            <input 
-              id="phone-lookup"
-              v-model="phoneInput"
-              type="tel" 
-              maxlength="10" 
-              placeholder="5101234567" 
-              class="phone-input"
-              :class="{ 'input-loading': isLookingUp, 'input-error': phoneError }"
-              list="phone-history-list"
-              autocomplete="tel"
-              required 
-              :disabled="isLookingUp"
-              @input="phoneError = ''"
-            />
-            <datalist id="phone-history-list">
-              <option v-for="phone in phoneHistory" :key="phone" :value="phone">
-                {{ phone }}
-              </option>
-            </datalist>
-            <span v-if="isLookingUp" class="input-spinner"></span>
-          </div>
-          <p v-if="phoneError" class="input-error-text">{{ phoneError }}</p>
-          <p v-else class="input-hint">Enter your 10-digit phone number (e.g., 5101234567)</p>
-        </div>
-        <button 
-          type="submit" 
-          class="lookup-button"
-          :class="{ 'button-loading': isLookingUp }"
-          :disabled="isLookingUp"
+    <div class="registration-content" :class="{ 'lookup-collapsed': collapsed }">
+      <!-- Collapsed state: Just show a simple link -->
+      <div v-if="collapsed" class="lookup-collapsed-link">
+        <a 
+          href="#"
+          class="lookup-toggle-link"
+          @click.prevent="toggleCollapse"
+          aria-label="Expand search form"
         >
-          <span v-if="!isLookingUp" class="button-text">
-            <span class="button-icon">🔍</span>
-            Lookup Player
-          </span>
-          <span v-else class="button-text">
-            <span class="button-spinner"></span>
-            Looking up...
-          </span>
-        </button>
-      </form>
+          🔍 Search Again
+        </a>
+      </div>
+      
+      <!-- Expanded state: Show full form -->
+      <div v-show="!collapsed" class="lookup-expanded-container">
+        <div class="lookup-header">
+          <h3 class="lookup-title">Find Your Player Account</h3>
+        </div>
+        <div class="lookup-form-container">
+          <form @submit="handleSubmit" class="lookup-form">
+            <div class="input-wrapper">
+              <label for="phone-lookup" class="input-label">Phone Number</label>
+              <div class="input-container" :class="{ 'input-error': phoneError }">
+                <span class="input-prefix">+1</span>
+                <input 
+                  id="phone-lookup"
+                  v-model="phoneInput"
+                  type="tel" 
+                  maxlength="10" 
+                  placeholder="5101234567" 
+                  class="phone-input"
+                  :class="{ 'input-loading': isLookingUp, 'input-error': phoneError }"
+                  list="phone-history-list"
+                  autocomplete="tel"
+                  required 
+                  :disabled="isLookingUp"
+                  @input="phoneError = ''"
+                />
+                <datalist id="phone-history-list">
+                  <option v-for="phone in phoneHistory" :key="phone" :value="phone">
+                    {{ phone }}
+                  </option>
+                </datalist>
+                <span v-if="isLookingUp" class="input-spinner"></span>
+              </div>
+              <p v-if="phoneError" class="input-error-text">{{ phoneError }}</p>
+              <p v-else class="input-hint">Enter your 10-digit phone number (e.g., 5101234567)</p>
+            </div>
+            <button 
+              type="submit" 
+              class="lookup-button"
+              :class="{ 'button-loading': isLookingUp }"
+              :disabled="isLookingUp"
+            >
+              <span v-if="!isLookingUp" class="button-text">
+                <span class="button-icon">🔍</span>
+                Lookup Player
+              </span>
+              <span v-else class="button-text">
+                <span class="button-spinner"></span>
+                Looking up...
+              </span>
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   `
 };
@@ -662,29 +700,74 @@ const PlayerList = {
       emit('unregister-player', index);
     };
 
+    /**
+     * Filters input to only allow numeric characters (for PIN fields)
+     * Removes any non-digit characters as user types
+     * Limits to maximum 6 digits
+     * 
+     * @param {Event} e - Input event
+     */
+    const filterNumericInput = (e) => {
+      // Get current value and remove any non-numeric characters
+      const numericOnly = e.target.value.replace(/\D/g, '').slice(0, 6);
+      
+      // Update the input value - Vue's v-model will handle reactivity
+      // We need to update both the input and trigger the model update
+      e.target.value = numericOnly;
+      
+      // Update the model directly to ensure v-model syncs correctly
+      // Find which player this input belongs to by checking the id
+      const inputId = e.target.id;
+      if (inputId.includes('register-pin-')) {
+        const index = parseInt(inputId.replace('register-pin-', ''));
+        if (props.players[index]) {
+          props.players[index].registerToken = numericOnly;
+        }
+      } else if (inputId.includes('unregister-pin-')) {
+        const index = parseInt(inputId.replace('unregister-pin-', ''));
+        if (props.players[index]) {
+          props.players[index].unregisterToken = numericOnly;
+        }
+      }
+    };
+
     return {
       registerPlayer,
       unregisterPlayer,
+      filterNumericInput,
       capacityLastUpdated: props.capacityLastUpdated  // Expose prop to template
     };
   },
   template: `
     <div v-if="players.length > 0" class="result">
-      <p class="success">Manage your registration:</p>
+      <div class="result-header">
+        <p class="success">Players Found</p>
+        <p class="result-subtitle">Select an action below for each player</p>
+      </div>
       <capacity-banner :capacity="capacity" :last-updated="capacityLastUpdated" />
       
       <div v-for="(player, index) in players" :key="player.bttc_id || index" class="entry">
-        <div v-if="player.is_registered">
-          <p class="player-registered">
-            {{ player.first_name }} {{ player.last_name }} 
-            <span class="player-registered-label">(Already registered)</span>
+        <div class="entry-header">
+          <h4 class="player-name-heading">{{ player.first_name }} {{ player.last_name }}</h4>
+        </div>
+        
+        <div v-if="player.is_registered" class="entry-content">
+          <p class="player-registered-status">
+            <span class="status-icon">✓</span>
+            <span class="player-registered-label">Already registered</span>
           </p>
           <div class="unregister-form">
+            <label :for="'unregister-pin-' + index" class="pin-label">Enter your 6-digit PIN to unregister:</label>
             <input 
               type="text" 
-              :placeholder="'Enter your PIN'"
+              :id="'unregister-pin-' + index"
+              placeholder="000000"
               class="token-field" 
               v-model="player.unregisterToken"
+              maxlength="6"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              @input="filterNumericInput"
             />
             <button 
               type="button"
@@ -696,25 +779,26 @@ const PlayerList = {
             <span class="token-error" v-if="player.unregisterError">{{ player.unregisterError }}</span>
           </div>
         </div>
-        <div v-else>
-          <p v-if="capacity.isAtCapacity" class="player-capacity-limited">
-            {{ player.first_name }} {{ player.last_name }}
-          </p>
-          <p v-else>
-            {{ player.first_name }} {{ player.last_name }}
-          </p>
-          
-          <div v-if="capacity.isAtCapacity" class="register-form">
+        <div v-else class="entry-content">
+          <div v-if="capacity.isAtCapacity" class="register-form full-message">
             <p class="registration-full-message">
-              ❌ Registration is full ({{ capacity.confirmedCount }}/{{ capacity.playerCap }})
+              <span class="status-icon">❌</span>
+              Registration is full ({{ capacity.confirmedCount }}/{{ capacity.playerCap }})
             </p>
+            <p class="full-message-hint">Please check back later or contact BTTC support if you believe this is an error.</p>
           </div>
           <div v-else class="register-form">
+            <label :for="'register-pin-' + index" class="pin-label">Enter your 6-digit PIN to register:</label>
             <input 
               type="text" 
-              :placeholder="'Enter your PIN'"
+              :id="'register-pin-' + index"
+              placeholder="000000"
               class="token-field" 
               v-model="player.registerToken"
+              maxlength="6"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              @input="filterNumericInput"
             />
             <button 
               type="button"
@@ -1459,9 +1543,12 @@ const RegistrationApp = {
         </a>
       </div>
 
-      <h2>Round Robin Registration</h2>
+      <div class="page-header">
+        <h2>Round Robin Registration</h2>
+      </div>
 
       <registration-status 
+        v-if="!registrationOpen"
         :is-open="registrationOpen"
         :closing-time="closingTime"
         :next-opening="nextOpening"
