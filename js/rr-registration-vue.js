@@ -70,6 +70,10 @@ const CapacityBanner = {
   },
   computed: {
     capacityClass() {
+      // Event closed takes highest priority
+      if (!this.capacity.eventOpen) {
+        return 'capacity-closed';
+      }
       return this.capacity.isAtCapacity ? 'capacity-full' : 'capacity-available';
     },
     lastUpdatedText() {
@@ -78,7 +82,10 @@ const CapacityBanner = {
   },
   template: `
     <div class="capacity-banner" :class="capacityClass">
-      <div v-if="capacity.isAtCapacity">
+      <div v-if="!capacity.eventOpen">
+        🔴 Event registrations are CLOSED
+      </div>
+      <div v-else-if="capacity.isAtCapacity">
         🔴 Registration is FULL
       </div>
       <div v-else>
@@ -349,7 +356,14 @@ const PlayerList = {
             <span class="status-icon">✓</span>
             <span class="player-registered-label">Already registered</span>
           </p>
-          <div class="unregister-form">
+          <div v-if="!capacity.eventOpen" class="unregister-form">
+            <p class="registration-full-message">
+              <span class="status-icon">🔒</span>
+              Event registrations are currently closed
+            </p>
+            <p class="full-message-hint">You cannot unregister at this time. Please contact BTTC support if needed.</p>
+          </div>
+          <div v-else class="unregister-form">
             <label :for="'unregister-pin-' + index" class="pin-label">Enter your 6-digit PIN to unregister:</label>
             <input 
               type="text" 
@@ -373,7 +387,14 @@ const PlayerList = {
           </div>
         </div>
         <div v-else class="entry-content">
-          <div v-if="capacity.isAtCapacity" class="register-form full-message">
+          <div v-if="!capacity.eventOpen" class="register-form full-message">
+            <p class="registration-full-message">
+              <span class="status-icon">🔒</span>
+              Event registrations are currently closed
+            </p>
+            <p class="full-message-hint">Please check back later or contact BTTC support for more information.</p>
+          </div>
+          <div v-else-if="capacity.isAtCapacity" class="register-form full-message">
             <p class="registration-full-message">
               <span class="status-icon">❌</span>
               Registration is full ({{ capacity.confirmedCount }}/{{ capacity.playerCap }})
@@ -580,7 +601,8 @@ const RegistrationApp = {
       isAtCapacity: false,                       // Whether event is at capacity
       confirmedCount: 0,                        // Number of confirmed registrations
       playerCap: fallbackPlayerCap,             // Maximum capacity
-      spotsAvailable: 0                         // Available spots
+      spotsAvailable: 0,                        // Available spots
+      eventOpen: true                           // Whether event is accepting registrations
     });
     const capacityLastUpdated = ref(null);       // Timestamp when capacity was last fetched
     const showRegistrationDialog = ref(false);    // Controls registration dialog visibility
@@ -770,6 +792,11 @@ const RegistrationApp = {
         return;
       }
 
+      if (!capacity.value.eventOpen) {
+        alert('This event is not currently accepting registrations. Please check back later or contact support.');
+        return;
+      }
+
       if (capacity.value.isAtCapacity) {
         alert(`Registration is full! All ${capacity.value.playerCap} spots have been taken.`);
         return;
@@ -792,6 +819,11 @@ const RegistrationApp = {
     };
 
     const handleUnregisterPlayer = (index) => {
+      if (!capacity.value.eventOpen) {
+        alert('This event is not currently accepting changes. Please check back later or contact support.');
+        return;
+      }
+
       const player = players.value[index];
       
       // Validate PIN before making API call

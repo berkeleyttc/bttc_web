@@ -133,6 +133,12 @@
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
+.event-closed-text {
+  color: #856404;
+  font-weight: 600;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
 /* Roster Table Container */
 .roster-table-container {
   margin-top: 1rem;
