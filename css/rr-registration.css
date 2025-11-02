@@ -427,9 +427,9 @@ button:active {
 
 /* Roster Section - Distinct from registration form */
 .roster-section {
-  margin: 2rem 0;
-  border-top: 2px solid #e9ecef;
-  padding-top: 2rem;
+  margin: 0 0 2rem 0;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 2rem;
 }
 
 .roster-link-button {

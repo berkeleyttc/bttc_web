@@ -94,8 +94,14 @@ const getFetchOptions = (options = {}) => {
   
   // If API_KEY is configured, add X-API-Key header
   if (apiKey) {
-    const headers = new Headers(options.headers || {});
-    headers.set('X-API-Key', apiKey);
+    // Ensure we have a clean headers object
+    const existingHeaders = options.headers || {};
+    const headers = {
+      ...(existingHeaders instanceof Headers 
+        ? Object.fromEntries(existingHeaders.entries()) 
+        : existingHeaders),
+      'X-API-Key': apiKey
+    };
     
     console.debug('[ApiHandler] Adding X-API-Key header to request');
     
@@ -278,7 +284,7 @@ const RosterApp = {
   template: `
     <div class="roster-container">
       <a href="bttc_rr_registration_vue.html" class="back-link">← Back to Round Robin Registration</a>
-      <h3>Round Robin Player Roster</h3>
+      <h3>Round Robin Registered Players</h3>
       
       <div v-if="loading" class="loading-message">
         Loading roster...

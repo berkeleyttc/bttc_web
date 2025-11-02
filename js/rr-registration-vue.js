@@ -87,14 +87,14 @@ const getFetchOptions = (options = {}) => {
   
   // If API_KEY is configured, add X-API-Key header
   if (apiKey) {
-    // Handle both Headers object and plain object
-    let headers;
-    if (options.headers instanceof Headers) {
-      headers = new Headers(options.headers);
-    } else {
-      headers = new Headers(options.headers || {});
-    }
-    headers.set('X-API-Key', apiKey);
+    // Ensure we have a clean headers object
+    const existingHeaders = options.headers || {};
+    const headers = {
+      ...(existingHeaders instanceof Headers 
+        ? Object.fromEntries(existingHeaders.entries()) 
+        : existingHeaders),
+      'X-API-Key': apiKey
+    };
     
     return {
       ...options,
@@ -951,7 +951,14 @@ const RegistrationApp = {
   },
   template: `
     <div class="container" :class="{ 'registration-disabled': !registrationOpen }">
-      <h2 style="font-family: Arial, sans-serif; font-weight: bold;">Round Robin Sign-Up</h2>
+      <div class="roster-section">
+        <a href="bttc_roster_vue.html" class="roster-link-button">
+          <span class="roster-text">View Players Registered for Round Robin</span>
+          <span class="roster-subtext">See current RR registrations</span>
+        </a>
+      </div>
+
+      <h2 style="font-family: Arial, sans-serif; font-weight: bold;">Round Robin Registration</h2>
 
       <registration-status 
         :is-open="registrationOpen"
@@ -971,7 +978,7 @@ const RegistrationApp = {
           <h3 class="error-title">Player Not Found</h3>
           
           <div class="error-actions">
-            <a href="player_signup.html" class="signup-button">
+            <a href="bttc_player_signup_vue.html" class="signup-button">
               <span class="signup-button-text">Sign Up as New Player</span>
               <span class="signup-button-subtext">Create your player account</span>
             </a>
@@ -991,13 +998,6 @@ const RegistrationApp = {
         @register-player="handleRegisterPlayer"
         @unregister-player="handleUnregisterPlayer"
       />
-
-      <div class="roster-section">
-        <a href="bttc_roster_vue.html" class="roster-link-button">
-          <span class="roster-text">View Players Registered for Round Robin</span>
-          <span class="roster-subtext">See current RR registrations</span>
-        </a>
-      </div>
 
       <registration-dialog 
         :show="showRegistrationDialog"
