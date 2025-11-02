@@ -966,12 +966,22 @@ const RegistrationApp = {
         @lookup-error="handleLookupError"
       />
 
-      <div v-if="error" class="result">
-        <p class="error">{{ error }}</p>
-        <a href="player_signup.html" class="signup-link">
-          PLAYER INFO SIGNUP
-        </a>
-        <p>Otherwise Contact BTTC support at {{ supportPhone }} ({{ supportMethod }})</p>
+      <div v-if="error" class="error-section">
+        <div class="error-content">
+          <h3 class="error-title">Player Not Found</h3>
+          
+          <div class="error-actions">
+            <a href="player_signup.html" class="signup-button">
+              <span class="signup-button-text">Sign Up as New Player</span>
+              <span class="signup-button-subtext">Create your player account</span>
+            </a>
+          </div>
+          
+          <div class="error-support">
+            <p class="support-text">Need help? Contact BTTC support:</p>
+            <p class="support-contact">{{ supportPhone }} <span class="support-method">({{ supportMethod }})</span></p>
+          </div>
+        </div>
       </div>
 
       <player-list 
@@ -984,8 +994,8 @@ const RegistrationApp = {
 
       <div class="roster-section">
         <a href="bttc_roster_vue.html" class="roster-link-button">
-          <span class="roster-text">View Registered Players</span>
-          <span class="roster-subtext">See current registrations</span>
+          <span class="roster-text">View Players Registered for Round Robin</span>
+          <span class="roster-subtext">See current RR registrations</span>
         </a>
       </div>
 
