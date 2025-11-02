@@ -378,6 +378,14 @@ button:active {
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* Signup Section - Appears after player list */
+.signup-section {
+  margin: 2rem 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e9ecef;
+  text-align: center;
+}
+
 .error-support {
   margin-top: 2rem;
   padding-top: 1.5rem;

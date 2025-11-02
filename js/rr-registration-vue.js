@@ -999,6 +999,13 @@ const RegistrationApp = {
         @unregister-player="handleUnregisterPlayer"
       />
 
+      <div v-if="players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
+        <a href="bttc_player_signup_vue.html" class="signup-button">
+          <span class="signup-button-text">Sign Up Another Player</span>
+          <span class="signup-button-subtext">Create another player account associated with this phone number</span>
+        </a>
+      </div>
+
       <registration-dialog 
         :show="showRegistrationDialog"
         :player="currentRegistrationData?.player"
