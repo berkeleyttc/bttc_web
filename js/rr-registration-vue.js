@@ -3,6 +3,13 @@
  * 
  * Simple and elegant registration form.
  * 
+ * DEBUGGING GUIDE:
+ * - All debug logs use [RRRegistration] prefix for easy filtering
+ * - console.debug() for normal flow tracking
+ * - console.warn() for warnings/non-critical issues
+ * - console.error() for errors
+ * - Open browser console and filter by [RRRegistration] to see all logs
+ * 
  * @file js/rr-registration-vue.js
  */
 
@@ -19,6 +26,7 @@ const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
  * @returns {string} - User-friendly error message
  */
 const getErrorMessage = (error, context = 'operation') => {
+  console.debug('[RRRegistration] Processing error:', { error, context });
   const errorMessage = error?.message || String(error || '');
   const errorName = error?.name || '';
   
@@ -35,6 +43,7 @@ const getErrorMessage = (error, context = 'operation') => {
     errorMessage.includes('ERR_TIMED_OUT') ||
     errorMessage.includes('Load failed')
   ) {
+    console.warn('[RRRegistration] Network error detected');
     const supportContact = typeof ENV !== 'undefined' 
       ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
       : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
@@ -44,6 +53,7 @@ const getErrorMessage = (error, context = 'operation') => {
   // HTTP response errors
   if (error && error.response) {
     const status = error.response.status;
+    console.debug('[RRRegistration] HTTP error:', status);
     
     const supportContact = typeof ENV !== 'undefined' 
       ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
@@ -65,12 +75,14 @@ const getErrorMessage = (error, context = 'operation') => {
   
   // Generic error fallback
   if (error && error.message) {
+    console.debug('[RRRegistration] Generic error:', error.message);
     const supportContact = typeof ENV !== 'undefined' 
       ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
       : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
     return `An error occurred during ${context}: ${error.message}. Please try again or ${supportContact}.`;
   }
   
+  console.warn('[RRRegistration] Unknown error format');
   const supportContact = typeof ENV !== 'undefined' 
     ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
     : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
@@ -79,11 +91,16 @@ const getErrorMessage = (error, context = 'operation') => {
 
 /**
  * Creates fetch options with API headers if configured
+ * DEBUG: Check browser console for [RRRegistration][ApiHandler] logs to verify API key is being sent
  * @param {object} options - Original fetch options
  * @returns {object} - Fetch options with headers
  */
 const getFetchOptions = (options = {}) => {
   const apiKey = typeof ENV !== 'undefined' ? ENV.API_KEY : '';
+  
+  console.debug('[RRRegistration][ApiHandler] getFetchOptions called');
+  console.debug('[RRRegistration][ApiHandler] ENV defined:', typeof ENV !== 'undefined');
+  console.debug('[RRRegistration][ApiHandler] API_KEY value:', apiKey ? '***SET***' : 'NOT SET');
   
   // If API_KEY is configured, add X-API-Key header
   if (apiKey) {
@@ -96,30 +113,39 @@ const getFetchOptions = (options = {}) => {
       'X-API-Key': apiKey
     };
     
+    console.debug('[RRRegistration][ApiHandler] Adding X-API-Key header to request');
+    console.debug('[RRRegistration][ApiHandler] Headers being sent:', { ...headers, 'X-API-Key': '***REDACTED***' });
+    
     return {
       ...options,
       headers: headers
     };
   }
   
+  console.warn('[RRRegistration][ApiHandler] No API key found, returning options without X-API-Key header');
   return options;
 };
 
 /**
  * Handles API response and checks for errors
+ * DEBUG: Check [RRRegistration][ApiHandler] logs for response status and parsing issues
  * @param {Response} response - Fetch API response
  * @returns {Promise<object>} - Parsed JSON data
  * @throws {Error} - If response is not OK or JSON parsing fails
  */
 const handleApiResponse = async (response) => {
+  console.debug('[RRRegistration][ApiHandler] Response status:', response.status, response.statusText);
+  
   if (!response.ok) {
     let errorMessage = 'Server error';
     try {
       const errorData = await response.json();
       errorMessage = errorData.message || errorData.error || errorMessage;
+      console.debug('[RRRegistration][ApiHandler] Error data:', errorData);
     } catch {
       // If response is not JSON, use status text
       errorMessage = response.statusText || `HTTP ${response.status}`;
+      console.debug('[RRRegistration][ApiHandler] Non-JSON error response');
     }
     
     const error = new Error(errorMessage);
@@ -129,8 +155,10 @@ const handleApiResponse = async (response) => {
   
   try {
     const data = await response.json();
+    console.debug('[RRRegistration][ApiHandler] Response parsed successfully');
     return data;
   } catch (jsonError) {
+    console.error('[RRRegistration][ApiHandler] JSON parse error:', jsonError);
     throw new Error('Invalid response from server. Please try again.');
   }
 };
@@ -736,6 +764,7 @@ const RegistrationApp = {
     };
 
     const checkRegistrationCapacity = async () => {
+      console.debug('[RRRegistration][App] Checking registration capacity');
       try {
         const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
         const fetchOptions = getFetchOptions({ method: 'POST' });
@@ -748,11 +777,13 @@ const RegistrationApp = {
           spotsAvailable: Number(data.spots_available || 0),
           eventOpen: !!data.event_open
         };
+        console.debug('[RRRegistration][App] Capacity updated:', capacity.value);
         // Clear any previous capacity errors on success
         if (error.value && error.value.includes('capacity')) {
           error.value = '';
         }
       } catch (err) {
+        console.error('[RRRegistration][App] Capacity check failed:', err);
         // Set capacity defaults to prevent UI issues
         capacity.value = { isAtCapacity: false, confirmedCount: 0, playerCap: fallbackPlayerCap, spotsAvailable: 0, eventOpen: false };
         
@@ -766,7 +797,10 @@ const RegistrationApp = {
     };
 
     const handlePlayerFound = (data) => {
+      console.debug('[RRRegistration][App] Player found:', { result: data.result, playersCount: data.length });
+      
       if (data.result === "None" || data.length === 0) {
+        console.debug('[RRRegistration][App] No players found for phone number');
         error.value = 'No player found for this phone number.';
         players.value = [];
         return;
@@ -780,6 +814,7 @@ const RegistrationApp = {
         registerError: '',
         unregisterError: ''
       }));
+      console.debug('[RRRegistration][App] Players set:', { count: players.value.length });
       
       checkRegistrationCapacity();
     };
@@ -824,12 +859,14 @@ const RegistrationApp = {
 
     const confirmRegistration = async (data) => {
       if (!currentRegistrationData.value) {
+        console.error('[RRRegistration][App] No player data found for registration');
         alert('Error: No player data found. Please try looking up your player again.');
         showRegistrationDialog.value = false;
         return;
       }
       
       const { player, index } = currentRegistrationData.value;
+      console.debug('[RRRegistration][App] Confirming registration:', { bttc_id: player.bttc_id, payment_method: data.paymentMethod });
       
       try {
         const payload = {
@@ -843,6 +880,7 @@ const RegistrationApp = {
 
         const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
         const url = `${apiUrl}/rr/register`;
+        console.debug('[RRRegistration][App] Submitting registration to:', url);
         
         const fetchOptions = getFetchOptions({
           method: "POST",
@@ -854,11 +892,13 @@ const RegistrationApp = {
         const result = await handleApiResponse(response);
         
         if (result.success) {
+          console.debug('[RRRegistration][App] Registration successful');
           alert(result.message);
           showRegistrationDialog.value = false;
           players.value = [];
           error.value = '';
         } else {
+          console.warn('[RRRegistration][App] Registration failed:', result.message);
           if (result.isAtCapacity) {
             alert(`Registration is full! All ${result.playerCap} spots have been taken.`);
           } else {
@@ -867,6 +907,7 @@ const RegistrationApp = {
           showRegistrationDialog.value = false;
         }
       } catch (err) {
+        console.error('[RRRegistration][App] Registration error:', err);
         const friendlyMessage = getErrorMessage(err, 'registration');
         players.value[index].registerError = friendlyMessage;
         showRegistrationDialog.value = false;

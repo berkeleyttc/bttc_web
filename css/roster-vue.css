@@ -1,9 +1,29 @@
-/* Vue.js Specific Styles for BTTC Roster */
+/**
+ * BTTC Round Robin Roster - Vue.js Styles
+ * 
+ * DEBUGGING GUIDE:
+ * - Use browser DevTools to inspect elements and see applied styles
+ * - Check console for [RosterApp] prefixed logs for JavaScript debugging
+ * - If styles aren't applying, check CSS file is loaded (Network tab)
+ * - Use browser's element inspector to see computed styles
+ * - Table sorting uses .sortable, .sorted-asc, .sorted-desc classes
+ * - Print styles are separated at bottom of file
+ * 
+ * @file css/roster-vue.css
+ */
+
+/* ========================================
+   RESET & BASE STYLES
+   ======================================== */
 
 /* Vue.js App Container */
 #vue-roster-app {
   min-height: 100vh;
 }
+
+/* ========================================
+   ROSTER CONTAINER & LAYOUT
+   ======================================== */
 
 /* Roster Container */
 .roster-container {
@@ -89,6 +109,12 @@
   margin-bottom: 1rem;
   color: #666;
   font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.capacity-full-text {
+  color: #dc3545;
+  font-weight: 600;
 }
 
 /* Roster Table Container */

@@ -1,4 +1,21 @@
-/* Round Robin Registration Styles */
+/**
+ * BTTC Round Robin Registration - Vue.js Styles
+ * 
+ * DEBUGGING GUIDE:
+ * - Use browser DevTools to inspect elements and see applied styles
+ * - Check console for [RRRegistration] prefixed logs for JavaScript debugging
+ * - If styles aren't applying, check CSS file is loaded (Network tab)
+ * - Use browser's element inspector to see computed styles
+ * - Common issues: z-index conflicts (dialogs), overflow hidden, display none
+ * - Registration status banners use .status-open/.status-closed classes
+ * - Capacity banners use .capacity-full/.capacity-available classes
+ * 
+ * @file css/rr-registration.css
+ */
+
+/* ========================================
+   RESET & BASE STYLES
+   ======================================== */
 
 /* Vue.js App Container */
 #vue-registration-app {

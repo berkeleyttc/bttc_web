@@ -159,6 +159,8 @@ const RosterApp = {
     const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
     const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
     const supportMethod = typeof ENV !== 'undefined' ? ENV.SUPPORT_METHOD : 'TEXT ONLY';
+    const defaultPlayerCap = typeof ENV !== 'undefined' ? ENV.DEFAULT_PLAYER_CAP : 64;
+    const fallbackPlayerCap = typeof ENV !== 'undefined' ? ENV.FALLBACK_PLAYER_CAP : 65;
     
     // API endpoint
     const API_URL = `${apiUrl}/rr/roster`;
@@ -167,10 +169,44 @@ const RosterApp = {
     const players = ref([]);
     const loading = ref(true);
     const error = ref('');
+    const capacity = ref({
+      isAtCapacity: false,
+      confirmedCount: 0,
+      playerCap: fallbackPlayerCap,
+      spotsAvailable: 0
+    });
     const currentSort = reactive({
       key: null,
       direction: 'asc'
     });
+
+    /**
+     * Fetches capacity data from the API
+     */
+    const fetchCapacity = async () => {
+      console.debug('[RosterApp] Fetching capacity data');
+      try {
+        const fetchOptions = getFetchOptions({ method: 'POST' });
+        const response = await fetch(`${apiUrl}/rr/capacity`, fetchOptions);
+        const data = await handleApiResponse(response);
+        capacity.value = {
+          isAtCapacity: !!data.roster_full,
+          confirmedCount: Number(data.confirmed_count || 0),
+          playerCap: Number(data.player_cap || defaultPlayerCap),
+          spotsAvailable: Number(data.spots_available || 0)
+        };
+        console.debug('[RosterApp] Capacity updated:', capacity.value);
+      } catch (err) {
+        console.error('[RosterApp] Capacity check failed:', err);
+        // Set capacity defaults to prevent UI issues
+        capacity.value = { 
+          isAtCapacity: false, 
+          confirmedCount: 0, 
+          playerCap: fallbackPlayerCap, 
+          spotsAvailable: 0 
+        };
+      }
+    };
 
     /**
      * Fetches roster data from the API
@@ -192,6 +228,9 @@ const RosterApp = {
         
         players.value = data;
         console.debug('[RosterApp] Roster loaded successfully, players count:', players.value.length);
+        
+        // Fetch capacity information after roster is loaded
+        await fetchCapacity();
       } catch (err) {
         console.error('[RosterApp] Error fetching roster:', err);
         error.value = getErrorMessage(err, 'loading roster');
@@ -257,6 +296,57 @@ const RosterApp = {
       return currentSort.direction === 'asc' ? 'sortable sorted-asc' : 'sortable sorted-desc';
     };
 
+    /**
+     * Formats a date string in PST timezone for user-friendly display
+     * DEBUG: Check console for [RosterApp][DateFormatter] logs if date formatting issues occur
+     * @param {string} dateString - Date string from API
+     * @returns {string} - Formatted date string in PST
+     */
+    const formatDatePST = (dateString) => {
+      if (!dateString) {
+        console.warn('[RosterApp][DateFormatter] Empty date string');
+        return '';
+      }
+
+      try {
+        const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
+        const date = new Date(dateString);
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          console.warn('[RosterApp][DateFormatter] Invalid date:', dateString);
+          return dateString; // Return original if invalid
+        }
+
+        // Format date in PST/PDT timezone
+        const formatted = date.toLocaleString("en-US", {
+          timeZone: timezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: 'numeric',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+
+        // Get timezone abbreviation (PST/PDT)
+        const timezoneAbbr = date.toLocaleTimeString("en-US", {
+          timeZone: timezone,
+          timeZoneName: 'short'
+        }).split(' ').pop() || 'PST';
+
+        // Combine formatted date with timezone
+        const result = `${formatted} ${timezoneAbbr}`;
+        console.debug('[RosterApp][DateFormatter] Formatted date:', { original: dateString, formatted: result });
+        
+        return result;
+      } catch (err) {
+        console.error('[RosterApp][DateFormatter] Error formatting date:', err, dateString);
+        return dateString; // Return original on error
+      }
+    };
+
     // Fetch roster on mount
     onMounted(() => {
       console.debug('[RosterApp] Component mounted, fetching roster...');
@@ -266,16 +356,22 @@ const RosterApp = {
     // Computed properties
     const hasPlayers = computed(() => players.value.length > 0);
     const playerCount = computed(() => players.value.length);
+    const spotsRemaining = computed(() => {
+      return Math.max(0, capacity.value.playerCap - capacity.value.confirmedCount);
+    });
 
     return {
       players,
       loading,
       error,
+      capacity,
       currentSort,
       hasPlayers,
       playerCount,
+      spotsRemaining,
       sortBy,
       getSortClass,
+      formatDatePST,
       fetchRoster,
       supportPhone,
       supportMethod
@@ -300,7 +396,14 @@ const RosterApp = {
       </div>
       
       <div v-else class="roster-table-container">
-        <p class="player-count">{{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} registered</p>
+        <p class="player-count">
+          {{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} registered
+          <span v-if="capacity.playerCap > 0">
+            • {{ capacity.confirmedCount }}/{{ capacity.playerCap }} capacity
+            <span v-if="spotsRemaining > 0">• {{ spotsRemaining }} spot{{ spotsRemaining !== 1 ? 's' : '' }} remaining</span>
+            <span v-else class="capacity-full-text">• Full</span>
+          </span>
+        </p>
         <table class="roster-table">
           <thead>
             <tr>
@@ -326,7 +429,7 @@ const RosterApp = {
           </thead>
           <tbody>
             <tr v-for="(player, index) in players" :key="index">
-              <td>{{ player.registered_at }}</td>
+              <td>{{ formatDatePST(player.registered_at) }}</td>
               <td>{{ player.full_name }}</td>
               <td>{{ player.rating }}</td>
             </tr>

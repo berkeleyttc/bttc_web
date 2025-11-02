@@ -1,8 +1,19 @@
 /**
  * BTTC Player Signup - Vue.js Styles
  * 
+ * DEBUGGING GUIDE:
+ * - Use browser DevTools to inspect elements and see applied styles
+ * - Check console for [PlayerSignup] prefixed logs for JavaScript debugging
+ * - If styles aren't applying, check CSS file is loaded (Network tab)
+ * - Use browser's element inspector to see computed styles
+ * - Common issues: z-index conflicts, overflow hidden, display none
+ * 
  * @file css/player-signup.css
  */
+
+/* ========================================
+   RESET & BASE STYLES
+   ======================================== */
 
 * {
   box-sizing: border-box;
