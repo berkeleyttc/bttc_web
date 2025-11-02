@@ -1,218 +1,9 @@
-/**
- * BTTC Round Robin Registration - Vue.js
- * 
- * Simple and elegant registration form for Round Robin tournament registration.
- * 
- * APPLICATION OVERVIEW:
- * This Vue.js application allows players to register for Round Robin tournaments
- * by entering their phone number. It shows registration status, capacity, and
- * allows players to view, register, and unregister.
- * 
- * COMPONENT STRUCTURE:
- * - RegistrationStatus: Shows whether registration is open/closed with time info
- * - PlayerLookup: Phone number input and lookup (with history from localStorage)
- * - PlayerList: Displays players found by phone number, allows registration/unregistration
- * - RegistrationDialog: Modal confirmation dialog for registration
- * - UnregistrationDialog: Modal confirmation dialog for unregistration
- * - RegistrationApp: Main app component that orchestrates the flow
- * 
- * APPLICATION FLOW:
- * 1. App checks registration status (time-based, configurable via ENV)
- * 2. User enters phone number → PlayerLookup component
- * 3. API lookup by phone → /rr/search endpoint
- * 4. Players found → PlayerList component shows matches
- * 5. User clicks Register → Opens RegistrationDialog
- * 6. User confirms → POST to /rr/register API
- * 7. Success → Updates player list, shows confirmation
- * 
- * REGISTRATION RULES (configurable via ENV):
- * - Opens: Configurable day/time (default: Wednesday at 00:00/midnight)
- * - Closes: Configurable day/time (default: Friday at 18:45/6:45 PM)
- * - Capacity check before allowing registration
- * - Configure via REGISTRATION_OPENING_DAY, REGISTRATION_OPENING_HOUR, REGISTRATION_OPENING_MINUTE
- * - Configure via REGISTRATION_CLOSING_DAY, REGISTRATION_CLOSING_HOUR, REGISTRATION_CLOSING_MINUTE
- * 
- * @file js/rr-registration-vue.js
- */
+// BTTC Round Robin Registration
+// Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateToken
 
 const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
 
-// ========================================
-// ERROR HANDLING UTILITY
-// ========================================
 
-/**
- * Converts technical errors into user-friendly messages
- * 
- * This function normalizes various error types (network errors, HTTP errors, etc.)
- * into messages that users can understand, with support contact information.
- * 
- * @param {Error|object} error - The error object from try/catch or API response
- * @param {string} context - Context of the operation (e.g., 'player lookup', 'registration')
- * @returns {string} - User-friendly error message with support contact info
- */
-const getErrorMessage = (error, context = 'operation') => {
-  const errorMessage = error?.message || String(error || '');
-  const errorName = error?.name || '';
-  
-  // Check for network-related errors (API down, connection refused, timeout, etc.)
-  // These occur when the server is unreachable, not just when API returns an error
-  if (
-    error instanceof TypeError ||
-    errorName === 'TypeError' ||
-    errorMessage.includes('Failed to fetch') ||
-    errorMessage.includes('NetworkError') ||
-    errorMessage.includes('Network request failed') ||
-    errorMessage.includes('ERR_INTERNET_DISCONNECTED') ||
-    errorMessage.includes('ERR_CONNECTION_REFUSED') ||
-    errorMessage.includes('ERR_CONNECTION_TIMED_OUT') ||
-    errorMessage.includes('ERR_TIMED_OUT') ||
-    errorMessage.includes('Load failed')
-  ) {
-    const supportContact = typeof ENV !== 'undefined' 
-      ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
-      : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
-    return `Unable to connect to the server. The registration service may be temporarily unavailable. Please try again in a few moments or ${supportContact}.`;
-  }
-  
-  // Check for HTTP response errors (server returned an error status code)
-  // These occur when the server is reachable but returns an error (4xx, 5xx)
-  if (error && error.response) {
-    const status = error.response.status;
-    
-    const supportContact = typeof ENV !== 'undefined' 
-      ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
-      : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
-    
-    if (status === 0) {
-      return `Connection error: The server is unreachable. Please try again later or ${supportContact}.`;
-    }
-    if (status >= 500) {
-      return `Server error: The registration service is experiencing technical difficulties. Please try again in a few moments or ${supportContact}.`;
-    }
-    if (status === 404) {
-      return `Service not found. Please ${supportContact}.`;
-    }
-    if (status === 503) {
-      return `Service unavailable: The registration service is temporarily down for maintenance. Please try again later or ${supportContact}.`;
-    }
-  }
-  
-  // Generic error fallback
-  if (error && error.message) {
-    const supportContact = typeof ENV !== 'undefined' 
-      ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
-      : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
-    return `An error occurred during ${context}: ${error.message}. Please try again or ${supportContact}.`;
-  }
-  
-  const supportContact = typeof ENV !== 'undefined' 
-    ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
-    : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
-  return `An unexpected error occurred during ${context}. Please try again or ${supportContact}.`;
-};
-
-/**
- * Creates fetch options with API authentication headers if configured
- * 
- * This function ensures all API requests include the X-API-Key header when
- * ENV.API_KEY is set. It handles both plain object headers and Headers objects.
- * 
- * WHY: The backend API requires authentication via X-API-Key header to prevent
- * unauthorized access. This function centralizes header injection logic.
- * 
- * @param {object} options - Original fetch options (method, headers, body, etc.)
- * @returns {object} - Fetch options with X-API-Key header added if API_KEY is configured
- */
-const getFetchOptions = (options = {}) => {
-  const apiKey = typeof ENV !== 'undefined' ? ENV.API_KEY : '';
-  
-  // If API_KEY is configured in env.js, add it to all requests
-  if (apiKey) {
-    // Handle both Headers object and plain object formats
-    // Headers objects need to be converted to plain objects for spreading
-    const existingHeaders = options.headers || {};
-    const headers = {
-      ...(existingHeaders instanceof Headers 
-        ? Object.fromEntries(existingHeaders.entries()) 
-        : existingHeaders),
-      'X-API-Key': apiKey  // Add API key header for authentication
-    };
-    
-    return {
-      ...options,
-      headers: headers
-    };
-  }
-  
-  // No API key configured, return options as-is
-  // This allows the app to work without API key (though backend may reject requests)
-  return options;
-};
-
-/**
- * Handles API response and checks for errors before parsing JSON
- * 
- * This function centralizes response handling:
- * 1. Checks if response.ok (status 200-299)
- * 2. Parses JSON from response
- * 3. Throws errors with context if anything fails
- * 
- * WHY: Centralizes error handling so all API calls handle errors consistently
- * 
- * @param {Response} response - Fetch API Response object
- * @returns {Promise<object>} - Parsed JSON data from successful response
- * @throws {Error} - If response is not OK (non-2xx) or JSON parsing fails
- */
-const handleApiResponse = async (response) => {
-  // Check if response has an error status (4xx, 5xx, etc.)
-  if (!response.ok) {
-    let errorMessage = 'Server error';
-    try {
-      // Try to get error message from JSON response body
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-    } catch {
-      // If response body isn't JSON, use HTTP status text
-      errorMessage = response.statusText || `HTTP ${response.status}`;
-    }
-    
-    // Attach response object to error for getErrorMessage to use
-    const error = new Error(errorMessage);
-    error.response = response;
-    throw error;
-  }
-  
-  // Response is OK, parse JSON body
-  try {
-    const data = await response.json();
-    return data;
-  } catch (jsonError) {
-    // JSON parsing failed (invalid JSON in response)
-    throw new Error('Invalid response from server. Please try again.');
-  }
-};
-
-
-// ========================================
-// REGISTRATION STATUS COMPONENT
-// ========================================
-
-/**
- * RegistrationStatus Component
- * 
- * PURPOSE: Displays whether registration is open or closed, with time information
- * 
- * PROPS:
- * - registrationOpen: Boolean indicating if registration is currently open
- * - closingTime: Formatted string showing when registration closes (if open)
- * - nextOpening: Formatted string showing when registration will next open (if closed)
- * 
- * BEHAVIOR:
- * - Shows "Registration is OPEN" with closing time if open
- * - Shows "Registration is CLOSED" with next opening time if closed
- * - Uses color coding (green for open, red for closed)
- */
 const RegistrationStatus = {
   props: {
     isOpen: Boolean,
@@ -242,29 +33,12 @@ const RegistrationStatus = {
   }
 };
 
-// ========================================
-// CAPACITY BANNER COMPONENT
-// ========================================
-
-/**
- * CapacityBanner Component
- * 
- * PURPOSE: Displays capacity information with last updated timestamp
- * 
- * PROPS:
- * - capacity: Object with capacity info (isAtCapacity, confirmedCount, playerCap, spotsAvailable)
- * - lastUpdated: Timestamp when capacity was last fetched (optional)
- */
 const CapacityBanner = {
   props: {
     capacity: Object,
     lastUpdated: Number  // Timestamp in milliseconds, optional
   },
   methods: {
-    /**
-     * Formats a timestamp into a user-friendly "last updated" string
-     * Shows relative time for recent updates (e.g., "5 seconds ago") or formatted time for older
-     */
     formatLastUpdated(timestamp) {
       if (!timestamp) return '';
       
@@ -320,33 +94,9 @@ const CapacityBanner = {
   `
 };
 
-// ========================================
-// PHONE HISTORY UTILITY
-// ========================================
+const PHONE_HISTORY_KEY = 'bttc_phone_history';
+const MAX_HISTORY_ITEMS = 10;
 
-/**
- * Phone History Utilities
- * 
- * PURPOSE: Manages phone number history in localStorage for user convenience
- * 
- * BEHAVIOR:
- * - Stores recently used phone numbers (max 10)
- * - Most recent numbers appear first
- * - Persists across browser sessions via localStorage
- * - Used in PlayerLookup component's datalist for autocomplete
- */
-
-const PHONE_HISTORY_KEY = 'bttc_phone_history';  // localStorage key for phone history
-const MAX_HISTORY_ITEMS = 10;                     // Maximum number of phone numbers to store
-
-/**
- * Retrieves phone number history from browser's localStorage
- * 
- * Returns empty array if localStorage is unavailable or corrupted.
- * Used to populate autocomplete datalist in PlayerLookup component.
- * 
- * @returns {string[]} Array of phone numbers (most recent first), empty array on error
- */
 const getPhoneHistory = () => {
   try {
     const history = localStorage.getItem(PHONE_HISTORY_KEY);
@@ -357,18 +107,6 @@ const getPhoneHistory = () => {
   }
 };
 
-/**
- * Saves a phone number to history, maintaining recent-first order
- * 
- * FLOW:
- * 1. Get current history
- * 2. Remove phone if it already exists (to move it to top)
- * 3. Add phone to beginning of array
- * 4. Keep only the most recent MAX_HISTORY_ITEMS entries
- * 5. Save back to localStorage
- * 
- * @param {string} phone - Phone number to save (must be cleaned, 10 digits)
- */
 const savePhoneToHistory = (phone) => {
   try {
     const history = getPhoneHistory();
@@ -384,33 +122,6 @@ const savePhoneToHistory = (phone) => {
   }
 };
 
-// ========================================
-// PLAYER LOOKUP COMPONENT
-// ========================================
-
-/**
- * PlayerLookup Component
- * 
- * PURPOSE: Allows users to enter phone number and look up their player account(s)
- * 
- * PROPS:
- * - registrationOpen: Boolean indicating if registration is currently open
- * 
- * BEHAVIOR:
- * - Phone number input with autocomplete from localStorage history
- * - Validates phone number format (10 digits, valid area/exchange codes)
- * - Makes API call to /rr/search?phone=... endpoint (returns { players: [], capacity: {} })
- * - Saves successful lookups to phone history for future use
- * - Shows loading state during API call
- * - Emits 'player-found' with results (includes players and capacity) or 'lookup-error' on failure
- * 
- * VALIDATION RULES:
- * - Removes all non-digits
- * - Removes leading '1' if present (country code)
- * - Must be exactly 10 digits (configurable via ENV.PHONE_NUMBER_LENGTH)
- * - Area code (first 3 digits) cannot start with 0 or 1
- * - Exchange code (next 3 digits) cannot start with 0 or 1
- */
 const PlayerLookup = {
   props: {
     registrationOpen: Boolean  // Whether registration is currently open
@@ -424,70 +135,6 @@ const PlayerLookup = {
     const phoneHistory = ref([]);     // Phone history from localStorage for autocomplete
     const collapsed = ref(false);     // Whether the search form is minimized/collapsed
 
-    /**
-     * Validates and normalizes phone number format
-     * 
-     * VALIDATION STEPS:
-     * 1. Remove all non-digit characters
-     * 2. Remove leading '1' if present (US country code)
-     * 3. Check length matches required length (default 10 digits)
-     * 4. Validate area code format (can't start with 0 or 1)
-     * 5. Validate exchange code format (can't start with 0 or 1)
-     * 
-     * @param {string} phone - Raw phone input (may include formatting like dashes, spaces, parens)
-     * @returns {object} - { valid: boolean, phone?: string (cleaned), message?: string (error message) }
-     */
-    const validatePhone = (phone) => {
-      // Remove all non-digits (spaces, dashes, parens, etc.)
-      const digitsOnly = phone.replace(/\D/g, '');
-      
-      // Remove leading 1 if present (US country code)
-      const cleaned = digitsOnly.replace(/^1/, '');
-      
-      // Check if empty after cleaning
-      if (!cleaned) {
-        return { valid: false, message: 'Please enter a phone number.' };
-      }
-      
-      // Check length matches required (default 10, configurable via ENV)
-      const requiredLength = typeof ENV !== 'undefined' ? ENV.PHONE_NUMBER_LENGTH : 10;
-      if (cleaned.length < requiredLength) {
-        return { valid: false, message: `Phone number must be at least ${requiredLength} digits.` };
-      }
-      
-      if (cleaned.length > requiredLength) {
-        return { valid: false, message: `Phone number must be exactly ${requiredLength} digits.` };
-      }
-      
-      // Validate area code (first 3 digits can't start with 0 or 1)
-      // This is a US phone number format rule
-      const areaCode = cleaned.substring(0, 3);
-      if (areaCode[0] === '0' || areaCode[0] === '1') {
-        return { valid: false, message: 'Invalid area code. Area codes cannot start with 0 or 1.' };
-      }
-      
-      // Validate exchange code (next 3 digits can't start with 0 or 1)
-      // This is a US phone number format rule
-      const exchangeCode = cleaned.substring(3, 6);
-      if (exchangeCode[0] === '0' || exchangeCode[0] === '1') {
-        return { valid: false, message: 'Invalid phone number format.' };
-      }
-      
-      // All validation passed, return cleaned phone number
-      return { valid: true, phone: cleaned };
-    };
-
-    /**
-     * Handles phone lookup form submission
-     * 
-     * FLOW:
-     * 1. Check if registration is open (show alert if closed)
-     * 2. Validate phone number format
-     * 3. If valid, make API call to /rr/search endpoint
-     * 4. On success: Save to history, emit 'player-found' with results
-     * 5. On error: Emit 'lookup-error' with user-friendly message
-     * 6. Always: Reset loading state
-     */
     const handleSubmit = async (e) => {
       e.preventDefault();
       
@@ -497,7 +144,6 @@ const PlayerLookup = {
         return;
       }
 
-      // Validate phone number format
       const validation = validatePhone(phoneInput.value);
       if (!validation.valid) {
         phoneError.value = validation.message;
@@ -545,11 +191,6 @@ const PlayerLookup = {
       }
     };
 
-    /**
-     * Toggles the collapsed state of the search form
-     * 
-     * When expanding, clears any errors to provide a fresh start
-     */
     const toggleCollapse = () => {
       collapsed.value = !collapsed.value;
       // Clear errors when expanding to provide a fresh start
@@ -558,8 +199,6 @@ const PlayerLookup = {
       }
     };
 
-    // Load phone history from localStorage on component mount
-    // This populates the autocomplete datalist
     onMounted(() => {
       phoneHistory.value = getPhoneHistory();
     });
@@ -645,33 +284,6 @@ const PlayerLookup = {
   `
 };
 
-// ========================================
-// PLAYER LIST COMPONENT
-// ========================================
-
-/**
- * PlayerList Component
- * 
- * PURPOSE: Displays list of players found by phone number, with registration/unregistration actions
- * 
- * PROPS:
- * - players: Array of player objects with registration status
- * - capacity: Object with capacity info (isAtCapacity, confirmedCount, playerCap, spotsAvailable)
- * 
- * BEHAVIOR:
- * - Shows capacity banner if at capacity
- * - Lists all players associated with the phone number
- * - Shows "Register" button for unregistered players
- * - Shows "Unregister" button for registered players
- * - Each button emits event to parent component
- * - Shows "Sign Up Another Player" link if players are found
- * 
- * PLAYER OBJECT STRUCTURE:
- * - bttc_id: Player's BTTC ID
- * - first_name, last_name: Player name
- * - is_registered: Boolean indicating registration status
- * - [other fields may vary]
- */
 const PlayerList = {
   props: {
     players: Array,        // Array of player objects from search
@@ -680,33 +292,14 @@ const PlayerList = {
   },
   emits: ['register-player', 'unregister-player'],
   setup(props, { emit }) {
-    /**
-     * Handles register button click
-     * Emits event to parent with player index
-     * 
-     * @param {number} index - Index of player in players array
-     */
     const registerPlayer = (index) => {
       emit('register-player', index);
     };
 
-    /**
-     * Handles unregister button click
-     * Emits event to parent with player index
-     * 
-     * @param {number} index - Index of player in players array
-     */
     const unregisterPlayer = (index) => {
       emit('unregister-player', index);
     };
 
-    /**
-     * Filters input to only allow numeric characters (for PIN fields)
-     * Removes any non-digit characters as user types
-     * Limits to maximum 6 digits
-     * 
-     * @param {Event} e - Input event
-     */
     const filterNumericInput = (e) => {
       // Get current value and remove any non-numeric characters
       const numericOnly = e.target.value.replace(/\D/g, '').slice(0, 6);
@@ -818,26 +411,6 @@ const PlayerList = {
   }
 };
 
-// ========================================
-// REGISTRATION DIALOG COMPONENT
-// ========================================
-
-/**
- * RegistrationDialog Component
- * 
- * PURPOSE: Modal confirmation dialog for Round Robin registration
- * 
- * PROPS:
- * - show: Boolean controlling dialog visibility
- * - player: Player object being registered
- * 
- * BEHAVIOR:
- * - Displays as overlay modal when show=true
- * - Collects payment method (cash or Zelle/Venmo) - required
- * - Collects optional comments
- * - On confirm: Emits 'confirm' event with payment method and comments
- * - On close/cancel: Emits 'close' event and clears form
- */
 const RegistrationDialog = {
   props: {
     show: Boolean,    // Controls dialog visibility
@@ -849,10 +422,6 @@ const RegistrationDialog = {
     const paymentMethod = ref('');  // 'cash' or 'zelle_venmo'
     const comments = ref('');         // Optional comments
 
-    /**
-     * Handles confirm button click
-     * Validates that payment method is selected, then emits confirm event
-     */
     const handleConfirm = () => {
       // Payment method is required
       if (!paymentMethod.value) {
@@ -868,10 +437,6 @@ const RegistrationDialog = {
       emit('confirm', data);
     };
 
-    /**
-     * Handles close/cancel button click
-     * Clears form and emits close event
-     */
     const handleClose = () => {
       paymentMethod.value = '';
       comments.value = '';
@@ -931,25 +496,6 @@ const RegistrationDialog = {
   `
 };
 
-// ========================================
-// UNREGISTRATION DIALOG COMPONENT
-// ========================================
-
-/**
- * UnregistrationDialog Component
- * 
- * PURPOSE: Modal confirmation dialog for unregistering from Round Robin
- * 
- * PROPS:
- * - show: Boolean controlling dialog visibility
- * - player: Player object being unregistered
- * 
- * BEHAVIOR:
- * - Displays as overlay modal when show=true
- * - Collects optional reason for unregistering
- * - On confirm: Emits 'confirm' event with comments
- * - On close/cancel: Emits 'close' event and clears form
- */
 const UnregistrationDialog = {
   props: {
     show: Boolean,    // Controls dialog visibility
@@ -960,20 +506,12 @@ const UnregistrationDialog = {
     // Form state
     const comments = ref('');  // Optional reason for unregistering
 
-    /**
-     * Handles confirm button click
-     * Emits confirm event with comments
-     */
     const handleConfirm = () => {
       emit('confirm', {
         comments: comments.value
       });
     };
 
-    /**
-     * Handles close/cancel button click
-     * Clears form and emits close event
-     */
     const handleClose = () => {
       comments.value = '';
       emit('close');
@@ -1007,39 +545,6 @@ const UnregistrationDialog = {
   `
 };
 
-// ========================================
-// MAIN REGISTRATION APP COMPONENT
-// ========================================
-
-/**
- * RegistrationApp Component
- * 
- * PURPOSE: Main application component that orchestrates the Round Robin registration flow
- * 
- * COMPONENT HIERARCHY:
- * RegistrationApp (this component)
- *   ├── RegistrationStatus (status banner at top)
- *   ├── PlayerLookup (phone input form)
- *   ├── PlayerList (players found, with register/unregister buttons)
- *   ├── RegistrationDialog (registration confirmation modal)
- *   └── UnregistrationDialog (unregistration confirmation modal)
- * 
- * APPLICATION FLOW:
- * 1. App initializes → Checks registration status (time-based)
- * 2. User enters phone → PlayerLookup emits 'player-found'
- * 3. Players displayed → PlayerList shows matches
- * 4. User clicks Register → Opens RegistrationDialog
- * 5. User confirms → POST to /rr/register API
- * 6. Success → Updates player list, refreshes capacity
- * 
- * REGISTRATION RULES (configurable via ENV):
- * - Opens: Configurable day/time (default: Wednesday at 00:00/midnight)
- * - Closes: Configurable day/time (default: Friday at 18:45/6:45 PM PST)
- * - Capacity check before allowing registration
- * - Configure via REGISTRATION_OPENING_DAY, REGISTRATION_OPENING_HOUR, REGISTRATION_OPENING_MINUTE
- * - Configure via REGISTRATION_CLOSING_DAY, REGISTRATION_CLOSING_HOUR, REGISTRATION_CLOSING_MINUTE
- * - DEV_OVERRIDE flag bypasses time restrictions (for testing)
- */
 const RegistrationApp = {
   components: {
     RegistrationStatus,     // Status banner (open/closed)
@@ -1152,19 +657,6 @@ const RegistrationApp = {
     });
 
     // Methods
-    /**
-     * Checks if registration is currently open
-     * 
-     * REGISTRATION SCHEDULE (configurable via ENV):
-     * - Opens: Configurable day/time (default: Wednesday at 00:00)
-     * - Closes: Configurable day/time (default: Friday at 18:45)
-     * 
-     * LOGIC:
-     * - If current day is after opening day but before closing day → OPEN
-     * - If current day is opening day and past opening time → OPEN
-     * - If current day is closing day and before closing time → OPEN
-     * - Otherwise → CLOSED
-     */
     const isRegistrationOpen = () => {
       if (devOverride) return true;
 
@@ -1271,27 +763,6 @@ const RegistrationApp = {
       players.value = [];
     };
 
-    /**
-     * Validates PIN/token format
-     * Must be exactly 6 digits (numbers only)
-     * 
-     * @param {string} token - PIN to validate
-     * @returns {object} - { valid: boolean, message?: string }
-     */
-    const validateToken = (token) => {
-      if (!token || token.trim() === '') {
-        return { valid: false, message: 'Please enter your PIN.' };
-      }
-      
-      const trimmedToken = token.trim();
-      const tokenRegex = /^\d{6}$/;
-      
-      if (!tokenRegex.test(trimmedToken)) {
-        return { valid: false, message: 'PIN must be exactly 6 digits.' };
-      }
-      
-      return { valid: true };
-    };
 
     const handleRegisterPlayer = (index) => {
       if (!registrationOpen.value) {
@@ -1613,9 +1084,6 @@ const RegistrationApp = {
   `
 };
 
-// ========================================
-// CREATE VUE APP
-// ========================================
 const app = createApp({
   components: {
     RegistrationApp

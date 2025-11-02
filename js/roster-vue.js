@@ -1,204 +1,7 @@
-/**
- * BTTC Round Robin Roster - Vue.js
- * 
- * Simple and elegant roster display for Round Robin tournament players.
- * 
- * APPLICATION OVERVIEW:
- * This Vue.js application displays the current roster of players registered
- * for the Round Robin tournament, with capacity information and sorting capabilities.
- * 
- * COMPONENT STRUCTURE:
- * - RosterApp: Main app component that fetches and displays roster
- *   ├── CapacityBanner: Shows capacity information (spots remaining, full status)
- *   └── RosterTable: Displays player roster with sorting
- * 
- * APPLICATION FLOW:
- * 1. App loads → Fetches roster from /rr/roster API endpoint (includes capacity in response)
- * 2. Displays roster → Table with player names, BTTC IDs, registration times
- * 3. User clicks column header → Sorts table by that column
- * 4. Displays capacity → Shows spots remaining, full status (from roster response)
- * 
- * FEATURES:
- * - Sortable table columns (name, BTTC ID, registered time)
- * - Real-time capacity information
- * - User-friendly date/time formatting (PST/PDT)
- * - Error handling with user-friendly messages
- * 
- * @file js/roster-vue.js
- */
+// BTTC Round Robin Roster
+// Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse
 
 const { createApp, ref, reactive, computed, onMounted } = Vue;
-
-// ========================================
-// ERROR HANDLING UTILITY
-// ========================================
-
-/**
- * Converts technical errors into user-friendly messages
- * 
- * This function normalizes various error types (network errors, HTTP errors, etc.)
- * into messages that users can understand, with support contact information.
- * 
- * @param {Error|object} error - The error object from try/catch or API response
- * @param {string} context - Context of the operation (e.g., 'loading roster', 'capacity check')
- * @returns {string} - User-friendly error message with support contact info
- */
-const getErrorMessage = (error, context = 'operation') => {
-  const errorMessage = error?.message || String(error || '');
-  const errorName = error?.name || '';
-  
-  // Check for network-related errors (API down, connection refused, timeout, etc.)
-  // These occur when the server is unreachable, not just when API returns an error
-  if (
-    error instanceof TypeError ||
-    errorName === 'TypeError' ||
-    errorMessage.includes('Failed to fetch') ||
-    errorMessage.includes('NetworkError') ||
-    errorMessage.includes('Network request failed') ||
-    errorMessage.includes('ERR_INTERNET_DISCONNECTED') ||
-    errorMessage.includes('ERR_CONNECTION_REFUSED') ||
-    errorMessage.includes('ERR_CONNECTION_TIMED_OUT') ||
-    errorMessage.includes('ERR_TIMED_OUT') ||
-    errorMessage.includes('Load failed')
-  ) {
-    const supportContact = typeof ENV !== 'undefined' 
-      ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
-      : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
-    return `Unable to connect to the server. The roster service may be temporarily unavailable. Please try again in a few moments or ${supportContact}.`;
-  }
-  
-  // Check for HTTP response errors (server returned an error status code)
-  // These occur when the server is reachable but returns an error (4xx, 5xx)
-  if (error && error.response) {
-    const status = error.response.status;
-    
-    const supportContact = typeof ENV !== 'undefined' 
-      ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
-      : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
-    
-    if (status === 0) {
-      return `Connection error: The server is unreachable. Please try again later or ${supportContact}.`;
-    }
-    if (status >= 500) {
-      return `Server error: The roster service is experiencing technical difficulties. Please try again in a few moments or ${supportContact}.`;
-    }
-    if (status === 404) {
-      return `Service not found. Please ${supportContact}.`;
-    }
-    if (status === 503) {
-      return `Service unavailable: The roster service is temporarily down for maintenance. Please try again later or ${supportContact}.`;
-    }
-  }
-  
-  // Generic error fallback
-  if (error && error.message) {
-    const supportContact = typeof ENV !== 'undefined' 
-      ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
-      : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
-    return `An error occurred during ${context}: ${error.message}. Please try again or ${supportContact}.`;
-  }
-  
-  const supportContact = typeof ENV !== 'undefined' 
-    ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
-    : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
-  return `An unexpected error occurred during ${context}. Please try again or ${supportContact}.`;
-};
-
-/**
- * Creates fetch options with API authentication headers if configured
- * 
- * This function ensures all API requests include the X-API-Key header when
- * ENV.API_KEY is set. It handles both plain object headers and Headers objects.
- * 
- * WHY: The backend API requires authentication via X-API-Key header to prevent
- * unauthorized access. This function centralizes header injection logic.
- * 
- * @param {object} options - Original fetch options (method, headers, body, etc.)
- * @returns {object} - Fetch options with X-API-Key header added if API_KEY is configured
- */
-const getFetchOptions = (options = {}) => {
-  const apiKey = typeof ENV !== 'undefined' ? ENV.API_KEY : '';
-  
-  // If API_KEY is configured in env.js, add it to all requests
-  if (apiKey) {
-    // Handle both Headers object and plain object formats
-    // Headers objects need to be converted to plain objects for spreading
-    const existingHeaders = options.headers || {};
-    const headers = {
-      ...(existingHeaders instanceof Headers 
-        ? Object.fromEntries(existingHeaders.entries()) 
-        : existingHeaders),
-      'X-API-Key': apiKey  // Add API key header for authentication
-    };
-    
-    return {
-      ...options,
-      headers: headers
-    };
-  }
-  
-  // No API key configured, return options as-is
-  // This allows the app to work without API key (though backend may reject requests)
-  return options;
-};
-
-/**
- * Handles API response and checks for errors before parsing JSON
- * 
- * This function centralizes response handling:
- * 1. Checks if response.ok (status 200-299)
- * 2. Parses JSON from response
- * 3. Throws errors with context if anything fails
- * 
- * WHY: Centralizes error handling so all API calls handle errors consistently
- * 
- * @param {Response} response - Fetch API Response object
- * @returns {Promise<object>} - Parsed JSON data from successful response
- * @throws {Error} - If response is not OK (non-2xx) or JSON parsing fails
- */
-const handleApiResponse = async (response) => {
-  // Check if response has an error status (4xx, 5xx, etc.)
-  if (!response.ok) {
-    let errorMessage = 'Server error';
-    try {
-      // Try to get error message from JSON response body
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-    } catch {
-      // If response body isn't JSON, use HTTP status text
-      errorMessage = response.statusText || `HTTP ${response.status}`;
-    }
-    
-    // Attach response object to error for getErrorMessage to use
-    const error = new Error(errorMessage);
-    error.response = response;
-    throw error;
-  }
-  
-  // Response is OK, parse JSON body
-  try {
-    const data = await response.json();
-    return data;
-  } catch (jsonError) {
-    // JSON parsing failed (invalid JSON in response)
-    throw new Error('Invalid response from server. Please try again.');
-  }
-};
-
-// ========================================
-// CACHE UTILITIES
-// ========================================
-
-/**
- * Cache Utilities
- * 
- * PURPOSE: Implements client-side caching for API responses to reduce API calls
- * 
- * CACHE STRATEGY:
- * - Uses sessionStorage for cache persistence (cleared on tab close)
- * - Stores data with timestamp to implement TTL (Time To Live)
- * - Returns cached data if still valid, otherwise fetches fresh data
- */
 
 const CACHE_KEYS = {
   ROSTER: 'bttc_roster_cache'
@@ -210,13 +13,6 @@ const CACHE_TTL = {
   ROSTER: (typeof ENV !== 'undefined' && ENV.CACHE_TTL_ROSTER ? ENV.CACHE_TTL_ROSTER : 45) * 1000    // Default: 45 seconds
 };
 
-/**
- * Gets cached data if still valid (within TTL)
- * 
- * @param {string} cacheKey - Cache key to retrieve
- * @param {number} ttl - Time to live in milliseconds
- * @returns {object|null} - Cached data with { data, timestamp } or null if expired/missing
- */
 const getCachedData = (cacheKey, ttl) => {
   try {
     const cached = sessionStorage.getItem(cacheKey);
@@ -245,12 +41,6 @@ const getCachedData = (cacheKey, ttl) => {
   }
 };
 
-/**
- * Stores data in cache with current timestamp
- * 
- * @param {string} cacheKey - Cache key to store
- * @param {*} data - Data to cache
- */
 const setCachedData = (cacheKey, data) => {
   try {
     const cacheEntry = {
@@ -264,11 +54,6 @@ const setCachedData = (cacheKey, data) => {
   }
 };
 
-/**
- * Clears cached data for a specific key
- * 
- * @param {string} cacheKey - Cache key to clear
- */
 const clearCache = (cacheKey) => {
   try {
     sessionStorage.removeItem(cacheKey);
@@ -277,33 +62,6 @@ const clearCache = (cacheKey) => {
   }
 };
 
-// ========================================
-// MAIN ROSTER APP COMPONENT
-// ========================================
-
-/**
- * RosterApp Component
- * 
- * PURPOSE: Displays the current Round Robin tournament roster with capacity information
- * 
- * COMPONENT HIERARCHY:
- * RosterApp (this component)
- *   ├── CapacityBanner: Shows capacity info (spots remaining, full status)
- *   └── RosterTable: Displays player list with sorting
- * 
- * APPLICATION FLOW:
- * 1. Component mounts → fetchRoster() is called
- * 2. Fetch roster → GET /rr/roster endpoint (response includes { roster: [], capacity: {} })
- * 3. Extract roster and capacity from response
- * 4. Display data → Shows roster table with capacity banner
- * 5. User clicks column → sortBy() sorts the table
- * 
- * FEATURES:
- * - Sortable columns (name, BTTC ID, registered_at)
- * - Real-time capacity display
- * - User-friendly date/time formatting (PST/PDT)
- * - Error handling with user-friendly messages
- */
 const RosterApp = {
   setup() {
     // Load configuration constants from ENV (or use defaults)
