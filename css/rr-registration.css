@@ -8,7 +8,7 @@
  * - Use browser's element inspector to see computed styles
  * - Common issues: z-index conflicts (dialogs), overflow hidden, display none
  * - Registration status banners use .status-open/.status-closed classes
- * - Capacity banners use .capacity-full/.capacity-available classes
+ * - Capacity banners use .capacity-full/.capacity-available/.capacity-closed classes
  * 
  * @file css/rr-registration.css
  */
@@ -893,6 +893,12 @@ button:active {
   background-color: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
+}
+
+.capacity-closed {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
 }
 
 .registration-full-message {

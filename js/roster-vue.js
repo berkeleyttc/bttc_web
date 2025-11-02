@@ -82,7 +82,8 @@ const RosterApp = {
       isAtCapacity: false,             // Whether event is at capacity
       confirmedCount: 0,              // Number of confirmed registrations
       playerCap: fallbackPlayerCap,   // Maximum capacity
-      spotsAvailable: 0               // Available spots remaining
+      spotsAvailable: 0,              // Available spots remaining
+      eventOpen: true                 // Whether event is accepting registrations
     });
     const lastUpdated = ref({
       roster: null,                    // Timestamp when roster was last fetched
@@ -117,15 +118,25 @@ const RosterApp = {
     const fetchRoster = async () => {
       // Check cache first
       const cachedResult = getCachedData(CACHE_KEYS.ROSTER, CACHE_TTL.ROSTER);
-      if (cachedResult && Array.isArray(cachedResult.data)) {
+      if (cachedResult && cachedResult.data) {
         // Use cached data immediately (no loading state for instant display)
-        players.value = cachedResult.data;
+        
+        // Restore roster data
+        if (Array.isArray(cachedResult.data.roster)) {
+          players.value = cachedResult.data.roster;
+        } else if (Array.isArray(cachedResult.data)) {
+          // Backward compatibility: handle old cache format (just array)
+          players.value = cachedResult.data;
+        }
+        
+        // Restore capacity data if available
+        if (cachedResult.data.capacity) {
+          capacity.value = cachedResult.data.capacity;
+          lastUpdated.value.capacity = cachedResult.timestamp;
+        }
+        
         lastUpdated.value.roster = cachedResult.timestamp;
         loading.value = false;  // Reset loading state when using cache
-        
-        // NOTE: Capacity is now included in roster response, but cached roster doesn't have capacity
-        // Capacity will be fetched when cache expires and fresh roster is fetched
-        // Or user can refresh to get capacity with roster
         
         // Cache is valid, no API call needed
         return;
@@ -158,20 +169,15 @@ const RosterApp = {
         
         const now = Date.now();
         
-        // Update cache with fresh data (store just the roster array)
-        setCachedData(CACHE_KEYS.ROSTER, rosterData);
-        
-        // Set players state with fresh data and timestamp
-        players.value = rosterData;
-        lastUpdated.value.roster = now;
-        
         // Extract capacity from roster response (new API always includes capacity)
+        let capacityData = null;
         if (data.capacity) {
-          const capacityData = {
+          capacityData = {
             isAtCapacity: !!data.capacity.roster_full,
             confirmedCount: Number(data.capacity.confirmed_count || 0),
             playerCap: Number(data.capacity.player_cap || defaultPlayerCap),
-            spotsAvailable: Number(data.capacity.spots_available || 0)
+            spotsAvailable: Number(data.capacity.spots_available || 0),
+            eventOpen: !!data.capacity.event_open
           };
           
           capacity.value = capacityData;
@@ -179,13 +185,37 @@ const RosterApp = {
         } else {
           // If capacity not included (should not happen with new API), continue without capacity
         }
+        
+        // Update cache with fresh data (store both roster and capacity)
+        const cacheData = {
+          roster: rosterData,
+          capacity: capacityData
+        };
+        setCachedData(CACHE_KEYS.ROSTER, cacheData);
+        
+        // Set players state with fresh data and timestamp
+        players.value = rosterData;
+        lastUpdated.value.roster = now;
       } catch (err) {
         // On error, try to use cached data as fallback (even if expired)
         const cachedResult = getCachedData(CACHE_KEYS.ROSTER, CACHE_TTL.ROSTER * 2); // Allow stale cache on error
-        if (cachedResult && Array.isArray(cachedResult.data)) {
-          players.value = cachedResult.data;
-          lastUpdated.value.roster = cachedResult.timestamp;
-          // NOTE: Capacity not available from cached data, will be shown when fresh roster is fetched
+        if (cachedResult && cachedResult.data) {
+          // Restore roster data from stale cache
+          if (Array.isArray(cachedResult.data.roster)) {
+            players.value = cachedResult.data.roster;
+            lastUpdated.value.roster = cachedResult.timestamp;
+          } else if (Array.isArray(cachedResult.data)) {
+            // Backward compatibility: handle old cache format (just array)
+            players.value = cachedResult.data;
+            lastUpdated.value.roster = cachedResult.timestamp;
+          }
+          
+          // Restore capacity data if available
+          if (cachedResult.data.capacity) {
+            capacity.value = cachedResult.data.capacity;
+            lastUpdated.value.capacity = cachedResult.timestamp;
+          }
+          
           return;
         }
         
@@ -456,7 +486,8 @@ const RosterApp = {
           {{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} registered
           <span v-if="capacity.playerCap > 0">
             • {{ capacity.confirmedCount }}/{{ capacity.playerCap }} capacity
-            <span v-if="spotsRemaining > 0">• {{ spotsRemaining }} spot{{ spotsRemaining !== 1 ? 's' : '' }} remaining</span>
+            <span v-if="!capacity.eventOpen" class="event-closed-text">• Event CLOSED</span>
+            <span v-else-if="spotsRemaining > 0">• {{ spotsRemaining }} spot{{ spotsRemaining !== 1 ? 's' : '' }} remaining</span>
             <span v-else class="capacity-full-text">• Full</span>
           </span>
           <span v-if="rosterLastUpdated" class="last-updated">
