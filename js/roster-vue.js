@@ -1,8 +1,7 @@
 /**
  * BTTC Round Robin Roster - Vue.js
  * 
- * Simple and elegant roster display with easy-to-debug code.
- * All functions include console.debug/warn/error logging for debugging.
+ * Simple and elegant roster display.
  * 
  * @file js/roster-vue.js
  */
@@ -20,8 +19,6 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
  * @returns {string} - User-friendly error message
  */
 const getErrorMessage = (error, context = 'operation') => {
-  console.debug('[ErrorHandler] Processing error:', { error, context });
-  
   const errorMessage = error?.message || String(error || '');
   const errorName = error?.name || '';
   
@@ -38,7 +35,6 @@ const getErrorMessage = (error, context = 'operation') => {
     errorMessage.includes('ERR_TIMED_OUT') ||
     errorMessage.includes('Load failed')
   ) {
-    console.warn('[ErrorHandler] Network error detected');
     const supportContact = typeof ENV !== 'undefined' 
       ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
       : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
@@ -48,7 +44,6 @@ const getErrorMessage = (error, context = 'operation') => {
   // HTTP response errors
   if (error && error.response) {
     const status = error.response.status;
-    console.debug('[ErrorHandler] HTTP error:', status);
     
     const supportContact = typeof ENV !== 'undefined' 
       ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
@@ -70,14 +65,12 @@ const getErrorMessage = (error, context = 'operation') => {
   
   // Generic error fallback
   if (error && error.message) {
-    console.debug('[ErrorHandler] Generic error:', error.message);
     const supportContact = typeof ENV !== 'undefined' 
       ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
       : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
     return `An error occurred during ${context}: ${error.message}. Please try again or ${supportContact}.`;
   }
   
-  console.warn('[ErrorHandler] Unknown error format');
   const supportContact = typeof ENV !== 'undefined' 
     ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
     : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
@@ -103,8 +96,6 @@ const getFetchOptions = (options = {}) => {
       'X-API-Key': apiKey
     };
     
-    console.debug('[ApiHandler] Adding X-API-Key header to request');
-    
     return {
       ...options,
       headers: headers
@@ -121,18 +112,14 @@ const getFetchOptions = (options = {}) => {
  * @throws {Error} - If response is not OK or JSON parsing fails
  */
 const handleApiResponse = async (response) => {
-  console.debug('[ApiHandler] Response status:', response.status, response.statusText);
-  
   if (!response.ok) {
     let errorMessage = 'Server error';
     try {
       const errorData = await response.json();
       errorMessage = errorData.message || errorData.error || errorMessage;
-      console.debug('[ApiHandler] Error data:', errorData);
     } catch {
       // If response is not JSON, use status text
       errorMessage = response.statusText || `HTTP ${response.status}`;
-      console.debug('[ApiHandler] Non-JSON error response');
     }
     
     const error = new Error(errorMessage);
@@ -142,10 +129,8 @@ const handleApiResponse = async (response) => {
   
   try {
     const data = await response.json();
-    console.debug('[ApiHandler] Response parsed successfully');
     return data;
   } catch (jsonError) {
-    console.error('[ApiHandler] JSON parse error:', jsonError);
     throw new Error('Invalid response from server. Please try again.');
   }
 };
@@ -184,7 +169,6 @@ const RosterApp = {
      * Fetches capacity data from the API
      */
     const fetchCapacity = async () => {
-      console.debug('[RosterApp] Fetching capacity data');
       try {
         const fetchOptions = getFetchOptions({ method: 'POST' });
         const response = await fetch(`${apiUrl}/rr/capacity`, fetchOptions);
@@ -195,9 +179,7 @@ const RosterApp = {
           playerCap: Number(data.player_cap || defaultPlayerCap),
           spotsAvailable: Number(data.spots_available || 0)
         };
-        console.debug('[RosterApp] Capacity updated:', capacity.value);
       } catch (err) {
-        console.error('[RosterApp] Capacity check failed:', err);
         // Set capacity defaults to prevent UI issues
         capacity.value = { 
           isAtCapacity: false, 
@@ -212,7 +194,6 @@ const RosterApp = {
      * Fetches roster data from the API
      */
     const fetchRoster = async () => {
-      console.debug('[RosterApp] Fetching roster data from:', API_URL);
       loading.value = true;
       error.value = '';
       
@@ -220,19 +201,15 @@ const RosterApp = {
         const response = await fetch(API_URL, getFetchOptions());
         const data = await handleApiResponse(response);
         
-        console.debug('[RosterApp] Roster data received:', data);
-        
         if (!Array.isArray(data)) {
           throw new Error('Invalid roster data format received from server.');
         }
         
         players.value = data;
-        console.debug('[RosterApp] Roster loaded successfully, players count:', players.value.length);
         
         // Fetch capacity information after roster is loaded
         await fetchCapacity();
       } catch (err) {
-        console.error('[RosterApp] Error fetching roster:', err);
         error.value = getErrorMessage(err, 'loading roster');
         players.value = [];
       } finally {
@@ -245,8 +222,6 @@ const RosterApp = {
      * @param {string} key - The column key to sort by
      */
     const sortBy = (key) => {
-      console.debug('[RosterApp] Sorting by:', key);
-      
       // Determine sort direction
       if (currentSort.key === key && currentSort.direction === 'asc') {
         currentSort.direction = 'desc';
@@ -281,7 +256,6 @@ const RosterApp = {
       });
       
       players.value = sorted;
-      console.debug('[RosterApp] Roster sorted:', { key, direction: currentSort.direction });
     };
 
     /**
@@ -304,7 +278,6 @@ const RosterApp = {
      */
     const formatDatePST = (dateString) => {
       if (!dateString) {
-        console.warn('[RosterApp][DateFormatter] Empty date string');
         return '';
       }
 
@@ -314,7 +287,6 @@ const RosterApp = {
         
         // Check if date is valid
         if (isNaN(date.getTime())) {
-          console.warn('[RosterApp][DateFormatter] Invalid date:', dateString);
           return dateString; // Return original if invalid
         }
 
@@ -338,18 +310,15 @@ const RosterApp = {
 
         // Combine formatted date with timezone
         const result = `${formatted} ${timezoneAbbr}`;
-        console.debug('[RosterApp][DateFormatter] Formatted date:', { original: dateString, formatted: result });
         
         return result;
       } catch (err) {
-        console.error('[RosterApp][DateFormatter] Error formatting date:', err, dateString);
         return dateString; // Return original on error
       }
     };
 
     // Fetch roster on mount
     onMounted(() => {
-      console.debug('[RosterApp] Component mounted, fetching roster...');
       fetchRoster();
     });
 
@@ -449,7 +418,6 @@ const app = createApp({
   },
   errorHandler: (err, instance, info) => {
     // Handle Vue component errors gracefully
-    console.error('Vue error:', err, info);
     // Don't show Vue internal errors to users - they're already handled in components
   }
 });
@@ -465,7 +433,6 @@ window.addEventListener('unhandledrejection', (event) => {
   if (error && (error instanceof TypeError || error?.message?.includes('fetch'))) {
     // This is likely already handled by our error handlers, so we can prevent default
     event.preventDefault();
-    console.error('Unhandled network error (likely already handled):', error);
   }
 });
 

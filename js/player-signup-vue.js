@@ -26,7 +26,6 @@ const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
  * @returns {string} - User-friendly error message
  */
 const getErrorMessage = (error, context = 'operation') => {
-  console.debug('[PlayerSignup] Processing error:', { error, context });
   const errorMessage = error?.message || String(error || '');
   const errorName = error?.name || '';
   
@@ -43,7 +42,6 @@ const getErrorMessage = (error, context = 'operation') => {
     errorMessage.includes('ERR_TIMED_OUT') ||
     errorMessage.includes('Load failed')
   ) {
-    console.warn('[PlayerSignup] Network error detected');
     const supportContact = typeof ENV !== 'undefined' 
       ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
       : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
@@ -53,7 +51,6 @@ const getErrorMessage = (error, context = 'operation') => {
   // HTTP response errors
   if (error && error.response) {
     const status = error.response.status;
-    console.debug('[PlayerSignup] HTTP error:', status);
     
     const supportContact = typeof ENV !== 'undefined' 
       ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
@@ -75,14 +72,12 @@ const getErrorMessage = (error, context = 'operation') => {
   
   // Generic error fallback
   if (error && error.message) {
-    console.debug('[PlayerSignup] Generic error:', error.message);
     const supportContact = typeof ENV !== 'undefined' 
       ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
       : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
     return `An error occurred during ${context}: ${error.message}. Please try again or ${supportContact}.`;
   }
   
-  console.warn('[PlayerSignup] Unknown error format');
   const supportContact = typeof ENV !== 'undefined' 
     ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
     : 'contact BTTC support at 510-926-6913 (TEXT ONLY)';
@@ -98,10 +93,6 @@ const getErrorMessage = (error, context = 'operation') => {
 const getFetchOptions = (options = {}) => {
   const apiKey = typeof ENV !== 'undefined' ? ENV.API_KEY : '';
   
-  console.debug('[PlayerSignup][ApiHandler] getFetchOptions called');
-  console.debug('[PlayerSignup][ApiHandler] ENV defined:', typeof ENV !== 'undefined');
-  console.debug('[PlayerSignup][ApiHandler] API_KEY value:', apiKey ? '***SET***' : 'NOT SET');
-  
   // If API_KEY is configured, add X-API-Key header
   if (apiKey) {
     // Ensure we have a clean headers object
@@ -113,16 +104,12 @@ const getFetchOptions = (options = {}) => {
       'X-API-Key': apiKey
     };
     
-    console.debug('[PlayerSignup][ApiHandler] Adding X-API-Key header to request');
-    console.debug('[PlayerSignup][ApiHandler] Headers being sent:', { ...headers, 'X-API-Key': '***REDACTED***' });
-    
     return {
       ...options,
       headers: headers
     };
   }
   
-  console.warn('[PlayerSignup][ApiHandler] No API key found, returning options without X-API-Key header');
   return options;
 };
 
@@ -134,18 +121,14 @@ const getFetchOptions = (options = {}) => {
  * @throws {Error} - If response is not OK or JSON parsing fails
  */
 const handleApiResponse = async (response) => {
-  console.debug('[PlayerSignup][ApiHandler] Response status:', response.status, response.statusText);
-  
   if (!response.ok) {
     let errorMessage = 'Server error';
     try {
       const errorData = await response.json();
       errorMessage = errorData.message || errorData.error || errorMessage;
-      console.debug('[PlayerSignup][ApiHandler] Error data:', errorData);
     } catch {
       // If response is not JSON, use status text
       errorMessage = response.statusText || `HTTP ${response.status}`;
-      console.debug('[PlayerSignup][ApiHandler] Non-JSON error response');
     }
     
     const error = new Error(errorMessage);
@@ -155,10 +138,8 @@ const handleApiResponse = async (response) => {
   
   try {
     const data = await response.json();
-    console.debug('[PlayerSignup][ApiHandler] Response parsed successfully');
     return data;
   } catch (jsonError) {
-    console.error('[PlayerSignup][ApiHandler] JSON parse error:', jsonError);
     throw new Error('Invalid response from server. Please try again.');
   }
 };
@@ -183,10 +164,8 @@ const PlayerSearch = {
       e.preventDefault();
       
       const searchValue = searchInput.value.trim();
-      console.debug('[PlayerSignup][PlayerSearch] Search submitted:', { searchType: searchType.value, searchValue });
       
       if (!searchValue) {
-        console.warn('[PlayerSignup][PlayerSearch] Empty search value');
         emit('search-error', 'Please enter a search term.');
         return;
       }
@@ -196,16 +175,13 @@ const PlayerSearch = {
       try {
         const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
         const url = `${apiUrl}/player/search?type=${searchType.value}&value=${encodeURIComponent(searchValue)}`;
-        console.debug('[PlayerSignup][PlayerSearch] Fetching:', url);
         
         const fetchOptions = getFetchOptions();
         const response = await fetch(url, fetchOptions);
         const data = await handleApiResponse(response);
         
-        console.debug('[PlayerSignup][PlayerSearch] Search successful:', { playersFound: data.players?.length || 0 });
         emit('players-found', data);
       } catch (error) {
-        console.error('[PlayerSignup][PlayerSearch] Search failed:', error);
         const friendlyMessage = getErrorMessage(error, 'player search');
         emit('search-error', friendlyMessage);
       } finally {
@@ -504,12 +480,10 @@ const PlayerSignupApp = {
     const successMessage = ref('');
 
     const handlePlayersFound = (data) => {
-      console.debug('[PlayerSignup][App] Players found:', { total: data.total_found, available: data.available_for_signup, players: data.players?.length || 0 });
       error.value = '';
       successMessage.value = '';
 
       if (data.error) {
-        console.warn('[PlayerSignup][App] Error in response:', data.error);
         error.value = data.error;
         searchResults.value = [];
         return;
@@ -517,10 +491,8 @@ const PlayerSignupApp = {
 
       if (!data.players || data.players.length === 0) {
         if (data.total_found > 0 && data.available_for_signup === 0) {
-          console.debug('[PlayerSignup][App] All found players already signed up');
           error.value = 'Found players matching your search, but they have already completed their signup. If this is incorrect, please contact BTTC support.';
         } else {
-          console.debug('[PlayerSignup][App] No players found');
           error.value = 'No players found. Please check your spelling or contact BTTC support at 510-926-6913 (TEXT ONLY)';
         }
         searchResults.value = [];
@@ -530,7 +502,6 @@ const PlayerSignupApp = {
       searchResults.value = data.players;
       totalFound.value = data.total_found || data.players.length;
       availableForSignup.value = data.available_for_signup || data.players.filter(p => !p.already_signed_up).length;
-      console.debug('[PlayerSignup][App] Search results set:', { totalFound: totalFound.value, availableForSignup: availableForSignup.value });
     };
 
     const handleSearchError = (errorMessage) => {
@@ -540,7 +511,6 @@ const PlayerSignupApp = {
     };
 
     const handlePlayerSelected = (player) => {
-      console.debug('[PlayerSignup][App] Player selected:', { bttc_id: player.bttc_id, name: `${player.first_name} ${player.last_name}` });
       selectedPlayer.value = player;
       showDialog.value = true;
     };
@@ -552,7 +522,6 @@ const PlayerSignupApp = {
 
     const handleDialogSubmit = async (formData) => {
       const { phoneNumber, email, token, setSubmitting } = formData;
-      console.debug('[PlayerSignup][App] Submitting signup:', { bttc_id: selectedPlayer.value.bttc_id, phone: phoneNumber, email });
 
       const payload = {
         bttc_id: selectedPlayer.value.bttc_id,
@@ -566,7 +535,6 @@ const PlayerSignupApp = {
       try {
         const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
         const url = `${apiUrl}/player/signup`;
-        console.debug('[PlayerSignup][App] Submitting to:', url);
 
         const fetchOptions = getFetchOptions({
           method: 'POST',
@@ -578,18 +546,15 @@ const PlayerSignupApp = {
         const data = await handleApiResponse(response);
 
         if (data.success) {
-          console.debug('[PlayerSignup][App] Signup successful');
           successMessage.value = 'Registration completed successfully! You can now use your phone number to register for round robin events.';
           error.value = '';
           searchResults.value = [];
           showDialog.value = false;
           selectedPlayer.value = null;
         } else {
-          console.warn('[PlayerSignup][App] Signup failed:', data.message);
           alert('Registration failed: ' + (data.message || 'Unknown error'));
         }
       } catch (err) {
-        console.error('[PlayerSignup][App] Signup error:', err);
         const friendlyMessage = getErrorMessage(err, 'registration');
         alert('Registration failed: ' + friendlyMessage);
       } finally {
@@ -664,7 +629,6 @@ const app = createApp({
   },
   errorHandler: (err, instance, info) => {
     // Handle Vue component errors gracefully
-    console.error('Vue error:', err, info);
   }
 });
 
