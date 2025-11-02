@@ -15,9 +15,16 @@ const ENV = {
   SUPPORT_METHOD: 'TEXT ONLY',
   
   // Registration Schedule
-  REGISTRATION_DAY: 5, // Friday (0 = Sunday, 5 = Friday)
-  REGISTRATION_CLOSING_HOUR: 18,
+  // Opening time (when registration opens each week)
+  REGISTRATION_OPENING_DAY: 3, // Wednesday (0 = Sunday, 1 = Monday, ..., 3 = Wednesday)
+  REGISTRATION_OPENING_HOUR: 0, // 00:00 (midnight)
+  REGISTRATION_OPENING_MINUTE: 0,
+  
+  // Closing time (when registration closes each week)
+  REGISTRATION_CLOSING_DAY: 5, // Friday (0 = Sunday, 5 = Friday)
+  REGISTRATION_CLOSING_HOUR: 18, // 18:45 (6:45 PM)
   REGISTRATION_CLOSING_MINUTE: 45,
+  
   TIMEZONE: 'America/Los_Angeles',
   
   // Capacity Settings
@@ -29,6 +36,6 @@ const ENV = {
   PHONE_COUNTRY_CODE: 1,
   
   // Development
-  DEV_OVERRIDE: true
+  DEV_OVERRIDE: false
 };
 

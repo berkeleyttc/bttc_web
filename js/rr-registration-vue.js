@@ -26,9 +26,11 @@
  * 7. Success → Updates player list, shows confirmation
  * 
  * REGISTRATION RULES (configurable via ENV):
- * - Opens on specific day of week (default: Friday = 5)
- * - Closes at specific time (default: 6:45 PM)
+ * - Opens: Configurable day/time (default: Wednesday at 00:00/midnight)
+ * - Closes: Configurable day/time (default: Friday at 18:45/6:45 PM)
  * - Capacity check before allowing registration
+ * - Configure via REGISTRATION_OPENING_DAY, REGISTRATION_OPENING_HOUR, REGISTRATION_OPENING_MINUTE
+ * - Configure via REGISTRATION_CLOSING_DAY, REGISTRATION_CLOSING_HOUR, REGISTRATION_CLOSING_MINUTE
  * 
  * @file js/rr-registration-vue.js
  */
@@ -226,7 +228,7 @@ const RegistrationStatus = {
         🔴 Registration is CLOSED
       </div>
       <div class="status-details">
-        <span v-if="isOpen && !devMode">Closes today at {{ closingTime }} PST</span>
+        <span v-if="isOpen && !devMode">Closes on closing day at {{ closingTime }} PST</span>
         <span v-else-if="isOpen && devMode">Developer override active</span>
         <span v-else>Next opening: {{ nextOpening }} PST</span>
       </div>
@@ -894,9 +896,11 @@ const UnregistrationDialog = {
  * 6. Success → Updates player list, refreshes capacity
  * 
  * REGISTRATION RULES (configurable via ENV):
- * - Opens on specific day of week (default: Friday = 5)
- * - Closes at specific time (default: 6:45 PM PST)
+ * - Opens: Configurable day/time (default: Wednesday at 00:00/midnight)
+ * - Closes: Configurable day/time (default: Friday at 18:45/6:45 PM PST)
  * - Capacity check before allowing registration
+ * - Configure via REGISTRATION_OPENING_DAY, REGISTRATION_OPENING_HOUR, REGISTRATION_OPENING_MINUTE
+ * - Configure via REGISTRATION_CLOSING_DAY, REGISTRATION_CLOSING_HOUR, REGISTRATION_CLOSING_MINUTE
  * - DEV_OVERRIDE flag bypasses time restrictions (for testing)
  */
 const RegistrationApp = {
@@ -910,12 +914,20 @@ const RegistrationApp = {
   setup() {
     // Load configuration constants from ENV (or use defaults)
     const devOverride = typeof ENV !== 'undefined' ? ENV.DEV_OVERRIDE : false;
-    const registrationDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_DAY : 5;  // Friday = 5
-    const closingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_HOUR : 18;  // 6 PM
-    const closingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_MINUTE : 45;  // 45 min
+    
+    // Opening configuration (default: Wednesday at 00:00)
+    const openingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_DAY : 3;  // Wednesday = 3
+    const openingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_HOUR : 0;  // 00:00 (midnight)
+    const openingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_MINUTE : 0;
+    
+    // Closing configuration (default: Friday at 18:45)
+    const closingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_DAY : 5;  // Friday = 5
+    const closingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_HOUR : 18;  // 18:00 (6 PM)
+    const closingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_MINUTE : 45;  // 45 minutes
+    
     const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
     const defaultPlayerCap = typeof ENV !== 'undefined' ? ENV.DEFAULT_PLAYER_CAP : 64;
-    const fallbackPlayerCap = typeof ENV !== 'undefined' ? ENV.FALLBACK_PLAYER_CAP : 65;
+    const fallbackPlayerCap = typeof ENV !== 'undefined' ? ENV.FALLBACK_PLAYER_CAP : 64;
     const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
     const supportMethod = typeof ENV !== 'undefined' ? ENV.SUPPORT_METHOD : 'TEXT ONLY';
     
@@ -935,36 +947,62 @@ const RegistrationApp = {
     const error = ref('');                      // Error message to display
 
     // Computed properties
+    // Closing time: Shows closing day and time (default: Friday 6:45 PM)
     const closingTime = computed(() => {
       const now = new Date();
       const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
-      const closingTime = new Date(pstNow);
-      closingTime.setHours(closingHour, closingMinute, 0, 0);
-      return closingTime.toLocaleString("en-US", {
+      const dayOfWeek = pstNow.getDay();
+      
+      // Calculate the current or next closing day
+      let closingDate = new Date(pstNow);
+      const daysUntilClosingDay = (closingDay - dayOfWeek + 7) % 7;
+      
+      // If it's the closing day but past closing time, use next week's closing day
+      if (daysUntilClosingDay === 0 && (pstNow.getHours() > closingHour || (pstNow.getHours() === closingHour && pstNow.getMinutes() >= closingMinute))) {
+        // Past closing time, use next week's closing day
+        closingDate.setDate(closingDate.getDate() + 7);
+      } else {
+        closingDate.setDate(closingDate.getDate() + daysUntilClosingDay);
+      }
+      
+      closingDate.setHours(closingHour, closingMinute, 0, 0);
+      return closingDate.toLocaleString("en-US", {
         timeZone: timezone,
         hour: 'numeric',
         minute: '2-digit'
       });
     });
 
+    // Next opening: Shows next opening day and time (default: Wednesday at 12:00 AM)
     const nextOpening = computed(() => {
       const now = new Date();
       const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
       const dayOfWeek = pstNow.getDay();
+      const hours = pstNow.getHours();
+      const minutes = pstNow.getMinutes();
       
-      let daysUntilRegistrationDay;
-      if (dayOfWeek === registrationDay) {
-        daysUntilRegistrationDay = 7;
+      let daysUntilOpeningDay;
+      
+      // Check if we're currently on the opening day and past opening time
+      const isPastOpeningTimeToday = (dayOfWeek === openingDay && 
+        (hours > openingHour || (hours === openingHour && minutes >= openingMinute)));
+      
+      if (isPastOpeningTimeToday || dayOfWeek === openingDay) {
+        // If it's the opening day (or past opening time on opening day), next opening is next week
+        daysUntilOpeningDay = 7;
+      } else if (dayOfWeek < openingDay) {
+        // Before opening day in the week
+        daysUntilOpeningDay = openingDay - dayOfWeek;
       } else {
-        daysUntilRegistrationDay = (registrationDay - dayOfWeek + 7) % 7;
-        if (daysUntilRegistrationDay === 0) daysUntilRegistrationDay = 7;
+        // After opening day but before next opening day
+        daysUntilOpeningDay = 7 - (dayOfWeek - openingDay);
       }
 
-      const nextRegistrationDay = new Date(pstNow);
-      nextRegistrationDay.setDate(nextRegistrationDay.getDate() + daysUntilRegistrationDay);
-      nextRegistrationDay.setHours(0, 0, 0, 0);
+      const nextOpeningDate = new Date(pstNow);
+      nextOpeningDate.setDate(nextOpeningDate.getDate() + daysUntilOpeningDay);
+      nextOpeningDate.setHours(openingHour, openingMinute, 0, 0);
 
-      return nextRegistrationDay.toLocaleString("en-US", {
+      return nextOpeningDate.toLocaleString("en-US", {
         timeZone: timezone,
         weekday: 'long',
         year: 'numeric',
@@ -976,20 +1014,67 @@ const RegistrationApp = {
     });
 
     // Methods
+    /**
+     * Checks if registration is currently open
+     * 
+     * REGISTRATION SCHEDULE (configurable via ENV):
+     * - Opens: Configurable day/time (default: Wednesday at 00:00)
+     * - Closes: Configurable day/time (default: Friday at 18:45)
+     * 
+     * LOGIC:
+     * - If current day is after opening day but before closing day → OPEN
+     * - If current day is opening day and past opening time → OPEN
+     * - If current day is closing day and before closing time → OPEN
+     * - Otherwise → CLOSED
+     */
     const isRegistrationOpen = () => {
       if (devOverride) return true;
 
       const now = new Date();
       const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
-      const dayOfWeek = pstNow.getDay();
+      const dayOfWeek = pstNow.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
       const hours = pstNow.getHours();
       const minutes = pstNow.getMinutes();
 
-      if (dayOfWeek === registrationDay) {
-        if (hours < closingHour || (hours === closingHour && minutes <= closingMinute)) {
+      // Check if we're on the opening day
+      if (dayOfWeek === openingDay) {
+        // Opening day: check if we're past opening time
+        if (hours > openingHour || (hours === openingHour && minutes >= openingMinute)) {
+          // Past opening time on opening day → OPEN
           return true;
         }
+        // Before opening time on opening day → CLOSED
+        return false;
       }
+      
+      // Check if we're on the closing day
+      if (dayOfWeek === closingDay) {
+        // Closing day: check if we're before closing time
+        if (hours < closingHour || (hours === closingHour && minutes < closingMinute)) {
+          // Before closing time on closing day → OPEN
+          return true;
+        }
+        // At or after closing time on closing day → CLOSED
+        return false;
+      }
+      
+      // Check if we're between opening day and closing day
+      // Handle week wrap-around (e.g., opening on Wednesday, closing on Friday)
+      let isBetweenDays;
+      if (openingDay < closingDay) {
+        // Opening and closing are in the same week (e.g., Wed to Fri)
+        isBetweenDays = dayOfWeek > openingDay && dayOfWeek < closingDay;
+      } else {
+        // Opening and closing wrap around the week (e.g., Fri to Wed)
+        isBetweenDays = dayOfWeek > openingDay || dayOfWeek < closingDay;
+      }
+      
+      if (isBetweenDays) {
+        // We're between opening and closing days → OPEN
+        return true;
+      }
+      
+      // Otherwise, we're outside the registration window → CLOSED
       return false;
     };
 
@@ -1212,7 +1297,7 @@ const RegistrationApp = {
     };
   },
   template: `
-    <div class="container" :class="{ 'registration-disabled': !registrationOpen }">
+    <div class="container">
       <div class="roster-section">
         <a href="bttc_roster_vue.html" class="roster-link-button">
           <span class="roster-text">View Players Registered for Round Robin</span>
@@ -1230,12 +1315,13 @@ const RegistrationApp = {
       />
 
       <player-lookup 
+        v-if="registrationOpen"
         :registration-open="registrationOpen"
         @player-found="handlePlayerFound"
         @lookup-error="handleLookupError"
       />
 
-      <div v-if="error" class="error-section">
+      <div v-if="registrationOpen && error" class="error-section">
         <div class="error-content">
           <h3 class="error-title">Player Not Found</h3>
           
@@ -1254,14 +1340,14 @@ const RegistrationApp = {
       </div>
 
       <player-list 
-        v-if="!error || !error.includes('capacity')"
+        v-if="registrationOpen && (!error || !error.includes('capacity'))"
         :players="players"
         :capacity="capacity"
         @register-player="handleRegisterPlayer"
         @unregister-player="handleUnregisterPlayer"
       />
 
-      <div v-if="players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
+      <div v-if="registrationOpen && players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
         <a href="bttc_player_signup_vue.html" class="signup-button">
           <span class="signup-button-text">Sign Up Another Player</span>
           <span class="signup-button-subtext">Create another player account associated with this phone number</span>
