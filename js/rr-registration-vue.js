@@ -94,7 +94,13 @@ const getFetchOptions = (options = {}) => {
   
   // If API_KEY is configured, add X-API-Key header
   if (apiKey) {
-    const headers = new Headers(options.headers || {});
+    // Handle both Headers object and plain object
+    let headers;
+    if (options.headers instanceof Headers) {
+      headers = new Headers(options.headers);
+    } else {
+      headers = new Headers(options.headers || {});
+    }
     headers.set('X-API-Key', apiKey);
     
     console.debug('[ApiHandler] Adding X-API-Key header to request');
@@ -448,10 +454,19 @@ const PlayerList = {
   emits: ['register-player', 'unregister-player'],
   setup(props, { emit }) {
     const registerPlayer = (index) => {
-      emit('register-player', index);
+      console.debug('[PlayerList] Register button clicked for index:', index);
+      console.debug('[PlayerList] Emitting register-player event');
+      console.debug('[PlayerList] emit function:', typeof emit);
+      try {
+        emit('register-player', index);
+        console.debug('[PlayerList] Event emitted successfully');
+      } catch (err) {
+        console.error('[PlayerList] Error emitting event:', err);
+      }
     };
 
     const unregisterPlayer = (index) => {
+      console.debug('[PlayerList] Unregister button clicked for index:', index);
       emit('unregister-player', index);
     };
 
@@ -465,7 +480,7 @@ const PlayerList = {
       <p class="success">Manage your registration:</p>
       <capacity-banner :capacity="capacity" />
       
-      <div v-for="(player, index) in players" :key="player.bttc_id" class="entry">
+      <div v-for="(player, index) in players" :key="player.bttc_id || index" class="entry">
         <div v-if="player.is_registered">
           <p style="color: gray;">
             {{ player.first_name }} {{ player.last_name }} 
@@ -479,6 +494,7 @@ const PlayerList = {
               v-model="player.unregisterToken"
             />
             <button 
+              type="button"
               style="background-color: #dc3545;" 
               class="confirm-btn" 
               @click="unregisterPlayer(index)"
@@ -509,6 +525,7 @@ const PlayerList = {
               v-model="player.registerToken"
             />
             <button 
+              type="button"
               class="confirm-btn" 
               @click="registerPlayer(index)"
             >
@@ -539,15 +556,28 @@ const RegistrationDialog = {
     const comments = ref('');
 
     const handleConfirm = () => {
+      console.debug('[RegistrationDialog] handleConfirm called');
+      console.debug('[RegistrationDialog] paymentMethod:', paymentMethod.value);
+      console.debug('[RegistrationDialog] comments:', comments.value);
+      console.debug('[RegistrationDialog] emit function:', typeof emit);
+      
       if (!paymentMethod.value) {
+        console.debug('[RegistrationDialog] No payment method selected');
         alert('Please select a payment method.');
         return;
       }
 
-      emit('confirm', {
+      const data = {
         paymentMethod: paymentMethod.value,
         comments: comments.value
-      });
+      };
+      console.debug('[RegistrationDialog] Emitting confirm event with data:', data);
+      try {
+        emit('confirm', data);
+        console.debug('[RegistrationDialog] Event emitted successfully');
+      } catch (err) {
+        console.error('[RegistrationDialog] Error emitting event:', err);
+      }
     };
 
     const handleClose = () => {
@@ -601,8 +631,8 @@ const RegistrationDialog = {
         </div>
 
         <div class="dialog-buttons">
-          <button class="dialog-btn dialog-btn-cancel" @click="handleClose">Cancel</button>
-          <button class="dialog-btn dialog-btn-ok" @click="handleConfirm">Register</button>
+          <button type="button" class="dialog-btn dialog-btn-cancel" @click="handleClose">Cancel</button>
+          <button type="button" class="dialog-btn dialog-btn-ok" @click.stop="handleConfirm">Register</button>
         </div>
       </div>
     </div>
@@ -817,24 +847,36 @@ const RegistrationApp = {
     };
 
     const handleRegisterPlayer = (index) => {
+      console.debug('[RegistrationApp] handleRegisterPlayer called with index:', index);
+      console.debug('[RegistrationApp] registrationOpen:', registrationOpen.value);
+      console.debug('[RegistrationApp] capacity:', capacity.value);
+      console.debug('[RegistrationApp] players:', players.value);
+      
       if (!registrationOpen.value) {
+        console.debug('[RegistrationApp] Registration is closed');
         alert('Registration is currently closed.');
         return;
       }
 
       if (capacity.value.isAtCapacity) {
+        console.debug('[RegistrationApp] Registration is full');
         alert(`Registration is full! All ${capacity.value.playerCap} spots have been taken.`);
         return;
       }
 
       const player = players.value[index];
+      console.debug('[RegistrationApp] Player at index:', player);
+      
       if (!player.registerToken) {
+        console.debug('[RegistrationApp] No PIN entered');
         player.registerError = "Please enter your PIN.";
         return;
       }
 
+      console.debug('[RegistrationApp] Opening registration dialog');
       currentRegistrationData.value = { player, index };
       showRegistrationDialog.value = true;
+      console.debug('[RegistrationApp] showRegistrationDialog set to:', showRegistrationDialog.value);
     };
 
     const handleUnregisterPlayer = (index) => {
@@ -849,7 +891,18 @@ const RegistrationApp = {
     };
 
     const confirmRegistration = async (data) => {
+      console.debug('[RegistrationApp] confirmRegistration called with data:', data);
+      
+      if (!currentRegistrationData.value) {
+        console.error('[RegistrationApp] ERROR: currentRegistrationData is null!');
+        alert('Error: No player data found. Please try looking up your player again.');
+        showRegistrationDialog.value = false;
+        return;
+      }
+      
       const { player, index } = currentRegistrationData.value;
+      console.debug('[RegistrationApp] Player data:', player);
+      console.debug('[RegistrationApp] Index:', index);
       
       try {
         const payload = {
@@ -860,14 +913,21 @@ const RegistrationApp = {
           payment_method: data.paymentMethod,
           comments: data.comments
         };
+        console.debug('[RegistrationApp] Registration payload:', payload);
 
         const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
+        const url = `${apiUrl}/rr/register`;
+        console.debug('[RegistrationApp] Calling registration API:', url);
+        
         const fetchOptions = getFetchOptions({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
-        const response = await fetch(`${apiUrl}/rr/register`, fetchOptions);
+        console.debug('[RegistrationApp] Fetch options:', fetchOptions);
+        
+        const response = await fetch(url, fetchOptions);
+        console.debug('[RegistrationApp] Registration response received:', response.status);
 
         const result = await handleApiResponse(response);
         
@@ -1002,7 +1062,7 @@ const RegistrationApp = {
       />
 
       <div class="roster-section">
-        <a href="roster.html" class="roster-link-button">
+        <a href="bttc_roster_vue.html" class="roster-link-button">
           <span class="roster-text">View Registered Players</span>
           <span class="roster-subtext">See current registrations</span>
         </a>

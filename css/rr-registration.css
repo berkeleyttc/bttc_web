@@ -1,5 +1,10 @@
 /* Round Robin Registration Styles */
 
+/* Vue.js App Container */
+#vue-registration-app {
+  min-height: 100vh;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -434,7 +439,17 @@ button:active {
 /* Disable form when registration is closed */
 .registration-disabled {
   opacity: 0.6;
+}
+
+.registration-disabled .lookup-button,
+.registration-disabled .phone-input {
   pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* Allow registration buttons to work even when registration is closed */
+.registration-disabled .confirm-btn {
+  pointer-events: auto;
 }
 
 /* Capacity Banner Styles */
@@ -474,7 +489,7 @@ button:active {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
-  display: none;
+  display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
@@ -584,6 +599,8 @@ button:active {
   box-sizing: border-box;
   font-family: inherit;
   -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 @media (max-width: 480px) {
