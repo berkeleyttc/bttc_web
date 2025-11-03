@@ -1038,6 +1038,72 @@ button:active {
   }
 }
 
+.waiver-section {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+}
+
+.waiver-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.waiver-checkbox input[type="checkbox"] {
+  margin-top: 0.2rem;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .waiver-checkbox input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+.waiver-checkbox label {
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #333;
+  flex: 1;
+}
+
+.waiver-checkbox label a {
+  color: #0066cc;
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.waiver-checkbox label a:hover,
+.waiver-checkbox label a:focus {
+  color: #0052a3;
+  text-decoration: none;
+}
+
+.waiver-note {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.85rem;
+  color: #856404;
+  font-style: italic;
+  padding-left: 2rem;
+}
+
+@media (max-width: 480px) {
+  .waiver-note {
+    padding-left: 0;
+    margin-top: 0.75rem;
+  }
+}
+
 .dialog-buttons {
   display: flex;
   gap: 1rem;
@@ -1076,6 +1142,19 @@ button:active {
 
 .dialog-btn-ok:hover, .dialog-btn-ok:focus {
   background-color: #157347;
+}
+
+.dialog-btn-disabled,
+.dialog-btn-ok:disabled {
+  background-color: #d0d0d0;
+  color: #888;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dialog-btn-disabled:hover,
+.dialog-btn-ok:disabled:hover {
+  background-color: #d0d0d0;
 }
 
 .dialog-btn-cancel {
