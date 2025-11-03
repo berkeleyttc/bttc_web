@@ -83,7 +83,7 @@ const PlayerSearch = {
   template: `
     <div>
       <h1>Complete Your Player Profile</h1>
-      <p class="subtitle">Find yourself in our system and complete your registration information</p>
+      <p class="subtitle">Find yourself in our system and complete your player signup</p>
       
       <div class="search-type">
         <label>
@@ -141,7 +141,7 @@ const PlayerResults = {
   },
   template: `
     <div class="result">
-      <div class="info">Click on your name to complete your registration:</div>
+      <div class="info">Click on your name to complete your player signup:</div>
       
       <div 
         v-for="player in players"
@@ -456,19 +456,19 @@ const PlayerSignupApp = {
         if (data.success) {
           // Success: Show success message and hide search form
           // User will only see success message and link to RR registration
-          successMessage.value = 'Registration completed successfully! You can now use your phone number to register for round robin events.';
+          successMessage.value = 'Signup completed successfully! You can now use your phone number to register for round robin events.';
           error.value = '';
           searchResults.value = [];
           showDialog.value = false;
           selectedPlayer.value = null;
         } else {
           // API returned error (e.g., phone number already in use)
-          alert('Registration failed: ' + (data.message || 'Unknown error'));
+          alert('Signup failed: ' + (data.message || 'Unknown error'));
         }
       } catch (err) {
         // Network error or other exception
-        const friendlyMessage = getErrorMessage(err, 'registration');
-        alert('Registration failed: ' + friendlyMessage);
+        const friendlyMessage = getErrorMessage(err, 'signup');
+        alert('Signup failed: ' + friendlyMessage);
       } finally {
         // Always reset submitting state (re-enable form)
         setSubmitting(false);
@@ -492,7 +492,7 @@ const PlayerSignupApp = {
   },
   template: `
     <div class="container">
-      <a href="bttc_rr_registration_vue.html" class="back-link">← Back to Round Robin Registration</a>
+      <a v-if="!successMessage" href="bttc_rr_registration_vue.html" class="back-link">← Back to Round Robin Registration</a>
       
       <div v-if="successMessage">
         <div class="success">
