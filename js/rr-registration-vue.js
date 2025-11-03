@@ -1,7 +1,7 @@
 // BTTC Round Robin Registration
 // Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateToken
 
-const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
+const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
 
 
 const RegistrationStatus = {
@@ -439,9 +439,13 @@ const RegistrationDialog = {
   },
   emits: ['close', 'confirm'],
   setup(props, { emit }) {
+    // Waiver configuration - update filename here when waiver version changes
+    const WAIVER_FILE = 'liability_waiver_2025-11-03-v1.html';
+    
     // Form state
     const paymentMethod = ref('');  // 'cash' or 'zelle_venmo'
     const comments = ref('');         // Optional comments
+    const waiverAccepted = ref(false); // Waiver acceptance checkbox
 
     const handleConfirm = () => {
       // Payment method is required
@@ -450,10 +454,22 @@ const RegistrationDialog = {
         return;
       }
 
+      // Waiver acceptance is required
+      if (!waiverAccepted.value) {
+        alert('You must accept the liability waiver to register.');
+        return;
+      }
+
+      // Prepend waiver acceptance to comments
+      const waiverNote = `Waiver accepted: ${WAIVER_FILE}`;
+      const fullComments = comments.value 
+        ? `${waiverNote}. ${comments.value}`
+        : waiverNote;
+
       // Emit confirm event with form data
       const data = {
         paymentMethod: paymentMethod.value,
-        comments: comments.value
+        comments: fullComments
       };
       emit('confirm', data);
     };
@@ -461,12 +477,25 @@ const RegistrationDialog = {
     const handleClose = () => {
       paymentMethod.value = '';
       comments.value = '';
+      waiverAccepted.value = false;
       emit('close');
     };
+
+    // Watch for dialog opening and reset all form fields
+    watch(() => props.show, (newValue) => {
+      if (newValue) {
+        // Reset all form fields when dialog opens
+        paymentMethod.value = '';
+        comments.value = '';
+        waiverAccepted.value = false;
+      }
+    });
 
     return {
       paymentMethod,
       comments,
+      waiverAccepted,
+      WAIVER_FILE,
       handleConfirm,
       handleClose
     };
@@ -508,9 +537,32 @@ const RegistrationDialog = {
           ></textarea>
         </div>
 
+        <div class="waiver-section">
+          <div class="waiver-checkbox">
+            <input 
+              type="checkbox" 
+              id="waiverAccept" 
+              v-model="waiverAccepted"
+            />
+            <label for="waiverAccept">
+              I have read and agree to the 
+              <a :href="WAIVER_FILE" target="_blank" rel="noopener noreferrer" @click.stop>liability waiver</a>
+            </label>
+          </div>
+          <p class="waiver-note">* Required. If you are a minor, please have your parent/guardian review this.</p>
+        </div>
+
         <div class="dialog-buttons">
           <button type="button" class="dialog-btn dialog-btn-cancel" @click="handleClose">Cancel</button>
-          <button type="button" class="dialog-btn dialog-btn-ok" @click.stop="handleConfirm">Register</button>
+          <button 
+            type="button" 
+            class="dialog-btn dialog-btn-ok" 
+            :disabled="!waiverAccepted"
+            :class="{ 'dialog-btn-disabled': !waiverAccepted }"
+            @click.stop="handleConfirm"
+          >
+            Register
+          </button>
         </div>
       </div>
     </div>
@@ -864,7 +916,7 @@ const RegistrationApp = {
           last_name: player.last_name,
           token: player.registerToken.trim(), // Trim token before sending
           payment_method: data.paymentMethod,
-          comments: data.comments
+          comments: data.comments  // Comments now include waiver version
         };
 
         const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
@@ -881,7 +933,6 @@ const RegistrationApp = {
         
         if (result.success) {
           alert(result.message);
-          showRegistrationDialog.value = false;
           
           // Update local state instead of clearing and forcing a new lookup
           // Mark the player as registered in the local players array
@@ -893,6 +944,9 @@ const RegistrationApp = {
             players.value[index].registerError = '';
             players.value[index].unregisterError = '';
           }
+          
+          // Close dialog after updating state (watch will reset the form)
+          showRegistrationDialog.value = false;
           
           // Extract capacity from registration response (new API always includes capacity)
           if (result.capacity) {
