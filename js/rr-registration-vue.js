@@ -179,11 +179,9 @@ const PlayerLookup = {
         // Refresh history list in UI
         phoneHistory.value = getPhoneHistory();
         
-        // Collapse the search form after successful lookup (only if players found)
-        const playerList = Array.isArray(data) ? data : (data.players || []);
-        if (playerList.length > 0 && data.result !== "None") {
-          collapsed.value = true;
-        }
+        // Collapse the search form after successful lookup (whether players found or not)
+        // This enables "Search Again" functionality for both success and "not found" cases
+        collapsed.value = true;
         
         // Emit results to parent component
         emit('player-found', data);
