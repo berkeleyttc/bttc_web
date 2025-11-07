@@ -502,3 +502,39 @@ button:disabled {
   }
 }
 
+/* Phone Input with Country Code */
+.phone-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.phone-input-wrapper .country-code {
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.phone-input-wrapper input {
+  padding-left: 3rem;
+  flex: 1;
+}
+
+@media (max-width: 480px) {
+  .phone-input-wrapper .country-code {
+    left: 1rem;
+    font-size: 16px;
+  }
+  
+  .phone-input-wrapper input {
+    padding-left: 3.25rem;
+  }
+}
+

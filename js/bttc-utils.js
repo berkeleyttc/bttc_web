@@ -153,3 +153,17 @@ const validateToken = (token) => {
   return { valid: true, token: cleaned };
 };
 
+const formatPhoneNumber = (phoneString) => {
+  // Remove all non-numeric characters
+  const cleaned = phoneString.replace(/\D/g, '').slice(0, 10);
+  
+  // Format as xxx-xxx-xxxx
+  if (cleaned.length <= 3) {
+    return cleaned;
+  } else if (cleaned.length <= 6) {
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+  } else {
+    return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  }
+};
+

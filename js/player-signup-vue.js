@@ -1,5 +1,5 @@
 // BTTC Player Signup
-// Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateEmail, validateToken
+// Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateEmail, validateToken, formatPhoneNumber
 
 const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
 
@@ -187,6 +187,18 @@ const PlayerDialog = {
     // Loading state during form submission
     const isSubmitting = ref(false);
 
+    const filterNumericInput = (e, fieldName) => {
+      // Get current value and remove any non-numeric characters
+      const numericOnly = e.target.value.replace(/\D/g, '');
+      
+      // Update the field with numeric-only value
+      if (fieldName === 'token') {
+        userToken.value = numericOnly.slice(0, 6);  // Limit to 6 digits
+      } else if (fieldName === 'phone') {
+        // Format phone number using shared utility (xxx-xxx-xxxx)
+        phoneNumber.value = formatPhoneNumber(numericOnly);
+      }
+    };
 
     const clearValidationErrors = () => {
       phoneError.value = '';
@@ -256,6 +268,7 @@ const PlayerDialog = {
       emailError,
       tokenError,
       isSubmitting,
+      filterNumericInput,
       handleClose,
       handleSubmit
     };
@@ -277,15 +290,22 @@ const PlayerDialog = {
         <form @submit.prevent="handleSubmit">
           <div class="form-group">
             <label for="phoneNumber">Phone Number *</label>
-            <input 
-              type="tel" 
-              id="phoneNumber"
-              v-model="phoneNumber"
-              placeholder="e.g., 5101234567" 
-              required 
-              :disabled="isSubmitting"
-            />
-            <div class="help-text">Enter 10 digits without spaces or dashes</div>
+            <div class="phone-input-wrapper">
+              <span class="country-code">+1</span>
+              <input 
+                type="tel" 
+                id="phoneNumber"
+                v-model="phoneNumber"
+                placeholder="xxx-xxx-xxxx"
+                maxlength="12"
+                inputmode="numeric"
+                pattern="[0-9-]*"
+                required 
+                :disabled="isSubmitting"
+                @input="filterNumericInput($event, 'phone')"
+              />
+            </div>
+            <div class="help-text">Enter 10-digit US phone number</div>
             <div v-if="phoneError" class="validation-error">{{ phoneError }}</div>
           </div>
 
@@ -311,9 +331,12 @@ const PlayerDialog = {
                 id="userToken"
                 v-model="userToken"
                 placeholder="Enter your 6-digit PIN" 
-                maxlength="6" 
+                maxlength="6"
+                inputmode="numeric"
+                pattern="[0-9]*"
                 required 
                 :disabled="isSubmitting"
+                @input="filterNumericInput($event, 'token')"
               />
               <div class="help-text">Choose a 6-digit PIN that you'll remember (numbers only)</div>
               <div v-if="tokenError" class="validation-error">{{ tokenError }}</div>
@@ -428,12 +451,15 @@ const PlayerSignupApp = {
     const handleDialogSubmit = async (formData) => {
       const { phoneNumber, email, token, setSubmitting } = formData;
 
+      // Strip dashes from phone number for backend (backend expects digits only)
+      const cleanedPhone = phoneNumber.replace(/\D/g, '');
+
       // Build API payload with player info and form data
       const payload = {
         bttc_id: selectedPlayer.value.bttc_id,
         first_name: selectedPlayer.value.first_name,
         last_name: selectedPlayer.value.last_name,
-        phone_number: phoneNumber,
+        phone_number: cleanedPhone,  // Send digits only (e.g., 8122721164)
         email: email,
         token: token  // 6-digit PIN
       };

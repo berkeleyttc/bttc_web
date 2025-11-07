@@ -1,5 +1,5 @@
 // BTTC Round Robin Registration
-// Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateToken
+// Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateToken, formatPhoneNumber
 
 const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
 
@@ -116,11 +116,15 @@ const getPhoneHistory = () => {
 
 const savePhoneToHistory = (phone) => {
   try {
+    // Format phone for display in history using shared utility (xxx-xxx-xxxx)
+    const cleaned = phone.replace(/\D/g, '');
+    const formatted = formatPhoneNumber(cleaned);
+    
     const history = getPhoneHistory();
     // Remove if already exists (to move to top on next lookup)
-    const filtered = history.filter(p => p !== phone);
+    const filtered = history.filter(p => p.replace(/\D/g, '') !== cleaned);
     // Add to beginning (most recent first)
-    filtered.unshift(phone);
+    filtered.unshift(formatted);
     // Keep only max items (remove oldest entries)
     const trimmed = filtered.slice(0, MAX_HISTORY_ITEMS);
     localStorage.setItem(PHONE_HISTORY_KEY, JSON.stringify(trimmed));
@@ -142,6 +146,12 @@ const PlayerLookup = {
     const phoneHistory = ref([]);     // Phone history from localStorage for autocomplete
     const collapsed = ref(false);     // Whether the search form is minimized/collapsed
 
+    const filterPhoneInput = (e) => {
+      // Get current value and remove any non-numeric characters, then format
+      const numericOnly = e.target.value.replace(/\D/g, '');
+      phoneInput.value = formatPhoneNumber(numericOnly);
+    };
+
     const handleSubmit = async (e) => {
       e.preventDefault();
       
@@ -151,7 +161,10 @@ const PlayerLookup = {
         return;
       }
 
-      const validation = validatePhone(phoneInput.value);
+      // Strip dashes before validation (user sees formatted, backend gets clean digits)
+      const cleanedInput = phoneInput.value.replace(/\D/g, '');
+      
+      const validation = validatePhone(cleanedInput);
       if (!validation.valid) {
         phoneError.value = validation.message;
         emit('lookup-error', validation.message);
@@ -160,7 +173,7 @@ const PlayerLookup = {
       
       // Clear previous errors
       phoneError.value = '';
-      const phone = validation.phone;  // Use cleaned phone number
+      const phone = validation.phone;  // Use cleaned phone number (digits only)
 
       // Set loading state (disables form, shows spinner)
       isLookingUp.value = true;
@@ -214,6 +227,7 @@ const PlayerLookup = {
       phoneError,
       phoneHistory,
       collapsed,
+      filterPhoneInput,
       handleSubmit,
       toggleCollapse
     };
@@ -247,15 +261,17 @@ const PlayerLookup = {
                   id="phone-lookup"
                   v-model="phoneInput"
                   type="tel" 
-                  maxlength="10" 
-                  placeholder="5101234567" 
+                  maxlength="12" 
+                  placeholder="xxx-xxx-xxxx" 
                   class="phone-input"
                   :class="{ 'input-loading': isLookingUp, 'input-error': phoneError }"
+                  inputmode="numeric"
+                  pattern="[0-9-]*"
                   list="phone-history-list"
                   autocomplete="tel"
                   required 
                   :disabled="isLookingUp"
-                  @input="phoneError = ''"
+                  @input="filterPhoneInput"
                 />
                 <datalist id="phone-history-list">
                   <option v-for="phone in phoneHistory" :key="phone" :value="phone">
@@ -265,7 +281,7 @@ const PlayerLookup = {
                 <span v-if="isLookingUp" class="input-spinner"></span>
               </div>
               <p v-if="phoneError" class="input-error-text">{{ phoneError }}</p>
-              <p v-else class="input-hint">Enter your 10-digit phone number (e.g., 5101234567)</p>
+              <p v-else class="input-hint">Enter your 10-digit US phone number</p>
             </div>
             <button 
               type="submit" 
