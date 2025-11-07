@@ -314,6 +314,10 @@ const RosterApp = {
         if (key === 'registered_at') {
           valA = new Date(valA);
           valB = new Date(valB);
+        } else if (key === 'rating') {
+          // Numeric comparison for rating column
+          valA = Number(valA) || 0;
+          valB = Number(valB) || 0;
         } else {
           // String comparison for other fields (case-insensitive)
           valA = valA.toString().toLowerCase();
