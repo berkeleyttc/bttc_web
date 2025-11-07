@@ -500,10 +500,8 @@ const RosterApp = {
   template: `
     <div class="roster-container">
       <a href="bttc_rr_registration_vue.html" class="back-link">← Back to Round Robin Registration</a>
-      <h3>
-        Round Robin Registered Players
-        <span v-if="formattedEventDate"> - {{ formattedEventDate }}</span>
-      </h3>
+      <h3>Round Robin Registered Players</h3>
+      <p v-if="formattedEventDate" class="event-date">{{ formattedEventDate }}</p>
       
       <div v-if="loading" class="loading-message">
         Loading roster...

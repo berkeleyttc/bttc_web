@@ -979,6 +979,7 @@ button:active {
   border-radius: 6px;
   touch-action: manipulation;
   min-height: 44px;
+  text-align: left;
 }
 
 .radio-option:hover {

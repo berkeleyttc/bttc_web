@@ -539,7 +539,7 @@ const RegistrationDialog = {
               value="zelle_venmo"
               v-model="paymentMethod"
             />
-            <label for="payByDigital">Pay by Zelle/Venmo</label>
+            <label for="payByDigital">Pay by Zelle/Venmo (recommended)</label>
           </div>
         </div>
 

@@ -65,11 +65,23 @@
 
 /* Heading */
 .roster-container h3 {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 0.5rem 0;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
   font-size: 1.75rem;
   font-weight: 700;
   color: #333;
+}
+
+/* Event Date */
+.event-date {
+  margin: 0.25rem 0 1.5rem 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #555;
+  text-align: center;
+  display: block;
+  width: 100%;
 }
 
 /* Loading Message */
