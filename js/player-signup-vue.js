@@ -26,6 +26,11 @@ const PlayerSearch = {
       }
     };
 
+    // Clear search input when switching between search types
+    watch(searchType, () => {
+      searchInput.value = '';
+    });
+
     const handleSubmit = async (e) => {
       e.preventDefault();
       
@@ -156,13 +161,6 @@ const PlayerResults = {
           ✓ Already signed up
         </div>
       </div>
-
-      <div 
-        v-if="totalFound > availableForSignup"
-        class="info"
-      >
-        Found {{ totalFound }} total matches, showing {{ availableForSignup }} available for signup.
-      </div>
     </div>
   `
 };
@@ -288,10 +286,6 @@ const PlayerDialog = {
           <span class="message-icon">✓</span>
           <div class="message-text">
             <div>{{ successMessage }}</div>
-            <div class="success-next-steps">
-              You can now use your phone number to register for round robin events at the 
-              <a href="bttc_rr_registration_vue.html" class="rr-inline-link">Round Robin Registration</a> page.
-            </div>
           </div>
         </div>
 
@@ -454,11 +448,19 @@ const PlayerSignupApp = {
     };
 
     const handleDialogClose = () => {
+      // Check if there was a successful signup before clearing messages
+      const wasSuccessful = !!dialogSuccessMessage.value;
+      
       showDialog.value = false;
       selectedPlayer.value = null;
       // Clear dialog messages when closing
       dialogSuccessMessage.value = '';
       dialogErrorMessage.value = '';
+      
+      // Redirect to Round Robin Registration page after successful signup
+      if (wasSuccessful) {
+        window.location.href = 'bttc_rr_registration_vue.html';
+      }
     };
 
     const handleDialogSubmit = async (formData) => {
@@ -497,7 +499,7 @@ const PlayerSignupApp = {
         // Check API response
         if (data.success) {
           // Success: Show success message inline in dialog
-          dialogSuccessMessage.value = data.message || 'Signup completed successfully!';
+          dialogSuccessMessage.value = 'Signup completed successfully!';
           // Don't close dialog - let user see success message and click Close
         } else {
           // API returned error (e.g., phone number already in use)
