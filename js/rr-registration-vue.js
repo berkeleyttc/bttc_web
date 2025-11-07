@@ -588,8 +588,7 @@ const RegistrationDialog = {
           <div class="message-text">
             <div>{{ successMessage }}</div>
             <div class="success-next-steps">
-              Please confirm your name appears in the 
-              <a href="bttc_roster_vue.html" target="_blank" rel="noopener noreferrer" class="roster-inline-link">"Registered Player List"</a>.
+              Please confirm your name appears in the "Round Robin Registered Players" list.
             </div>
           </div>
         </div>
