@@ -230,11 +230,13 @@ const PlayerDialog = {
         isValid = false;
       }
 
-      // Validate email
-      const emailValidation = validateEmail(emailValue);
-      if (!emailValidation.valid) {
-        emailError.value = emailValidation.message || 'Please enter a valid email address';
-        isValid = false;
+      // Validate email (only if provided, since it's optional)
+      if (emailValue) {
+        const emailValidation = validateEmail(emailValue);
+        if (!emailValidation.valid) {
+          emailError.value = emailValidation.message || 'Please enter a valid email address';
+          isValid = false;
+        }
       }
 
       // Validate PIN
@@ -310,13 +312,12 @@ const PlayerDialog = {
           </div>
 
           <div class="form-group">
-            <label for="email">Email Address *</label>
+            <label for="email">Email Address (optional)</label>
             <input 
               type="email" 
               id="email"
               v-model="email"
               placeholder="e.g., john@example.com" 
-              required 
               :disabled="isSubmitting"
             />
             <div v-if="emailError" class="validation-error">{{ emailError }}</div>
