@@ -449,7 +449,9 @@ const PlayerList = {
 const RegistrationDialog = {
   props: {
     show: Boolean,    // Controls dialog visibility
-    player: Object    // Player object being registered
+    player: Object,   // Player object being registered
+    successMessage: String,  // Success message to display inline
+    errorMessage: String     // Error message to display inline
   },
   emits: ['close', 'confirm'],
   setup(props, { emit }) {
@@ -460,17 +462,21 @@ const RegistrationDialog = {
     const paymentMethod = ref('');  // 'cash' or 'zelle_venmo'
     const comments = ref('');         // Optional comments
     const waiverAccepted = ref(false); // Waiver acceptance checkbox
+    const validationError = ref('');  // Inline validation errors
 
     const handleConfirm = () => {
+      // Clear previous validation errors
+      validationError.value = '';
+
       // Payment method is required
       if (!paymentMethod.value) {
-        alert('Please select a payment method.');
+        validationError.value = 'Please select a payment method.';
         return;
       }
 
       // Waiver acceptance is required
       if (!waiverAccepted.value) {
-        alert('You must accept the liability waiver to register.');
+        validationError.value = 'You must accept the liability waiver to register.';
         return;
       }
 
@@ -492,6 +498,7 @@ const RegistrationDialog = {
       paymentMethod.value = '';
       comments.value = '';
       waiverAccepted.value = false;
+      validationError.value = '';
       emit('close');
     };
 
@@ -502,6 +509,7 @@ const RegistrationDialog = {
         paymentMethod.value = '';
         comments.value = '';
         waiverAccepted.value = false;
+        validationError.value = '';
       }
     });
 
@@ -509,6 +517,7 @@ const RegistrationDialog = {
       paymentMethod,
       comments,
       waiverAccepted,
+      validationError,
       WAIVER_FILE,
       handleConfirm,
       handleClose
@@ -519,56 +528,84 @@ const RegistrationDialog = {
       <div class="dialog-box" @click.stop>
         <div class="dialog-title">Complete Registration</div>
 
-        <div class="payment-options">
-          <h4>Payment Method:</h4>
-          <div class="radio-option">
-            <input 
-              type="radio" 
-              id="payByCash" 
-              name="paymentMethod" 
-              value="cash"
-              v-model="paymentMethod"
-            />
-            <label for="payByCash">Pay by Cash</label>
-          </div>
-          <div class="radio-option">
-            <input 
-              type="radio" 
-              id="payByDigital" 
-              name="paymentMethod" 
-              value="zelle_venmo"
-              v-model="paymentMethod"
-            />
-            <label for="payByDigital">Pay by Zelle/Venmo (recommended)</label>
+        <!-- Success Message -->
+        <div v-if="successMessage" class="dialog-message dialog-message-success">
+          <span class="message-icon">✓</span>
+          <div class="message-text">
+            <div>{{ successMessage }}</div>
+            <div class="success-next-steps">
+              Please confirm your name appears in the 
+              <a href="bttc_roster_vue.html" target="_blank" rel="noopener noreferrer" class="roster-inline-link">"Registered Player List"</a>.
+            </div>
           </div>
         </div>
 
-        <div class="comments-section">
-          <h4>Comments (optional):</h4>
-          <textarea 
-            v-model="comments"
-            placeholder="Enter any comments or special requests..."
-          ></textarea>
+        <!-- Error Message -->
+        <div v-if="errorMessage" class="dialog-message dialog-message-error">
+          <span class="message-icon">✗</span>
+          <span class="message-text">{{ errorMessage }}</span>
         </div>
 
-        <div class="waiver-section">
-          <div class="waiver-checkbox">
-            <input 
-              type="checkbox" 
-              id="waiverAccept" 
-              v-model="waiverAccepted"
-            />
-            <label for="waiverAccept">
-              I have read and agree to the 
-              <a :href="WAIVER_FILE" target="_blank" rel="noopener noreferrer" @click.stop>liability waiver</a>
-            </label>
+        <!-- Validation Error -->
+        <div v-if="validationError" class="dialog-message dialog-message-error">
+          <span class="message-icon">⚠</span>
+          <span class="message-text">{{ validationError }}</span>
+        </div>
+
+        <!-- Show form only if no success message -->
+        <div v-if="!successMessage">
+          <div class="payment-options">
+            <h4>Payment Method:</h4>
+            <div class="radio-option">
+              <input 
+                type="radio" 
+                id="payByCash" 
+                name="paymentMethod" 
+                value="cash"
+                v-model="paymentMethod"
+              />
+              <label for="payByCash">Pay by Cash</label>
+            </div>
+            <div class="radio-option">
+              <input 
+                type="radio" 
+                id="payByDigital" 
+                name="paymentMethod" 
+                value="zelle_venmo"
+                v-model="paymentMethod"
+              />
+              <label for="payByDigital">Pay by Zelle/Venmo (recommended)</label>
+            </div>
           </div>
-          <p class="waiver-note">* Required. If you are a minor, please have your parent/guardian review this.</p>
+
+          <div class="comments-section">
+            <h4>Comments (optional):</h4>
+            <textarea 
+              v-model="comments"
+              placeholder="Enter any comments or special requests..."
+            ></textarea>
+          </div>
+
+          <div class="waiver-section">
+            <div class="waiver-checkbox">
+              <input 
+                type="checkbox" 
+                id="waiverAccept" 
+                v-model="waiverAccepted"
+              />
+              <label for="waiverAccept">
+                I have read and agree to the 
+                <a :href="WAIVER_FILE" target="_blank" rel="noopener noreferrer" @click.stop>liability waiver</a>
+              </label>
+            </div>
+            <p class="waiver-note">* Required. If you are a minor, please have your parent/guardian review this.</p>
+          </div>
         </div>
 
         <div class="dialog-buttons">
-          <button type="button" class="dialog-btn dialog-btn-cancel" @click="handleClose">Cancel</button>
+          <button v-if="!successMessage" type="button" class="dialog-btn dialog-btn-cancel" @click="handleClose">Cancel</button>
           <button 
+            v-if="!successMessage"
             type="button" 
             class="dialog-btn dialog-btn-ok" 
             :disabled="!waiverAccepted"
@@ -577,6 +614,7 @@ const RegistrationDialog = {
           >
             Register
           </button>
+          <button v-if="successMessage" type="button" class="dialog-btn dialog-btn-ok" @click="handleClose">Close</button>
         </div>
       </div>
     </div>
@@ -586,7 +624,9 @@ const RegistrationDialog = {
 const UnregistrationDialog = {
   props: {
     show: Boolean,    // Controls dialog visibility
-    player: Object    // Player object being unregistered
+    player: Object,   // Player object being unregistered
+    successMessage: String,  // Success message to display inline
+    errorMessage: String     // Error message to display inline
   },
   emits: ['close', 'confirm'],
   setup(props, { emit }) {
@@ -604,6 +644,13 @@ const UnregistrationDialog = {
       emit('close');
     };
 
+    // Watch for dialog opening and reset form fields
+    watch(() => props.show, (newValue) => {
+      if (newValue) {
+        comments.value = '';
+      }
+    });
+
     return {
       comments,
       handleConfirm,
@@ -615,17 +662,33 @@ const UnregistrationDialog = {
       <div class="dialog-box" @click.stop>
         <div class="dialog-title">Confirm Unregistration</div>
 
-        <div class="comments-section">
-          <h4>Reason for unregistering (optional):</h4>
-          <textarea 
-            v-model="comments"
-            placeholder="Please let us know why you're unregistering..."
-          ></textarea>
+        <!-- Success Message -->
+        <div v-if="successMessage" class="dialog-message dialog-message-success">
+          <span class="message-icon">✓</span>
+          <span class="message-text">{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div v-if="errorMessage" class="dialog-message dialog-message-error">
+          <span class="message-icon">✗</span>
+          <span class="message-text">{{ errorMessage }}</span>
+        </div>
+
+        <!-- Show form only if no success message -->
+        <div v-if="!successMessage">
+          <div class="comments-section">
+            <h4>Reason for unregistering (optional):</h4>
+            <textarea 
+              v-model="comments"
+              placeholder="Please let us know why you're unregistering..."
+            ></textarea>
+          </div>
         </div>
 
         <div class="dialog-buttons">
-          <button class="dialog-btn dialog-btn-cancel" @click="handleClose">Cancel</button>
-          <button class="dialog-btn dialog-btn-ok" @click="handleConfirm">Unregister</button>
+          <button v-if="!successMessage" class="dialog-btn dialog-btn-cancel" @click="handleClose">Cancel</button>
+          <button v-if="!successMessage" class="dialog-btn dialog-btn-ok" @click="handleConfirm">Unregister</button>
+          <button v-if="successMessage" type="button" class="dialog-btn dialog-btn-ok" @click="handleClose">Close</button>
         </div>
       </div>
     </div>
@@ -675,6 +738,10 @@ const RegistrationApp = {
     const showUnregistrationDialog = ref(false); // Controls unregistration dialog visibility
     const currentRegistrationData = ref(null);  // Player being registered (for dialog)
     const currentUnregistrationData = ref(null); // Player being unregistered (for dialog)
+    const registrationSuccessMessage = ref('');  // Success message for registration dialog
+    const registrationErrorMessage = ref('');    // Error message for registration dialog
+    const unregistrationSuccessMessage = ref(''); // Success message for unregistration dialog
+    const unregistrationErrorMessage = ref('');   // Error message for unregistration dialog
     const error = ref('');                      // Error message to display
 
     // Computed properties
@@ -880,6 +947,10 @@ const RegistrationApp = {
       // Clear any previous errors
       player.registerError = '';
 
+      // Clear dialog messages from previous interactions
+      registrationSuccessMessage.value = '';
+      registrationErrorMessage.value = '';
+
       currentRegistrationData.value = { player, index };
       showRegistrationDialog.value = true;
     };
@@ -902,25 +973,31 @@ const RegistrationApp = {
       // Clear any previous errors
       player.unregisterError = '';
 
+      // Clear dialog messages from previous interactions
+      unregistrationSuccessMessage.value = '';
+      unregistrationErrorMessage.value = '';
+
       currentUnregistrationData.value = { player, index };
       showUnregistrationDialog.value = true;
     };
 
     const confirmRegistration = async (data) => {
       if (!currentRegistrationData.value) {
-        alert('Error: No player data found. Please try looking up your player again.');
-        showRegistrationDialog.value = false;
+        registrationErrorMessage.value = 'Error: No player data found. Please close this dialog and try looking up your player again.';
         return;
       }
       
       const { player, index } = currentRegistrationData.value;
       
+      // Clear any previous messages
+      registrationSuccessMessage.value = '';
+      registrationErrorMessage.value = '';
+      
       try {
         // Validate token again before API call (extra safety check)
         const tokenValidation = validateToken(player.registerToken);
         if (!tokenValidation.valid) {
-          players.value[index].registerError = tokenValidation.message;
-          showRegistrationDialog.value = false;
+          registrationErrorMessage.value = tokenValidation.message;
           return;
         }
         
@@ -946,7 +1023,8 @@ const RegistrationApp = {
         const result = await handleApiResponse(response);
         
         if (result.success) {
-          alert(result.message);
+          // Set success message instead of alert
+          registrationSuccessMessage.value = result.message || 'Registration completed successfully!';
           
           // Update local state instead of clearing and forcing a new lookup
           // Mark the player as registered in the local players array
@@ -958,9 +1036,6 @@ const RegistrationApp = {
             players.value[index].registerError = '';
             players.value[index].unregisterError = '';
           }
-          
-          // Close dialog after updating state (watch will reset the form)
-          showRegistrationDialog.value = false;
           
           // Extract capacity from registration response (new API always includes capacity)
           if (result.capacity) {
@@ -980,35 +1055,40 @@ const RegistrationApp = {
             if (error.value && error.value.includes('capacity')) {
               error.value = '';
             }
-          } else {
-            // If capacity not included (should not happen with new API), continue without capacity
           }
           
           error.value = '';
+          // Don't close the dialog - let user see success message and click Close button
         } else {
           if (result.isAtCapacity) {
-            alert(`Registration is full! All ${result.playerCap} spots have been taken.`);
+            registrationErrorMessage.value = `Registration is full! All ${result.playerCap} spots have been taken.`;
           } else {
-            players.value[index].registerError = result.message;
+            registrationErrorMessage.value = result.message || 'Registration failed. Please try again.';
           }
-          showRegistrationDialog.value = false;
         }
       } catch (err) {
         const friendlyMessage = getErrorMessage(err, 'registration');
-        players.value[index].registerError = friendlyMessage;
-        showRegistrationDialog.value = false;
+        registrationErrorMessage.value = friendlyMessage;
       }
     };
 
     const confirmUnregistration = async (data) => {
+      if (!currentUnregistrationData.value) {
+        unregistrationErrorMessage.value = 'Error: No player data found. Please close this dialog and try looking up your player again.';
+        return;
+      }
+      
       const { player, index } = currentUnregistrationData.value;
+      
+      // Clear any previous messages
+      unregistrationSuccessMessage.value = '';
+      unregistrationErrorMessage.value = '';
       
       try {
         // Validate token again before API call (extra safety check)
         const tokenValidation = validateToken(player.unregisterToken);
         if (!tokenValidation.valid) {
-          players.value[index].unregisterError = tokenValidation.message;
-          showUnregistrationDialog.value = false;
+          unregistrationErrorMessage.value = tokenValidation.message;
           return;
         }
         
@@ -1031,8 +1111,8 @@ const RegistrationApp = {
         const result = await handleApiResponse(response);
         
         if (result.success) {
-          alert(result.message);
-          showUnregistrationDialog.value = false;
+          // Set success message instead of alert
+          unregistrationSuccessMessage.value = result.message || 'Unregistration completed successfully!';
           
           // Update local state instead of making another API call
           // Mark the player as unregistered in the local players array
@@ -1063,17 +1143,14 @@ const RegistrationApp = {
             if (error.value && error.value.includes('capacity')) {
               error.value = '';
             }
-          } else {
-            // If capacity not included (should not happen with new API), continue without capacity
           }
+          // Don't close the dialog - let user see success message and click Close button
         } else {
-          players.value[index].unregisterError = result.message;
-          showUnregistrationDialog.value = false;
+          unregistrationErrorMessage.value = result.message || 'Unregistration failed. Please try again.';
         }
       } catch (err) {
         const friendlyMessage = getErrorMessage(err, 'unregistration');
-        players.value[index].unregisterError = friendlyMessage;
-        showUnregistrationDialog.value = false;
+        unregistrationErrorMessage.value = friendlyMessage;
       }
     };
 
@@ -1091,6 +1168,10 @@ const RegistrationApp = {
       showUnregistrationDialog,
       currentRegistrationData,
       currentUnregistrationData,
+      registrationSuccessMessage,
+      registrationErrorMessage,
+      unregistrationSuccessMessage,
+      unregistrationErrorMessage,
       error,
       devOverride,
       closingTime,
@@ -1170,6 +1251,8 @@ const RegistrationApp = {
       <registration-dialog 
         :show="showRegistrationDialog"
         :player="currentRegistrationData?.player"
+        :success-message="registrationSuccessMessage"
+        :error-message="registrationErrorMessage"
         @close="showRegistrationDialog = false"
         @confirm="confirmRegistration"
       />
@@ -1177,6 +1260,8 @@ const RegistrationApp = {
       <unregistration-dialog 
         :show="showUnregistrationDialog"
         :player="currentUnregistrationData?.player"
+        :success-message="unregistrationSuccessMessage"
+        :error-message="unregistrationErrorMessage"
         @close="showUnregistrationDialog = false"
         @confirm="confirmUnregistration"
       />

@@ -1184,3 +1184,88 @@ button:active {
     transform: none;
   }
 }
+
+/* Dialog Message Styles - Success/Error Inline Messages */
+.dialog-message {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.dialog-message-success {
+  background-color: #d1e7dd;
+  color: #0f5132;
+  border: 1px solid #badbcc;
+}
+
+.dialog-message-error {
+  background-color: #f8d7da;
+  color: #842029;
+  border: 1px solid #f5c2c7;
+}
+
+.dialog-message .message-icon {
+  font-size: 1.5rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.dialog-message-success .message-icon {
+  color: #198754;
+}
+
+.dialog-message-error .message-icon {
+  color: #dc3545;
+}
+
+.dialog-message .message-text {
+  flex: 1;
+  font-weight: 500;
+}
+
+/* Success next steps - appears after success message */
+.success-next-steps {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #badbcc;
+  font-size: 0.9rem;
+  font-weight: normal;
+  color: #0f5132;
+  line-height: 1.6;
+}
+
+/* Inline roster link in success message */
+.roster-inline-link {
+  color: #0d6efd;
+  text-decoration: underline;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.roster-inline-link:hover,
+.roster-inline-link:focus {
+  color: #0b5ed7;
+  text-decoration: none;
+}
+
+@media (max-width: 480px) {
+  .dialog-message {
+    padding: 0.875rem;
+    font-size: 0.9rem;
+  }
+  
+  .dialog-message .message-icon {
+    font-size: 1.25rem;
+  }
+  
+  .success-next-steps {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+  }
+}

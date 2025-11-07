@@ -1,7 +1,7 @@
 // BTTC Player Signup
 // Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateEmail, validateToken, formatPhoneNumber
 
-const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
+const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
 
 const PlayerSearch = {
   emits: ['players-found', 'search-error'],
@@ -170,7 +170,9 @@ const PlayerResults = {
 const PlayerDialog = {
   props: {
     show: Boolean,    // Controls dialog visibility
-    player: Object    // Selected player info to display in dialog header
+    player: Object,   // Selected player info to display in dialog header
+    successMessage: String,  // Success message to display inline
+    errorMessage: String     // Error message to display inline
   },
   emits: ['close', 'submit'],
   setup(props, { emit }) {
@@ -213,6 +215,16 @@ const PlayerDialog = {
       clearValidationErrors();
       emit('close');
     };
+
+    // Watch for dialog opening and reset form fields
+    watch(() => props.show, (newValue) => {
+      if (newValue) {
+        phoneNumber.value = '';
+        email.value = '';
+        userToken.value = '';
+        clearValidationErrors();
+      }
+    });
 
     const handleSubmit = () => {
       clearValidationErrors();
@@ -289,7 +301,25 @@ const PlayerDialog = {
           BTTC ID: {{ player.bttc_id }}
         </div>
 
-        <form @submit.prevent="handleSubmit">
+        <!-- Success Message -->
+        <div v-if="successMessage" class="dialog-message dialog-message-success">
+          <span class="message-icon">✓</span>
+          <div class="message-text">
+            <div>{{ successMessage }}</div>
+            <div class="success-next-steps">
+              You can now use your phone number to register for round robin events at the 
+              <a href="bttc_rr_registration_vue.html" class="rr-inline-link">Round Robin Registration</a> page.
+            </div>
+          </div>
+        </div>
+
+        <!-- Error Message -->
+        <div v-if="errorMessage" class="dialog-message dialog-message-error">
+          <span class="message-icon">✗</span>
+          <span class="message-text">{{ errorMessage }}</span>
+        </div>
+
+        <form v-if="!successMessage" @submit.prevent="handleSubmit">
           <div class="form-group">
             <label for="phoneNumber">Phone Number *</label>
             <div class="phone-input-wrapper">
@@ -346,6 +376,7 @@ const PlayerDialog = {
 
           <div class="dialog-buttons">
             <button 
+              v-if="!successMessage"
               type="button" 
               class="dialog-btn dialog-btn-secondary" 
               @click="handleClose"
@@ -354,6 +385,7 @@ const PlayerDialog = {
               Cancel
             </button>
             <button 
+              v-if="!successMessage"
               type="submit" 
               class="dialog-btn dialog-btn-primary"
               :disabled="isSubmitting"
@@ -363,6 +395,17 @@ const PlayerDialog = {
             </button>
           </div>
         </form>
+
+        <!-- Close button for success state -->
+        <div v-if="successMessage" class="dialog-buttons">
+          <button 
+            type="button" 
+            class="dialog-btn dialog-btn-primary" 
+            @click="handleClose"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   `
@@ -383,6 +426,8 @@ const PlayerSignupApp = {
     const showDialog = ref(false);        // Controls dialog modal visibility
     const error = ref('');                // Error message to display
     const successMessage = ref('');        // Success message to display
+    const dialogSuccessMessage = ref('');  // Success message for dialog
+    const dialogErrorMessage = ref('');    // Error message for dialog
 
     /**
      * Handles successful player search results
@@ -441,16 +486,26 @@ const PlayerSignupApp = {
 
     const handlePlayerSelected = (player) => {
       selectedPlayer.value = player;
+      // Clear any previous dialog messages
+      dialogSuccessMessage.value = '';
+      dialogErrorMessage.value = '';
       showDialog.value = true;
     };
 
     const handleDialogClose = () => {
       showDialog.value = false;
       selectedPlayer.value = null;
+      // Clear dialog messages when closing
+      dialogSuccessMessage.value = '';
+      dialogErrorMessage.value = '';
     };
 
     const handleDialogSubmit = async (formData) => {
       const { phoneNumber, email, token, setSubmitting } = formData;
+
+      // Clear any previous dialog messages
+      dialogSuccessMessage.value = '';
+      dialogErrorMessage.value = '';
 
       // Strip dashes from phone number for backend (backend expects digits only)
       const cleanedPhone = phoneNumber.replace(/\D/g, '');
@@ -481,21 +536,17 @@ const PlayerSignupApp = {
 
         // Check API response
         if (data.success) {
-          // Success: Show success message and hide search form
-          // User will only see success message and link to RR registration
-          successMessage.value = 'Signup completed successfully! You can now use your phone number to register for round robin events.';
-          error.value = '';
-          searchResults.value = [];
-          showDialog.value = false;
-          selectedPlayer.value = null;
+          // Success: Show success message inline in dialog
+          dialogSuccessMessage.value = data.message || 'Signup completed successfully!';
+          // Don't close dialog - let user see success message and click Close
         } else {
           // API returned error (e.g., phone number already in use)
-          alert('Signup failed: ' + (data.message || 'Unknown error'));
+          dialogErrorMessage.value = data.message || 'Signup failed. Please try again.';
         }
       } catch (err) {
         // Network error or other exception
         const friendlyMessage = getErrorMessage(err, 'signup');
-        alert('Signup failed: ' + friendlyMessage);
+        dialogErrorMessage.value = friendlyMessage;
       } finally {
         // Always reset submitting state (re-enable form)
         setSubmitting(false);
@@ -510,6 +561,8 @@ const PlayerSignupApp = {
       showDialog,
       error,
       successMessage,
+      dialogSuccessMessage,
+      dialogErrorMessage,
       handlePlayersFound,
       handleSearchError,
       handlePlayerSelected,
@@ -553,6 +606,8 @@ const PlayerSignupApp = {
       <player-dialog 
         :show="showDialog"
         :player="selectedPlayer"
+        :success-message="dialogSuccessMessage"
+        :error-message="dialogErrorMessage"
         @close="handleDialogClose"
         @submit="handleDialogSubmit"
       />
