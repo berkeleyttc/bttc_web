@@ -179,12 +179,10 @@ const PlayerDialog = {
     // Form input state
     const phoneNumber = ref('');
     const email = ref('');
-    const userToken = ref('');  // PIN/token input
     
     // Validation error messages (shown below each field)
     const phoneError = ref('');
     const emailError = ref('');
-    const tokenError = ref('');
     
     // Loading state during form submission
     const isSubmitting = ref(false);
@@ -194,9 +192,7 @@ const PlayerDialog = {
       const numericOnly = e.target.value.replace(/\D/g, '');
       
       // Update the field with numeric-only value
-      if (fieldName === 'token') {
-        userToken.value = numericOnly.slice(0, 6);  // Limit to 6 digits
-      } else if (fieldName === 'phone') {
+      if (fieldName === 'phone') {
         // Format phone number using shared utility (xxx-xxx-xxxx)
         phoneNumber.value = formatPhoneNumber(numericOnly);
       }
@@ -205,13 +201,11 @@ const PlayerDialog = {
     const clearValidationErrors = () => {
       phoneError.value = '';
       emailError.value = '';
-      tokenError.value = '';
     };
 
     const handleClose = () => {
       phoneNumber.value = '';
       email.value = '';
-      userToken.value = '';
       clearValidationErrors();
       emit('close');
     };
@@ -221,7 +215,6 @@ const PlayerDialog = {
       if (newValue) {
         phoneNumber.value = '';
         email.value = '';
-        userToken.value = '';
         clearValidationErrors();
       }
     });
@@ -233,7 +226,6 @@ const PlayerDialog = {
       // Get trimmed values from form inputs
       const phone = phoneNumber.value.trim();
       const emailValue = email.value.trim();
-      const token = userToken.value.trim();
 
       // Validate phone number
       const phoneValidation = validatePhone(phone);
@@ -251,13 +243,6 @@ const PlayerDialog = {
         }
       }
 
-      // Validate PIN
-      const tokenValidation = validateToken(token);
-      if (!tokenValidation.valid) {
-        tokenError.value = tokenValidation.message || 'PIN must be exactly 6 digits';
-        isValid = false;
-      }
-
       // Stop if validation failed (errors are already shown)
       if (!isValid) return;
 
@@ -268,7 +253,6 @@ const PlayerDialog = {
       emit('submit', {
         phoneNumber: phone,
         email: emailValue,
-        token: token,
         // Provide callback to allow parent to reset loading state
         setSubmitting: (value) => { isSubmitting.value = value; }
       });
@@ -277,10 +261,8 @@ const PlayerDialog = {
     return {
       phoneNumber,
       email,
-      userToken,
       phoneError,
       emailError,
-      tokenError,
       isSubmitting,
       filterNumericInput,
       handleClose,
@@ -351,27 +333,6 @@ const PlayerDialog = {
               :disabled="isSubmitting"
             />
             <div v-if="emailError" class="validation-error">{{ emailError }}</div>
-          </div>
-
-          <div class="token-section">
-            <h4>Create Your Personal PIN</h4>
-            <div class="form-group">
-              <label for="userToken">Personal PIN *</label>
-              <input 
-                type="text" 
-                id="userToken"
-                v-model="userToken"
-                placeholder="Enter your 6-digit PIN" 
-                maxlength="6"
-                inputmode="numeric"
-                pattern="[0-9]*"
-                required 
-                :disabled="isSubmitting"
-                @input="filterNumericInput($event, 'token')"
-              />
-              <div class="help-text">Choose a 6-digit PIN that you'll remember (numbers only)</div>
-              <div v-if="tokenError" class="validation-error">{{ tokenError }}</div>
-            </div>
           </div>
 
           <div class="dialog-buttons">
@@ -501,7 +462,7 @@ const PlayerSignupApp = {
     };
 
     const handleDialogSubmit = async (formData) => {
-      const { phoneNumber, email, token, setSubmitting } = formData;
+      const { phoneNumber, email, setSubmitting } = formData;
 
       // Clear any previous dialog messages
       dialogSuccessMessage.value = '';
@@ -516,8 +477,7 @@ const PlayerSignupApp = {
         first_name: selectedPlayer.value.first_name,
         last_name: selectedPlayer.value.last_name,
         phone_number: cleanedPhone,  // Send digits only (e.g., 8122721164)
-        email: email,
-        token: token  // 6-digit PIN
+        email: email
       };
 
       try {

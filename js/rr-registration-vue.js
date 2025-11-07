@@ -375,34 +375,9 @@ const PlayerList = {
       emit('unregister-player', index);
     };
 
-    const filterNumericInput = (e) => {
-      // Get current value and remove any non-numeric characters
-      const numericOnly = e.target.value.replace(/\D/g, '').slice(0, 6);
-      
-      // Update the input value - Vue's v-model will handle reactivity
-      // We need to update both the input and trigger the model update
-      e.target.value = numericOnly;
-      
-      // Update the model directly to ensure v-model syncs correctly
-      // Find which player this input belongs to by checking the id
-      const inputId = e.target.id;
-      if (inputId.includes('register-pin-')) {
-        const index = parseInt(inputId.replace('register-pin-', ''));
-        if (props.players[index]) {
-          props.players[index].registerToken = numericOnly;
-        }
-      } else if (inputId.includes('unregister-pin-')) {
-        const index = parseInt(inputId.replace('unregister-pin-', ''));
-        if (props.players[index]) {
-          props.players[index].unregisterToken = numericOnly;
-        }
-      }
-    };
-
     return {
       registerPlayer,
       unregisterPlayer,
-      filterNumericInput,
       capacityLastUpdated: props.capacityLastUpdated  // Expose prop to template
     };
   },
@@ -432,18 +407,6 @@ const PlayerList = {
             <p class="full-message-hint">You cannot unregister at this time. Please contact BTTC support if needed.</p>
           </div>
           <div v-else class="unregister-form">
-            <label :for="'unregister-pin-' + index" class="pin-label">Enter your 6-digit PIN to unregister:</label>
-            <input 
-              type="text" 
-              :id="'unregister-pin-' + index"
-              placeholder="000000"
-              class="token-field" 
-              v-model="player.unregisterToken"
-              maxlength="6"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              @input="filterNumericInput"
-            />
             <button 
               type="button"
               class="confirm-btn unregister-btn" 
@@ -470,18 +433,6 @@ const PlayerList = {
             <p class="full-message-hint">Please check back later or contact BTTC support if you believe this is an error.</p>
           </div>
           <div v-else class="register-form">
-            <label :for="'register-pin-' + index" class="pin-label">Enter your 6-digit PIN to register:</label>
-            <input 
-              type="text" 
-              :id="'register-pin-' + index"
-              placeholder="000000"
-              class="token-field" 
-              v-model="player.registerToken"
-              maxlength="6"
-              inputmode="numeric"
-              pattern="[0-9]*"
-              @input="filterNumericInput"
-            />
             <button 
               type="button"
               class="confirm-btn" 
@@ -1050,8 +1001,6 @@ const RegistrationApp = {
       error.value = '';
       players.value = playerList.map(player => ({
         ...player,
-        registerToken: '',
-        unregisterToken: '',
         registerError: '',
         unregisterError: ''
       }));
@@ -1089,13 +1038,6 @@ const RegistrationApp = {
 
       const player = players.value[index];
       
-      // Validate PIN before making API call
-      const tokenValidation = validateToken(player.registerToken);
-      if (!tokenValidation.valid) {
-        player.registerError = tokenValidation.message;
-        return;
-      }
-      
       // Clear any previous errors
       player.registerError = '';
 
@@ -1114,13 +1056,6 @@ const RegistrationApp = {
       }
 
       const player = players.value[index];
-      
-      // Validate PIN before making API call
-      const tokenValidation = validateToken(player.unregisterToken);
-      if (!tokenValidation.valid) {
-        player.unregisterError = tokenValidation.message;
-        return;
-      }
       
       // Clear any previous errors
       player.unregisterError = '';
@@ -1146,18 +1081,10 @@ const RegistrationApp = {
       registrationErrorMessage.value = '';
       
       try {
-        // Validate token again before API call (extra safety check)
-        const tokenValidation = validateToken(player.registerToken);
-        if (!tokenValidation.valid) {
-          registrationErrorMessage.value = tokenValidation.message;
-          return;
-        }
-        
         const payload = {
           bttc_id: player.bttc_id,
           first_name: player.first_name,
           last_name: player.last_name,
-          token: player.registerToken.trim(), // Trim token before sending
           payment_method: data.paymentMethod,
           comments: data.comments  // Comments now include waiver version
         };
@@ -1182,9 +1109,7 @@ const RegistrationApp = {
           // Mark the player as registered in the local players array
           if (players.value[index]) {
             players.value[index].is_registered = true;
-            // Clear any PIN/token fields
-            players.value[index].registerToken = '';
-            players.value[index].unregisterToken = '';
+            // Clear any error fields
             players.value[index].registerError = '';
             players.value[index].unregisterError = '';
           }
@@ -1222,18 +1147,10 @@ const RegistrationApp = {
       unregistrationErrorMessage.value = '';
       
       try {
-        // Validate token again before API call (extra safety check)
-        const tokenValidation = validateToken(player.unregisterToken);
-        if (!tokenValidation.valid) {
-          unregistrationErrorMessage.value = tokenValidation.message;
-          return;
-        }
-        
         const payload = {
           bttc_id: player.bttc_id,
           first_name: player.first_name,
           last_name: player.last_name,
-          token: player.unregisterToken.trim(), // Trim token before sending
           comments: data.comments
         };
 
@@ -1255,9 +1172,7 @@ const RegistrationApp = {
           // Mark the player as unregistered in the local players array
           if (players.value[index]) {
             players.value[index].is_registered = false;
-            // Clear any PIN/token fields
-            players.value[index].unregisterToken = '';
-            players.value[index].registerToken = '';
+            // Clear any error fields
             players.value[index].registerError = '';
             players.value[index].unregisterError = '';
           }
