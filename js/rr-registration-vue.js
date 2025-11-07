@@ -103,6 +103,9 @@ const CapacityBanner = {
 
 const PHONE_HISTORY_KEY = 'bttc_phone_history';
 const MAX_HISTORY_ITEMS = 10;
+const EVENT_METADATA_CACHE_KEY = 'bttc_event_metadata';
+const EVENT_METADATA_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (event date never changes)
+const ROSTER_CACHE_KEY = 'bttc_roster_cache'; // Same cache key as roster-vue.js
 
 const getPhoneHistory = () => {
   try {
@@ -111,6 +114,57 @@ const getPhoneHistory = () => {
   } catch (err) {
     // localStorage unavailable or corrupted JSON, return empty array
     return [];
+  }
+};
+
+// Cache for event metadata (event_date, event_type)
+const getEventMetadataCache = () => {
+  try {
+    const cached = sessionStorage.getItem(EVENT_METADATA_CACHE_KEY);
+    if (!cached) return null;
+    
+    const { data, timestamp } = JSON.parse(cached);
+    const now = Date.now();
+    const age = now - timestamp;
+    
+    // Check if cache is still valid (24 hours TTL)
+    if (age < EVENT_METADATA_CACHE_TTL) {
+      return data;
+    }
+    
+    // Cache expired, remove it
+    sessionStorage.removeItem(EVENT_METADATA_CACHE_KEY);
+    return null;
+  } catch (err) {
+    return null;
+  }
+};
+
+const setEventMetadataCache = (eventDate, eventType) => {
+  try {
+    const cacheEntry = {
+      data: { eventDate, eventType },
+      timestamp: Date.now()
+    };
+    sessionStorage.setItem(EVENT_METADATA_CACHE_KEY, JSON.stringify(cacheEntry));
+  } catch (err) {
+    // sessionStorage unavailable, silently fail
+  }
+};
+
+// Cache roster data (shared with roster-vue.js)
+const setRosterCache = (rosterData, capacityData) => {
+  try {
+    const cacheEntry = {
+      data: {
+        roster: rosterData,
+        capacity: capacityData
+      },
+      timestamp: Date.now()
+    };
+    sessionStorage.setItem(ROSTER_CACHE_KEY, JSON.stringify(cacheEntry));
+  } catch (err) {
+    // sessionStorage unavailable, silently fail
   }
 };
 
@@ -731,7 +785,9 @@ const RegistrationApp = {
       confirmedCount: 0,                        // Number of confirmed registrations
       playerCap: fallbackPlayerCap,             // Maximum capacity
       spotsAvailable: 0,                        // Available spots
-      eventOpen: true                           // Whether event is accepting registrations
+      eventOpen: true,                          // Whether event is accepting registrations
+      eventDate: null,                          // Event date (ISO format YYYY-MM-DD)
+      eventType: null                           // Event type (e.g., "rr", "tournament", "group_training")
     });
     const capacityLastUpdated = ref(null);       // Timestamp when capacity was last fetched
     const showRegistrationDialog = ref(false);    // Controls registration dialog visibility
@@ -745,6 +801,36 @@ const RegistrationApp = {
     const error = ref('');                      // Error message to display
 
     // Computed properties
+    
+    /**
+     * Computed: Formatted event date in user-friendly format
+     * Converts ISO date (YYYY-MM-DD) to "Month Day, Year" format (e.g., "Nov 2, 2025")
+     * Returns empty string if no event date available
+     */
+    const formattedEventDate = computed(() => {
+      if (!capacity.value.eventDate) return '';
+      
+      try {
+        const date = new Date(capacity.value.eventDate + 'T00:00:00'); // Add time to avoid timezone issues
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          return '';
+        }
+        
+        // Format date as "Month Day, Year" (e.g., "Nov 2, 2025")
+        const formatted = date.toLocaleDateString("en-US", {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        
+        return formatted;
+      } catch (err) {
+        return '';
+      }
+    });
+    
     // Closing time: Shows closing day and time (default: Friday 6:45 PM)
     const closingTime = computed(() => {
       const now = new Date();
@@ -870,6 +956,88 @@ const RegistrationApp = {
     // NOTE: Capacity is now included in all API responses (search, register, unregister)
     // No need for separate /rr/capacity calls anymore
 
+    /**
+     * Helper function to update capacity state from API response
+     * Also caches event metadata (event_date, event_type) for future use
+     */
+    const updateCapacityFromResponse = (capacityData) => {
+      if (!capacityData) return;
+      
+      const updatedCapacity = {
+        isAtCapacity: !!capacityData.roster_full,
+        confirmedCount: Number(capacityData.confirmed_count || 0),
+        playerCap: Number(capacityData.player_cap || defaultPlayerCap),
+        spotsAvailable: Number(capacityData.spots_available || 0),
+        eventOpen: !!capacityData.event_open,
+        eventDate: capacityData.event_date || null,
+        eventType: capacityData.event_type || null
+      };
+      
+      capacity.value = updatedCapacity;
+      capacityLastUpdated.value = Date.now();
+      
+      // Cache event metadata separately (long TTL since event date never changes)
+      if (capacityData.event_date || capacityData.event_type) {
+        setEventMetadataCache(capacityData.event_date, capacityData.event_type);
+      }
+      
+      // Clear any previous capacity errors on success
+      if (error.value && error.value.includes('capacity')) {
+        error.value = '';
+      }
+    };
+
+    /**
+     * Fetches event metadata (event_date, event_type) from cache or API
+     * Called on mount to display event date without waiting for user action
+     * Also caches the full roster data for roster-vue.js to use
+     */
+    const fetchEventMetadata = async () => {
+      // Check cache first
+      const cached = getEventMetadataCache();
+      if (cached) {
+        capacity.value.eventDate = cached.eventDate;
+        capacity.value.eventType = cached.eventType;
+        return;
+      }
+      
+      // Not cached, fetch from API (use roster endpoint - gets event date + full roster)
+      try {
+        const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
+        const url = `${apiUrl}/rr/roster`;
+        
+        const fetchOptions = getFetchOptions();
+        const response = await fetch(url, fetchOptions);
+        const data = await handleApiResponse(response);
+        
+        // Extract roster data (array of players)
+        const rosterData = Array.isArray(data) ? data : (data.roster || []);
+        
+        // Extract capacity data (which includes event metadata)
+        if (data.capacity) {
+          updateCapacityFromResponse(data.capacity);
+          
+          // Cache the full roster data for roster-vue.js to use
+          // This avoids an extra API call when user navigates to roster page
+          const capacityData = {
+            isAtCapacity: !!data.capacity.roster_full,
+            confirmedCount: Number(data.capacity.confirmed_count || 0),
+            playerCap: Number(data.capacity.player_cap || defaultPlayerCap),
+            spotsAvailable: Number(data.capacity.spots_available || 0),
+            eventOpen: !!data.capacity.event_open,
+            eventDate: data.capacity.event_date || null,
+            eventType: data.capacity.event_type || null
+          };
+          
+          // Cache roster data with same structure as roster-vue.js expects
+          setRosterCache(rosterData, capacityData);
+        }
+      } catch (err) {
+        // Silently fail - event date is nice-to-have, not critical
+        // User will see it after performing a lookup
+      }
+    };
+
     const handlePlayerFound = (data) => {
       // New API response structure: { players: [], capacity: {} }
       const playerList = Array.isArray(data) ? data : (data.players || []);
@@ -891,22 +1059,7 @@ const RegistrationApp = {
       
       // Extract capacity from search response (new API always includes capacity)
       if (data.capacity) {
-        const capacityData = {
-          isAtCapacity: !!data.capacity.roster_full,
-          confirmedCount: Number(data.capacity.confirmed_count || 0),
-          playerCap: Number(data.capacity.player_cap || defaultPlayerCap),
-          spotsAvailable: Number(data.capacity.spots_available || 0),
-          eventOpen: !!data.capacity.event_open
-        };
-        
-        const now = Date.now();
-        capacity.value = capacityData;
-        capacityLastUpdated.value = now;
-        
-        // Clear any previous capacity errors on success
-        if (error.value && error.value.includes('capacity')) {
-          error.value = '';
-        }
+        updateCapacityFromResponse(data.capacity);
       } else {
         // If capacity not included (should not happen with new API), show error
         error.value = 'Capacity information is missing from the response. Please refresh and try again.';
@@ -1039,22 +1192,7 @@ const RegistrationApp = {
           
           // Extract capacity from registration response (new API always includes capacity)
           if (result.capacity) {
-            const capacityData = {
-              isAtCapacity: !!result.capacity.roster_full,
-              confirmedCount: Number(result.capacity.confirmed_count || 0),
-              playerCap: Number(result.capacity.player_cap || defaultPlayerCap),
-              spotsAvailable: Number(result.capacity.spots_available || 0),
-              eventOpen: !!result.capacity.event_open
-            };
-            
-            const now = Date.now();
-            capacity.value = capacityData;
-            capacityLastUpdated.value = now;
-            
-            // Clear any previous capacity errors on success
-            if (error.value && error.value.includes('capacity')) {
-              error.value = '';
-            }
+            updateCapacityFromResponse(result.capacity);
           }
           
           error.value = '';
@@ -1127,22 +1265,7 @@ const RegistrationApp = {
           
           // Extract capacity from unregistration response (new API always includes capacity)
           if (result.capacity) {
-            const capacityData = {
-              isAtCapacity: !!result.capacity.roster_full,
-              confirmedCount: Number(result.capacity.confirmed_count || 0),
-              playerCap: Number(result.capacity.player_cap || defaultPlayerCap),
-              spotsAvailable: Number(result.capacity.spots_available || 0),
-              eventOpen: !!result.capacity.event_open
-            };
-            
-            const now = Date.now();
-            capacity.value = capacityData;
-            capacityLastUpdated.value = now;
-            
-            // Clear any previous capacity errors on success
-            if (error.value && error.value.includes('capacity')) {
-              error.value = '';
-            }
+            updateCapacityFromResponse(result.capacity);
           }
           // Don't close the dialog - let user see success message and click Close button
         } else {
@@ -1157,6 +1280,7 @@ const RegistrationApp = {
     // Lifecycle
     onMounted(() => {
       checkRegistrationStatus();
+      fetchEventMetadata(); // Fetch event date from cache or API
     });
 
     return {
@@ -1176,6 +1300,7 @@ const RegistrationApp = {
       devOverride,
       closingTime,
       nextOpening,
+      formattedEventDate,
       handlePlayerFound,
       handleLookupError,
       handleRegisterPlayer,
@@ -1197,6 +1322,7 @@ const RegistrationApp = {
 
       <div class="page-header">
         <h2>Round Robin Registration</h2>
+        <p v-if="formattedEventDate" class="event-date">{{ formattedEventDate }}</p>
       </div>
 
       <registration-status 

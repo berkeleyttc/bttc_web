@@ -70,6 +70,15 @@ body {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
+/* Event date styling - bold and bigger */
+.event-date {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #495057;
+  margin: 0.5rem 0 0 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
 /* Mobile-first responsive adjustments */
 @media (max-width: 480px) {
   .container {
@@ -77,6 +86,10 @@ body {
     padding: 1rem;
     width: calc(100% - 1rem);
     border-radius: 8px;
+  }
+  
+  .event-date {
+    font-size: 1.25rem;
   }
 }
 
