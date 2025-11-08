@@ -709,7 +709,8 @@ const RegistrationApp = {
   },
   setup() {
     // Load configuration constants from ENV (or use defaults)
-    const devOverride = typeof ENV !== 'undefined' ? ENV.DEV_OVERRIDE : false;
+    const devOverride = typeof ENV !== 'undefined' ? (ENV.DEV_OVERRIDE ?? false) : false;
+    console.log('DEV_OVERRIDE mode:', devOverride ? 'ENABLED' : 'DISABLED');
     
     // Opening configuration (default: Wednesday at 00:00)
     const openingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_DAY : 3;  // Wednesday = 3
@@ -940,7 +941,7 @@ const RegistrationApp = {
     /**
      * Fetches event metadata (event_date, event_type) from cache or API
      * Called on mount to display event date without waiting for user action
-     * Also caches the full roster data for roster-vue.js to use
+     * Uses the capacity endpoint for lightweight fetch (no roster data needed)
      */
     const fetchEventMetadata = async () => {
       // Check cache first
@@ -951,36 +952,22 @@ const RegistrationApp = {
         return;
       }
       
-      // Not cached, fetch from API (use roster endpoint - gets event date + full roster)
+      // Not cached, fetch from API (use capacity endpoint - lightweight, just event metadata)
       try {
         const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
-        const url = `${apiUrl}/rr/roster`;
+        const url = `${apiUrl}/rr/capacity`;
         
-        const fetchOptions = getFetchOptions();
+        const fetchOptions = getFetchOptions({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({})
+        });
         const response = await fetch(url, fetchOptions);
         const data = await handleApiResponse(response);
         
-        // Extract roster data (array of players)
-        const rosterData = Array.isArray(data) ? data : (data.roster || []);
-        
-        // Extract capacity data (which includes event metadata)
-        if (data.capacity) {
-          updateCapacityFromResponse(data.capacity);
-          
-          // Cache the full roster data for roster-vue.js to use
-          // This avoids an extra API call when user navigates to roster page
-          const capacityData = {
-            isAtCapacity: !!data.capacity.roster_full,
-            confirmedCount: Number(data.capacity.confirmed_count || 0),
-            playerCap: Number(data.capacity.player_cap || defaultPlayerCap),
-            spotsAvailable: Number(data.capacity.spots_available || 0),
-            eventOpen: !!data.capacity.event_open,
-            eventDate: data.capacity.event_date || null,
-            eventType: data.capacity.event_type || null
-          };
-          
-          // Cache roster data with same structure as roster-vue.js expects
-          setRosterCache(rosterData, capacityData);
+        // Capacity endpoint returns capacity data directly
+        if (data) {
+          updateCapacityFromResponse(data);
         }
       } catch (err) {
         // Silently fail - event date is nice-to-have, not critical

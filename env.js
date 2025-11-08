@@ -39,6 +39,6 @@ const ENV = {
   PHONE_COUNTRY_CODE: 1,
   
   // Development
-  DEV_OVERRIDE: true
+  // DEV_OVERRIDE: true
 };
 
