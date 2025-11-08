@@ -1181,7 +1181,10 @@ const RegistrationApp = {
     // Lifecycle
     onMounted(() => {
       checkRegistrationStatus();
-      fetchEventMetadata(); // Fetch event date from cache or API
+      // Only fetch event metadata if registration is open
+      if (registrationOpen.value) {
+        fetchEventMetadata(); // Fetch event date from cache or API
+      }
     });
 
     return {
@@ -1214,7 +1217,7 @@ const RegistrationApp = {
   },
   template: `
     <div class="container">
-      <div class="roster-section">
+      <div v-if="registrationOpen" class="roster-section">
         <a href="bttc_roster_vue.html" class="roster-link-button">
           <span class="roster-text">View Players Registered for Round Robin</span>
           <span class="roster-subtext">See current RR registrations</span>
