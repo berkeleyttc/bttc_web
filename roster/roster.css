@@ -1,135 +1,40 @@
 /**
- * BTTC Round Robin Roster - Vue.js Styles
+ * BTTC Round Robin Roster - Page-Specific Styles
  * 
- * DEBUGGING GUIDE:
- * - Use browser DevTools to inspect elements and see applied styles
- * - Check console for [RosterApp] prefixed logs for JavaScript debugging
- * - If styles aren't applying, check CSS file is loaded (Network tab)
- * - Use browser's element inspector to see computed styles
- * - Table sorting uses .sortable, .sorted-asc, .sorted-desc classes
- * - Print styles are separated at bottom of file
+ * This file contains only roster-specific styles.
+ * Common styles are in ../css/bttc-shared.css
+ * All styles are automatically scoped by the .bttc-vue-app container class
  * 
- * @file css/roster-vue.css
+ * @file roster/roster.css
  */
 
 /* ========================================
-   RESET & BASE STYLES
+   ROSTER-SPECIFIC STYLES
    ======================================== */
 
-/* Vue.js App Container */
-#vue-roster-app {
-  min-height: 100vh;
-}
-
-/* ========================================
-   ROSTER CONTAINER & LAYOUT
-   ======================================== */
-
-/* Roster Container */
+/* Roster Container - specific width for roster */
 .roster-container {
-  background: #fff;
-  margin: 4rem auto;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   max-width: 900px;
   width: 90%;
-  text-align: center;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  margin: 4rem auto;
 }
 
-/* Back Link */
-.back-link {
-  display: inline-block;
-  margin-bottom: 1.5rem;
-  padding: 0.5rem 1rem;
-  color: #0d6efd;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 1rem;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+@media (max-width: 768px) {
+  .roster-container {
+    margin: 2rem auto;
+    padding: 1rem;
+    width: 95%;
+  }
 }
 
-.back-link:hover {
-  color: #0a58ca;
-  background-color: #e9ecef;
-  border-color: #0d6efd;
-  text-decoration: none;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Heading */
-.roster-container h3 {
-  margin: 0 0 0.5rem 0;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #333;
-}
-
-/* Event Date */
-.event-date {
-  margin: 0.25rem 0 1.5rem 0;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #555;
-  text-align: center;
-  display: block;
-  width: 100%;
-}
-
-/* Loading Message */
-.loading-message {
-  padding: 2rem;
-  color: #666;
-  font-size: 1.1rem;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
-/* Error Message */
-.error-message {
-  padding: 2rem;
-  color: #dc3545;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: 8px;
-  margin: 1rem 0;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
-.error-message p {
-  margin: 0.5rem 0;
-}
-
-.error-message p:first-child {
-  font-weight: bold;
-  margin-bottom: 1rem;
-}
-
-/* Empty Message */
-.empty-message {
-  padding: 2rem;
-  color: #666;
-  font-size: 1.1rem;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
+@media (max-width: 480px) {
+  .roster-container {
+    margin: 1rem auto;
+    padding: 0.75rem;
+  }
 }
 
 /* Player Count */
-/* Last Updated Text */
-.last-updated {
-  color: #6c757d;
-  font-size: 0.85em;
-  font-style: italic;
-  margin-left: 0.5rem;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
 .player-count {
   text-align: left;
   margin-bottom: 1rem;
@@ -219,12 +124,6 @@
 
 /* Mobile Optimizations */
 @media (max-width: 768px) {
-  .roster-container {
-    margin: 2rem auto;
-    padding: 1rem;
-    width: 95%;
-  }
-  
   .roster-container h3 {
     font-size: 1.5rem;
   }
@@ -237,19 +136,9 @@
   .roster-table td {
     padding: 0.5rem;
   }
-  
-  .back-link {
-    font-size: 0.9rem;
-    padding: 0.4rem 0.8rem;
-  }
 }
 
 @media (max-width: 480px) {
-  .roster-container {
-    margin: 1rem auto;
-    padding: 0.75rem;
-  }
-  
   .roster-table {
     font-size: 0.85rem;
   }
@@ -262,17 +151,6 @@
   .player-count {
     font-size: 0.85rem;
   }
-}
-
-/* Vue.js Transitions */
-.vue-fade-enter-active,
-.vue-fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.vue-fade-enter-from,
-.vue-fade-leave-to {
-  opacity: 0;
 }
 
 /* Accessibility */
@@ -302,4 +180,3 @@
     page-break-inside: avoid;
   }
 }
-

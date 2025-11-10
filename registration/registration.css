@@ -1,62 +1,18 @@
 /**
- * BTTC Round Robin Registration - Vue.js Styles
+ * BTTC Round Robin Registration - Page-Specific Styles
  * 
- * DEBUGGING GUIDE:
- * - Use browser DevTools to inspect elements and see applied styles
- * - Check console for [RRRegistration] prefixed logs for JavaScript debugging
- * - If styles aren't applying, check CSS file is loaded (Network tab)
- * - Use browser's element inspector to see computed styles
- * - Common issues: z-index conflicts (dialogs), overflow hidden, display none
- * - Registration status banners use .status-open/.status-closed classes
- * - Capacity banners use .capacity-full/.capacity-available/.capacity-closed classes
+ * This file contains only registration-specific styles.
+ * Common styles are in ../css/bttc-shared.css
+ * All styles are automatically scoped by the .bttc-vue-app container class
  * 
- * @file css/rr-registration.css
+ * @file registration/registration.css
  */
 
 /* ========================================
-   RESET & BASE STYLES
+   REGISTRATION-SPECIFIC STYLES
    ======================================== */
 
-/* Vue.js App Container */
-#vue-registration-app {
-  min-height: 100vh;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  background-color: #EBE9E4;
-  margin: 0;
-  padding: 0;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.container {
-  background: #fff;
-  margin: 3rem auto;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  max-width: 500px;
-  width: calc(100% - 2rem);
-  text-align: center;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
-/* Consistent heading styles */
-.container h2 {
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-  font-weight: 700;
-  font-size: 1.75rem;
-  color: #212529;
-  margin: 0 0 0.5rem 0;
-}
-
-/* Page header with description */
+/* Page Header */
 .page-header {
   margin-bottom: 2rem;
   padding-bottom: 0;
@@ -70,37 +26,7 @@ body {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
-/* Event date styling - bold and bigger */
-.event-date {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #495057;
-  margin: 0.5rem 0 0 0;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
-/* Mobile-first responsive adjustments */
-@media (max-width: 480px) {
-  .container {
-    margin: 0.5rem auto;
-    padding: 1rem;
-    width: calc(100% - 1rem);
-    border-radius: 8px;
-  }
-  
-  .event-date {
-    font-size: 1.25rem;
-  }
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-/* Registration Form Styles - Simple & Elegant */
+/* Registration Content Container */
 .registration-content {
   background: #ffffff;
   padding: 2rem;
@@ -113,6 +39,15 @@ form {
   border-bottom: 1px solid #e9ecef;
 }
 
+/* Collapsed state for registration content - remove all styling */
+.registration-content.lookup-collapsed {
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Lookup Header */
 .lookup-header {
   margin-bottom: 1.5rem;
   display: flex;
@@ -123,12 +58,10 @@ form {
   position: relative;
 }
 
-/* When collapsed, show button on right */
 .lookup-header:has(.lookup-toggle-btn) {
   text-align: left;
 }
 
-/* When not collapsed (no toggle button), center the title */
 .lookup-header:not(:has(.lookup-toggle-btn)) {
   justify-content: center;
   text-align: center;
@@ -142,7 +75,7 @@ form {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
-/* Collapsed link - minimal footprint, no container styling */
+/* Collapsed Link */
 .lookup-collapsed-link {
   text-align: center;
   margin: 0.5rem 0;
@@ -164,25 +97,8 @@ form {
   text-decoration: underline;
 }
 
-/* Collapsed state for registration content - remove all styling */
-.registration-content.lookup-collapsed {
-  padding: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-}
-
 .lookup-form-container {
-  /* Smooth transition when collapsing/expanding */
   transition: opacity 0.2s ease, max-height 0.3s ease;
-}
-
-/* Mobile adjustments for collapsed state */
-@media (max-width: 480px) {
-  .lookup-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
 }
 
 .lookup-description {
@@ -197,6 +113,7 @@ form {
   gap: 1rem;
 }
 
+/* Input Wrapper */
 .input-wrapper {
   display: flex;
   flex-direction: column;
@@ -210,6 +127,7 @@ form {
   margin-bottom: 0.25rem;
 }
 
+/* Phone Input Container */
 .input-container {
   position: relative;
   display: flex;
@@ -290,6 +208,7 @@ form {
   font-weight: 500;
 }
 
+/* Lookup Button */
 .lookup-button {
   padding: 0.875rem 1.5rem;
   background: #0d6efd;
@@ -335,58 +254,7 @@ form {
   animation: spin 0.8s linear infinite;
 }
 
-/* Legacy form styles for compatibility */
-input[type="text"] {
-  padding: 0.875rem;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  width: 100%;
-  box-sizing: border-box;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
-
-@media (max-width: 480px) {
-  input[type="text"] {
-    padding: 1rem;
-    font-size: 16px; /* Prevents zoom on iOS */
-  }
-}
-
-button {
-  padding: 0.875rem;
-  background-color: #0d6efd;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  min-height: 44px; /* iOS touch target size */
-}
-
-button:hover, button:focus {
-  background-color: #0b5ed7;
-  outline: none;
-}
-
-button:active {
-  transform: translateY(1px);
-  background-color: #0a58ca;
-}
-
-/* Mobile button improvements */
-@media (max-width: 480px) {
-  button {
-    padding: 1rem;
-    font-size: 1.1rem;
-    min-height: 48px;
-  }
-}
-
+/* Player Entry */
 .entry {
   border: 2px solid #e9ecef;
   background: #ffffff;
@@ -420,19 +288,13 @@ button:active {
   margin-top: 0.75rem;
 }
 
-@media (max-width: 480px) {
-  .entry {
-    padding: 0.75rem;
-  }
-}
-
 .entry p {
   margin: 0.5rem 0;
   word-wrap: break-word;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
-/* Player status text styles */
+/* Player Status */
 .player-registered-status {
   display: flex;
   align-items: center;
@@ -455,20 +317,7 @@ button:active {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
-.entry .player-capacity-limited {
-  color: #666;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
-.pin-label {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #495057;
-  margin-bottom: 0.5rem;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
+/* Register/Unregister Forms */
 .register-form,
 .unregister-form {
   margin-top: 1rem;
@@ -497,6 +346,7 @@ button:active {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
+/* Result Section */
 .result {
   margin-top: 2rem;
   padding-top: 1.5rem;
@@ -527,19 +377,7 @@ button:active {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
-.error {
-  color: #dc3545;
-  font-weight: bold;
-}
-
-.success {
-  color: #198754;
-  font-weight: bold;
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
-}
-
-/* Error Section - Prominent Design */
+/* Error Section */
 .error-section {
   margin: 2rem 0;
   padding-top: 1.5rem;
@@ -567,11 +405,6 @@ button:active {
   text-align: center;
 }
 
-.error-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
 .error-title {
   font-size: 1.5rem;
   font-weight: bold;
@@ -580,54 +413,11 @@ button:active {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
-.error-message {
-  font-size: 1rem;
-  color: #6c757d;
-  margin: 0 0 2rem 0;
-  line-height: 1.5;
-}
-
 .error-actions {
   margin: 2rem 0;
 }
 
-.signup-button {
-  display: block;
-  background: #0d6efd;
-  color: #ffffff;
-  border: 2px solid #0d6efd;
-  border-radius: 8px;
-  padding: 1.25rem 2rem;
-  text-decoration: none;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
-}
-
-.signup-button:hover {
-  background: #0b5ed7;
-  border-color: #0b5ed7;
-  box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
-  transform: translateY(-1px);
-}
-
-.signup-button-text {
-  display: block;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #ffffff;
-  margin-bottom: 0.25rem;
-}
-
-.signup-button-subtext {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: normal;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* Signup Section - Appears after player list */
+/* Signup Section */
 .signup-section {
   margin: 2rem 0;
   padding-top: 1.5rem;
@@ -647,6 +437,7 @@ button:active {
   opacity: 0.4;
 }
 
+/* Error Support */
 .error-support {
   margin-top: 2rem;
   padding-top: 1.5rem;
@@ -671,30 +462,7 @@ button:active {
   color: #6c757d;
 }
 
-/* Mobile adjustments for error section */
-@media (max-width: 480px) {
-  .error-content {
-    padding: 1.5rem;
-  }
-  
-  .error-icon {
-    font-size: 2.5rem;
-  }
-  
-  .error-title {
-    font-size: 1.25rem;
-  }
-  
-  .signup-button {
-    padding: 1rem 1.5rem;
-  }
-  
-  .signup-button-text {
-    font-size: 1rem;
-  }
-}
-
-/* Roster Section - Distinct from registration form */
+/* Roster Section */
 .roster-section {
   margin: 0 0 2.5rem 0;
   border-bottom: 2px solid #ced4da;
@@ -713,50 +481,7 @@ button:active {
   opacity: 0.5;
 }
 
-.roster-link-button {
-  display: block;
-  background: #ffffff;
-  border: 2px solid #0d6efd;
-  border-radius: 6px;
-  padding: 1.25rem 1.5rem;
-  text-decoration: none;
-  color: #495057;
-  text-align: center;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.roster-link-button:hover {
-  background-color: #f8f9fa;
-}
-
-.roster-text {
-  display: block;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #212529;
-  margin-bottom: 0.25rem;
-}
-
-.roster-subtext {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: normal;
-  color: #6c757d;
-}
-
-/* Legacy roster link for compatibility */
-.roster-link {
-  font-weight: bold;
-  color: #0d6efd;
-  text-decoration: underline;
-  margin-top: 0.5rem;
-  display: inline-block;
-  padding: 0.5rem;
-  min-height: 44px;
-  touch-action: manipulation;
-}
-
+/* Token Field */
 .token-field {
   width: 100%;
   margin-top: 0.25rem;
@@ -769,20 +494,12 @@ button:active {
   font-family: 'Courier New', monospace;
 }
 
-/* Mobile token field adjustments */
-@media (max-width: 480px) {
-  .token-field {
-    width: 100%;
-  }
-}
-
 .confirm-btn {
   margin-top: 0.5rem;
   width: 100%;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
-/* Unregister button - red/danger style */
 .confirm-btn.unregister-btn {
   background-color: #dc3545;
   color: #ffffff;
@@ -794,20 +511,6 @@ button:active {
   border-color: #bd2130;
 }
 
-@media (min-width: 481px) {
-  .token-field {
-    width: 70%;
-    display: inline-block;
-    margin-right: 0.5rem;
-  }
-
-  .confirm-btn {
-    width: auto;
-    display: inline-block;
-    vertical-align: top;
-  }
-}
-
 .token-error {
   display: block;
   margin-top: 0.5rem;
@@ -815,164 +518,7 @@ button:active {
   font-size: 0.9em;
 }
 
-/* Status Banner Styles */
-.status-banner {
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  padding-top: 1.25rem;
-  padding-bottom: 1.25rem;
-  border-radius: 8px;
-  text-align: center;
-  font-weight: bold;
-  font-size: 1rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-@media (max-width: 480px) {
-  .status-banner {
-    padding: 0.75rem;
-    font-size: 0.95rem;
-  }
-}
-
-.status-open {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.status-closed {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.status-loading {
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
-}
-
-.status-details {
-  font-size: 0.85rem;
-  margin-top: 0.5rem;
-  font-weight: normal;
-}
-
-/* Disable form when registration is closed */
-.registration-disabled {
-  opacity: 0.6;
-}
-
-.registration-disabled .lookup-button,
-.registration-disabled .phone-input {
-  pointer-events: none;
-  cursor: not-allowed;
-}
-
-/* Allow registration buttons to work even when registration is closed */
-.registration-disabled .confirm-btn {
-  pointer-events: auto;
-}
-
-/* Capacity Banner Styles */
-.capacity-banner {
-  margin: 1rem 0;
-  padding: 0.75rem;
-  border-radius: 6px;
-  text-align: center;
-  font-weight: bold;
-  font-size: 0.9rem;
-}
-
-/* Last Updated Text in Capacity Banner */
-.capacity-last-updated {
-  color: #6c757d;
-  font-size: 0.8em;
-  font-style: italic;
-  font-weight: normal;
-  margin-left: 0.5rem;
-}
-
-.capacity-available {
-  background-color: #d1ecf1;
-  color: #0c5460;
-  border: 1px solid #bee5eb;
-}
-
-.capacity-full {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-}
-
-.capacity-closed {
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
-}
-
-.registration-full-message {
-  color: #dc3545;
-  font-weight: bold;
-  margin: 0.5rem 0;
-  font-size: 0.9rem;
-}
-
-/* Dialog Styles - Mobile Optimized */
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  padding: 1rem;
-  box-sizing: border-box;
-}
-
-.dialog-box {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  max-width: 400px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  -webkit-overflow-scrolling: touch;
-}
-
-@media (max-width: 480px) {
-  .dialog-box {
-    padding: 1rem;
-    border-radius: 8px;
-    margin: 0.5rem;
-    width: calc(100% - 1rem);
-  }
-}
-
-.dialog-title {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  color: #333;
-}
-
-@media (max-width: 480px) {
-  .dialog-title {
-    font-size: 1.1rem;
-    margin-bottom: 1rem;
-  }
-}
-
+/* Payment Options */
 .payment-options {
   margin-bottom: 1.5rem;
 }
@@ -1006,19 +552,13 @@ button:active {
   flex-shrink: 0;
 }
 
-@media (max-width: 480px) {
-  .radio-option input[type="radio"] {
-    width: 22px;
-    height: 22px;
-  }
-}
-
 .radio-option label {
   cursor: pointer;
   font-size: 0.95rem;
   flex: 1;
 }
 
+/* Comments Section */
 .comments-section {
   margin-bottom: 1.5rem;
 }
@@ -1044,14 +584,7 @@ button:active {
   appearance: none;
 }
 
-@media (max-width: 480px) {
-  .comments-section textarea {
-    padding: 1rem;
-    font-size: 16px; /* Prevents zoom on iOS */
-    min-height: 100px;
-  }
-}
-
+/* Waiver Section */
 .waiver-section {
   margin-bottom: 1.5rem;
   padding: 1rem;
@@ -1074,13 +607,6 @@ button:active {
   height: 20px;
   flex-shrink: 0;
   cursor: pointer;
-}
-
-@media (max-width: 480px) {
-  .waiver-checkbox input[type="checkbox"] {
-    width: 22px;
-    height: 22px;
-  }
 }
 
 .waiver-checkbox label {
@@ -1111,137 +637,22 @@ button:active {
   padding-left: 2rem;
 }
 
-@media (max-width: 480px) {
-  .waiver-note {
-    padding-left: 0;
-    margin-top: 0.75rem;
-  }
-}
-
-.dialog-buttons {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-}
-
-@media (max-width: 480px) {
-  .dialog-buttons {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-}
-
-.dialog-btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  cursor: pointer;
-  touch-action: manipulation;
-  min-height: 44px;
-}
-
-@media (max-width: 480px) {
-  .dialog-btn {
-    padding: 1rem;
-    font-size: 1rem;
-    width: 100%;
-  }
-}
-
-.dialog-btn-ok {
-  background-color: #198754;
-  color: white;
-}
-
-.dialog-btn-ok:hover, .dialog-btn-ok:focus {
-  background-color: #157347;
-}
-
-.dialog-btn-disabled,
-.dialog-btn-ok:disabled {
-  background-color: #d0d0d0;
-  color: #888;
-  cursor: not-allowed;
+/* Registration Disabled State */
+.registration-disabled {
   opacity: 0.6;
 }
 
-.dialog-btn-disabled:hover,
-.dialog-btn-ok:disabled:hover {
-  background-color: #d0d0d0;
+.registration-disabled .lookup-button,
+.registration-disabled .phone-input {
+  pointer-events: none;
+  cursor: not-allowed;
 }
 
-.dialog-btn-cancel {
-  background-color: #6c757d;
-  color: white;
+.registration-disabled .confirm-btn {
+  pointer-events: auto;
 }
 
-.dialog-btn-cancel:hover, .dialog-btn-cancel:focus {
-  background-color: #5a6268;
-}
-
-/* Header responsive adjustments */
-@media (max-width: 768px) {
-  #header {
-    padding: 0 1rem;
-  }
-
-  #nav li {
-    font-size: 0.9rem;
-  }
-}
-
-/* Accessibility improvements */
-@media (prefers-reduced-motion: reduce) {
-  button:active {
-    transform: none;
-  }
-}
-
-/* Dialog Message Styles - Success/Error Inline Messages */
-.dialog-message {
-  padding: 1rem;
-  border-radius: 6px;
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.dialog-message-success {
-  background-color: #d1e7dd;
-  color: #0f5132;
-  border: 1px solid #badbcc;
-}
-
-.dialog-message-error {
-  background-color: #f8d7da;
-  color: #842029;
-  border: 1px solid #f5c2c7;
-}
-
-.dialog-message .message-icon {
-  font-size: 1.5rem;
-  font-weight: bold;
-  flex-shrink: 0;
-}
-
-.dialog-message-success .message-icon {
-  color: #198754;
-}
-
-.dialog-message-error .message-icon {
-  color: #dc3545;
-}
-
-.dialog-message .message-text {
-  flex: 1;
-  font-weight: 500;
-}
-
-/* Success next steps - appears after success message */
+/* Success Next Steps */
 .success-next-steps {
   margin-top: 0.75rem;
   padding-top: 0.75rem;
@@ -1252,7 +663,6 @@ button:active {
   line-height: 1.6;
 }
 
-/* Inline roster link in success message */
 .roster-inline-link {
   color: #0d6efd;
   text-decoration: underline;
@@ -1266,19 +676,59 @@ button:active {
   text-decoration: none;
 }
 
+/* Mobile Adjustments */
 @media (max-width: 480px) {
-  .dialog-message {
-    padding: 0.875rem;
-    font-size: 0.9rem;
+  .lookup-header {
+    flex-direction: column;
+    align-items: stretch;
   }
   
-  .dialog-message .message-icon {
-    font-size: 1.25rem;
+  .entry {
+    padding: 0.75rem;
+  }
+  
+  .error-content {
+    padding: 1.5rem;
+  }
+  
+  .token-field {
+    width: 100%;
+  }
+  
+  .radio-option input[type="radio"],
+  .waiver-checkbox input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .comments-section textarea {
+    padding: 1rem;
+    font-size: 16px;
+    min-height: 100px;
+  }
+  
+  .waiver-note {
+    padding-left: 0;
+    margin-top: 0.75rem;
   }
   
   .success-next-steps {
     font-size: 0.85rem;
     margin-top: 0.5rem;
     padding-top: 0.5rem;
+  }
+}
+
+@media (min-width: 481px) {
+  .token-field {
+    width: 70%;
+    display: inline-block;
+    margin-right: 0.5rem;
+  }
+
+  .confirm-btn {
+    width: auto;
+    display: inline-block;
+    vertical-align: top;
   }
 }

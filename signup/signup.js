@@ -307,7 +307,7 @@ const PlayerDialog = {
                 placeholder="xxx-xxx-xxxx"
                 maxlength="12"
                 inputmode="numeric"
-                pattern="[0-9-]*"
+                pattern="[0-9\-]*"
                 required 
                 :disabled="isSubmitting"
                 @input="filterNumericInput($event, 'phone')"
