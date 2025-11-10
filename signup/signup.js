@@ -459,7 +459,7 @@ const PlayerSignupApp = {
       
       // Redirect to Round Robin Registration page after successful signup
       if (wasSuccessful) {
-        window.location.href = 'bttc_rr_registration_vue.html';
+        window.location.href = '../registration/';
       }
     };
 
@@ -534,13 +534,13 @@ const PlayerSignupApp = {
   },
   template: `
     <div class="container">
-      <a v-if="!successMessage" href="bttc_rr_registration_vue.html" class="back-link">← Back to Round Robin Registration</a>
+      <a v-if="!successMessage" href="../registration/" class="back-link">← Back to Round Robin Registration</a>
       
       <div v-if="successMessage">
         <div class="success">
           {{ successMessage }}
         </div>
-        <a href="bttc_rr_registration_vue.html" class="registration-link-button">
+        <a href="../registration/" class="registration-link-button">
           <span class="registration-link-button-text">→ Go to Round Robin Registration</span>
           <span class="registration-link-button-subtext">Register for the next round robin event</span>
         </a>

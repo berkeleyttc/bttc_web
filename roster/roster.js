@@ -546,7 +546,7 @@ const RosterApp = {
   },
   template: `
     <div class="roster-container">
-      <a href="bttc_rr_registration_vue.html" class="back-link">← Back to Round Robin Registration</a>
+      <a href="../registration/" class="back-link">← Back to Round Robin Registration</a>
       <h3>Round Robin Registered Players</h3>
       <p v-if="formattedEventDate" class="event-date">{{ formattedEventDate }}</p>
       
