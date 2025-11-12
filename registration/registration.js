@@ -461,7 +461,7 @@ const RegistrationDialog = {
   emits: ['close', 'confirm'],
   setup(props, { emit }) {
     // Waiver configuration - update filename here when waiver version changes
-    const WAIVER_FILE = 'liability_waiver_2025-11-03-v1.html';
+    const WAIVER_FILE = '../liability_waiver_2025-11-03-v1.html';
     
     // Form state
     const paymentMethod = ref('');  // 'cash' or 'zelle_venmo'
@@ -1218,7 +1218,7 @@ const RegistrationApp = {
   template: `
     <div class="container">
       <div v-if="registrationOpen" class="roster-section">
-        <a href="bttc_roster_vue.html" class="roster-link-button">
+        <a href="../roster/" class="roster-link-button">
           <span class="roster-text">View Players Registered for Round Robin</span>
           <span class="roster-subtext">See current RR registrations</span>
         </a>
@@ -1249,7 +1249,7 @@ const RegistrationApp = {
           <h3 class="error-title">Player Not Found</h3>
           
           <div class="error-actions">
-            <a href="bttc_player_signup_vue.html" class="signup-button">
+            <a href="../signup/" class="signup-button">
               <span class="signup-button-text">Sign Up as New Player</span>
               <span class="signup-button-subtext">Create your player account</span>
             </a>
@@ -1272,7 +1272,7 @@ const RegistrationApp = {
       />
 
       <div v-if="registrationOpen && players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
-        <a href="bttc_player_signup_vue.html" class="signup-button">
+        <a href="../signup/" class="signup-button">
           <span class="signup-button-text">Sign Up Another Player</span>
           <span class="signup-button-subtext">Create another player account associated with this phone number</span>
         </a>

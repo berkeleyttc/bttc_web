@@ -36,9 +36,9 @@ Use this option if you're running the backend API locally and don't need to test
 2. **Start your backend API** on port 8080
 
 3. **Open the HTML files** directly in your browser:
-   - Registration: `bttc_rr_registration_vue.html`
-   - Roster: `bttc_roster_vue.html`
-   - Player Signup: `bttc_player_signup_vue.html`
+   - Registration: `registration/index.html` or navigate to `/registration/`
+   - Roster: `roster/index.html` or navigate to `/roster/`
+   - Player Signup: `signup/index.html` or navigate to `/signup/`
 
 ## Option 2: With Netlify Function Proxy (Production-like)
 
@@ -81,8 +81,9 @@ Use this option to test the full production setup including the Netlify function
 
 2. **Access your site**:
    - Main site: `http://localhost:8888`
-   - Registration: `http://localhost:8888/bttc_rr_registration_vue.html`
-   - Roster: `http://localhost:8888/bttc_roster_vue.html`
+   - Registration: `http://localhost:8888/registration/`
+   - Roster: `http://localhost:8888/roster/`
+   - Player Signup: `http://localhost:8888/signup/`
    - Function endpoint: `http://localhost:8888/.netlify/functions/api`
 
 ### Testing the Function
@@ -172,6 +173,6 @@ Choose your approach:
 - Check backend logs for authentication errors
 
 ### 404 errors on roster/registration pages
-- Ensure you're accessing the full filename (e.g., `bttc_roster_vue.html`)
-- With Netlify dev, the server auto-serves HTML files
-- Without Netlify dev, open files directly
+- Ensure you're accessing the correct path (e.g., `/registration/`, `/roster/`, `/signup/`)
+- With Netlify dev, the server auto-serves index.html files from directories
+- Without Netlify dev, open the index.html files directly from their directories
