@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Player Signup - BTTC (Vue.js)</title>
+
+  <meta name="description" content="Complete your player profile for Berkeley Table Tennis Club registration.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+  <link href="https://fonts.googleapis.com/css?family=Lobster|PT+Sans+Narrow:400,700" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=1">
+  <link rel="stylesheet" href="signup.css?v=1">
+</head>
+
+<body>
+  <div id="header">
+    <div class="container_12 clearfix">
+      <div id="logo" class="grid_6">
+        <a href="../index.html" title="Go Home">
+          <img src="../images/logo.gif" height="60" alt="BTTC Logo" />
+        </a>
+      </div>
+      <div id="search" class="grid_6"></div>
+    </div>
+    <div class="border">
+      <ul id="nav" class="container_12 clearfix">
+        <li class="grid_2"><a href="../index.html" title="Home">Home</a></li>
+        <li class="grid_2"><a href="../results.html" title="Weekly Results">Results</a></li>
+        <li class="grid_2"><a href="../coaching.html" title="Coaching">Coaching</a></li>
+        <li class="grid_2"><a href="../about.html" title="About Us">About Us</a></li>
+        <li class="grid_2"><a href="../club_policy.html" title="Club Policy">Club Policy</a></li>
+        <li class="grid_2 last"><a href="../more.html" title="More...">More...</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Vue.js App Container -->
+  <div id="vue-player-signup-app">
+    <player-signup-app></player-signup-app>
+  </div>
+
+  <!-- Load Vue.js from CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="../env.js?v=2"></script>
+  <script src="../js/bttc-utils.js"></script>
+  <script src="signup.js?v=2"></script>
+</body>
+</html>
+

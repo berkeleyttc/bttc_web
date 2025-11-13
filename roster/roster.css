@@ -1,0 +1,305 @@
+/**
+ * BTTC Round Robin Roster - Vue.js Styles
+ * 
+ * DEBUGGING GUIDE:
+ * - Use browser DevTools to inspect elements and see applied styles
+ * - Check console for [RosterApp] prefixed logs for JavaScript debugging
+ * - If styles aren't applying, check CSS file is loaded (Network tab)
+ * - Use browser's element inspector to see computed styles
+ * - Table sorting uses .sortable, .sorted-asc, .sorted-desc classes
+ * - Print styles are separated at bottom of file
+ * 
+ * @file css/roster-vue.css
+ */
+
+/* ========================================
+   RESET & BASE STYLES
+   ======================================== */
+
+/* Vue.js App Container */
+#vue-roster-app {
+  min-height: 100vh;
+}
+
+/* ========================================
+   ROSTER CONTAINER & LAYOUT
+   ======================================== */
+
+/* Roster Container */
+.roster-container {
+  background: #fff;
+  margin: 4rem auto;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  max-width: 900px;
+  width: 90%;
+  text-align: center;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+/* Back Link */
+.back-link {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 1rem;
+  color: #0d6efd;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.back-link:hover {
+  color: #0a58ca;
+  background-color: #e9ecef;
+  border-color: #0d6efd;
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Heading */
+.roster-container h3 {
+  margin: 0 0 0.5rem 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #333;
+}
+
+/* Event Date */
+.event-date {
+  margin: 0.25rem 0 1.5rem 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #555;
+  text-align: center;
+  display: block;
+  width: 100%;
+}
+
+/* Loading Message */
+.loading-message {
+  padding: 2rem;
+  color: #666;
+  font-size: 1.1rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+/* Error Message */
+.error-message {
+  padding: 2rem;
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  margin: 1rem 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.error-message p {
+  margin: 0.5rem 0;
+}
+
+.error-message p:first-child {
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+/* Empty Message */
+.empty-message {
+  padding: 2rem;
+  color: #666;
+  font-size: 1.1rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+/* Player Count */
+/* Last Updated Text */
+.last-updated {
+  color: #6c757d;
+  font-size: 0.85em;
+  font-style: italic;
+  margin-left: 0.5rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.player-count {
+  text-align: left;
+  margin-bottom: 1rem;
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.capacity-full-text {
+  color: #dc3545;
+  font-weight: 600;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.event-closed-text {
+  color: #856404;
+  font-weight: 600;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+/* Roster Table Container */
+.roster-table-container {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+/* Roster Table */
+.roster-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background: #fff;
+}
+
+.roster-table th,
+.roster-table td {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  text-align: left;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.roster-table th {
+  background-color: #f0f0f0;
+  font-weight: 700;
+  color: #333;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+.roster-table th:hover {
+  background-color: #e2e2e2;
+}
+
+.roster-table th.sortable {
+  position: relative;
+  padding-right: 2rem;
+}
+
+.roster-table th.sorted-asc::after {
+  content: " ▲";
+  position: absolute;
+  right: 0.5rem;
+  color: #0d6efd;
+}
+
+.roster-table th.sorted-desc::after {
+  content: " ▼";
+  position: absolute;
+  right: 0.5rem;
+  color: #0d6efd;
+}
+
+.roster-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.roster-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.roster-table tbody td {
+  color: #555;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .roster-container {
+    margin: 2rem auto;
+    padding: 1rem;
+    width: 95%;
+  }
+  
+  .roster-container h3 {
+    font-size: 1.5rem;
+  }
+  
+  .roster-table {
+    font-size: 0.9rem;
+  }
+  
+  .roster-table th,
+  .roster-table td {
+    padding: 0.5rem;
+  }
+  
+  .back-link {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .roster-container {
+    margin: 1rem auto;
+    padding: 0.75rem;
+  }
+  
+  .roster-table {
+    font-size: 0.85rem;
+  }
+  
+  .roster-table th,
+  .roster-table td {
+    padding: 0.4rem;
+  }
+  
+  .player-count {
+    font-size: 0.85rem;
+  }
+}
+
+/* Vue.js Transitions */
+.vue-fade-enter-active,
+.vue-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.vue-fade-enter-from,
+.vue-fade-leave-to {
+  opacity: 0;
+}
+
+/* Accessibility */
+.roster-table th:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+
+/* Print Styles */
+@media print {
+  .roster-container {
+    box-shadow: none;
+    margin: 0;
+    padding: 1rem;
+  }
+  
+  .back-link {
+    display: none;
+  }
+  
+  .roster-table th {
+    background-color: #f0f0f0 !important;
+    color: #000 !important;
+  }
+  
+  .roster-table tbody tr {
+    page-break-inside: avoid;
+  }
+}
+
