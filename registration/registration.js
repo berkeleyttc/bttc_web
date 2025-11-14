@@ -1226,7 +1226,7 @@ const RegistrationApp = {
 
       <div class="page-header">
         <h2>Round Robin Registration</h2>
-        <p v-if="formattedEventDate" class="event-date">{{ formattedEventDate }}</p>
+        <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For RR on</span> {{ formattedEventDate }}</p>
       </div>
 
       <registration-status 

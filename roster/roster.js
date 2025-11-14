@@ -548,7 +548,7 @@ const RosterApp = {
     <div class="roster-container">
       <a href="../registration/" class="back-link">← Back to Round Robin Registration</a>
       <h3>Round Robin Registered Players</h3>
-      <p v-if="formattedEventDate" class="event-date">{{ formattedEventDate }}</p>
+      <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For RR on</span> {{ formattedEventDate }}</p>
       
       <div v-if="loading" class="loading-message">
         Loading roster...

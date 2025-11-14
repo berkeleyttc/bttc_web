@@ -84,6 +84,13 @@
   width: 100%;
 }
 
+/* De-emphasize the label text */
+.event-date-label {
+  font-weight: 500;
+  color: #2f3438;
+  opacity: 1.0;
+}
+
 /* Loading Message */
 .loading-message {
   padding: 2rem;

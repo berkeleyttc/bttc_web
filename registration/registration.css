@@ -79,6 +79,13 @@ body {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
+/* De-emphasize the label text */
+.event-date-label {
+  font-weight: 500;
+  color: #2f3438;
+  opacity: 1.0;
+}
+
 /* Mobile-first responsive adjustments */
 @media (max-width: 480px) {
   .container {
