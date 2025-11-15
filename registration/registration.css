@@ -1292,3 +1292,37 @@ button:active {
     padding-top: 0.5rem;
   }
 }
+
+/* FAQ Link Section */
+.faq-section {
+  margin: 1.5rem 0;
+  padding-top: 1rem;
+  text-align: center;
+  border-top: 1px solid #dee2e6;
+}
+
+.faq-link {
+  display: inline-block;
+  color: #607890;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 0.5rem 0;
+  transition: color 0.2s ease;
+}
+
+.faq-link:hover {
+  color: #036;
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .faq-section {
+    margin: 1rem 0;
+    padding-top: 0.75rem;
+  }
+  
+  .faq-link {
+    font-size: 0.9rem;
+  }
+}
