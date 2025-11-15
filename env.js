@@ -40,5 +40,6 @@ const ENV = {
   
   // Development
   // DEV_OVERRIDE: true
+  DEV_OVERRIDE: true
 };
 
