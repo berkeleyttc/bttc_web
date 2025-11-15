@@ -1,7 +1,7 @@
 // BTTC Round Robin Roster
 // Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse
 
-const { createApp, ref, reactive, computed, onMounted } = Vue;
+const { createApp, ref, reactive, computed, onMounted, onUnmounted } = Vue;
 
 const CACHE_KEYS = {
   ROSTER: 'bttc_roster_cache',
@@ -132,6 +132,8 @@ const RosterApp = {
       key: 'rating',                   // Column key being sorted (default: 'rating' for high to low)
       direction: 'desc'                // Sort direction: 'asc' or 'desc' (default: 'desc' for high to low)
     });
+    const currentTime = ref(Date.now()); // Current time for countdown updates
+    let timeIntervalId = null; // Interval ID for cleanup
 
     // NOTE: Capacity is now included in /rr/roster response
     // No need for separate /rr/capacity calls anymore
@@ -438,8 +440,21 @@ const RosterApp = {
     };
 
     // Fetch roster when component mounts (when page loads)
-    onMounted(() => {
-      fetchRoster();
+    onMounted(async () => {
+      await fetchRoster();
+      
+      // Update current time every second for countdown display
+      timeIntervalId = setInterval(() => {
+        currentTime.value = Date.now();
+      }, 1000);
+    });
+    
+    // Clean up interval when component unmounts
+    onUnmounted(() => {
+      if (timeIntervalId) {
+        clearInterval(timeIntervalId);
+        timeIntervalId = null;
+      }
     });
 
     // Computed properties (derived state from reactive data)
@@ -546,6 +561,49 @@ const RosterApp = {
         return '';
       }
     });
+    
+    /**
+     * Computed: Time until next roster update (in seconds)
+     * Calculates remaining time until cache expires and fresh data will be fetched
+     * Returns null if no roster data has been loaded yet
+     */
+    const nextUpdateIn = computed(() => {
+      if (!lastUpdated.value.roster) return null;
+      
+      const now = currentTime.value;
+      const lastUpdateTime = lastUpdated.value.roster;
+      const age = now - lastUpdateTime;
+      const remaining = CACHE_TTL.ROSTER - age;
+      
+      // If cache has expired, return 0 (update should happen soon)
+      if (remaining <= 0) return 0;
+      
+      return Math.ceil(remaining / 1000); // Return seconds
+    });
+    
+    /**
+     * Computed: Formatted "next update" string
+     * Shows countdown until next update (e.g., "Next update in 30 seconds")
+     * Returns empty string if no data available
+     */
+    const nextUpdateText = computed(() => {
+      const seconds = nextUpdateIn.value;
+      if (seconds === null) return '';
+      
+      if (seconds <= 0) {
+        return 'Refresh page to get latest data';
+      } else if (seconds < 60) {
+        return `Next update in ${seconds} second${seconds !== 1 ? 's' : ''}`;
+      } else {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        if (remainingSeconds === 0) {
+          return `Next update in ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+        } else {
+          return `Next update in ${minutes}m ${remainingSeconds}s`;
+        }
+      }
+    });
 
     return {
       players,
@@ -559,6 +617,7 @@ const RosterApp = {
       rosterLastUpdated,
       capacityLastUpdated,
       formattedEventDate,
+      nextUpdateText,
       sortBy,
       getSortClass,
       formatDatePST,
@@ -588,15 +647,17 @@ const RosterApp = {
       
       <div v-else class="roster-table-container">
         <p class="player-count">
-          {{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} registered
-          <span v-if="capacity.playerCap > 0">
-            • {{ capacity.confirmedCount }}/{{ capacity.playerCap }} capacity
-            <span v-if="!capacity.eventOpen" class="event-closed-text">• Event CLOSED</span>
-            <span v-else-if="spotsRemaining > 0">• {{ spotsRemaining }} spot{{ spotsRemaining !== 1 ? 's' : '' }} remaining</span>
-            <span v-else class="capacity-full-text">• Full</span>
+          <span class="player-count-left">
+            {{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} registered
+            <span v-if="capacity.playerCap > 0">
+              • {{ capacity.confirmedCount }}/{{ capacity.playerCap }} capacity
+              <span v-if="!capacity.eventOpen" class="event-closed-text">• Event CLOSED</span>
+              <span v-else-if="spotsRemaining > 0">• {{ spotsRemaining }} spot{{ spotsRemaining !== 1 ? 's' : '' }} remaining</span>
+              <span v-else class="capacity-full-text">• Full</span>
+            </span>
           </span>
-          <span v-if="rosterLastUpdated" class="last-updated">
-            • Updated {{ rosterLastUpdated }}
+          <span v-if="nextUpdateText" class="next-update">
+            • {{ nextUpdateText }}
           </span>
         </p>
         <table class="roster-table">

@@ -136,6 +136,15 @@
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
+/* Next Update Text */
+.next-update {
+  color: #6c757d;
+  font-size: 0.85em;
+  font-style: italic;
+  margin-left: auto;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
 .player-count {
   text-align: left;
   margin-bottom: 1rem;
