@@ -1242,6 +1242,9 @@ const RegistrationApp = {
       <div class="page-header">
         <h2>Round Robin Registration</h2>
         <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For</span> {{ formattedEventDate }}</p>
+        <div class="faq-section">
+          <a href="faq.html" class="faq-link">Have questions? Check out our FAQ</a>
+        </div>
       </div>
 
       <registration-status 
@@ -1273,6 +1276,9 @@ const RegistrationApp = {
           <div class="error-support">
             <p class="support-text">Need help or new to Friday Night League? Contact BTTC support.</p>
             <p class="support-contact">{{ supportPhone }} <span class="support-method">({{ supportMethod }})</span></p>
+            <div style="margin-top: 1rem; text-align: center;">
+              <a href="faq.html" class="faq-link">View FAQ for common questions</a>
+            </div>
           </div>
         </div>
       </div>
