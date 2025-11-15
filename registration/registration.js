@@ -168,6 +168,15 @@ const setRosterCache = (rosterData, capacityData) => {
   }
 };
 
+// Clear roster cache to force fresh fetch (called after registration/unregistration)
+const clearRosterCache = () => {
+  try {
+    sessionStorage.removeItem(ROSTER_CACHE_KEY);
+  } catch (err) {
+    // sessionStorage unavailable, silently fail
+  }
+};
+
 const savePhoneToHistory = (phone) => {
   try {
     // Format phone for display in history using shared utility (xxx-xxx-xxxx)
@@ -1105,6 +1114,9 @@ const RegistrationApp = {
             updateCapacityFromResponse(result.capacity);
           }
           
+          // Clear roster cache to force fresh fetch when viewing roster
+          clearRosterCache();
+          
           error.value = '';
           // Don't close the dialog - let user see success message and click Close button
         } else {
@@ -1167,6 +1179,10 @@ const RegistrationApp = {
           if (result.capacity) {
             updateCapacityFromResponse(result.capacity);
           }
+          
+          // Clear roster cache to force fresh fetch when viewing roster
+          clearRosterCache();
+          
           // Don't close the dialog - let user see success message and click Close button
         } else {
           unregistrationErrorMessage.value = result.message || 'Unregistration failed. Please try again.';
