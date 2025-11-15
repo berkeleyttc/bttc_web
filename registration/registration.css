@@ -1316,11 +1316,6 @@ button:active {
   text-decoration: underline;
 }
 
-.faq-link::before {
-  content: '❓ ';
-  margin-right: 0.25rem;
-}
-
 @media (max-width: 480px) {
   .faq-section {
     margin: 1rem 0;

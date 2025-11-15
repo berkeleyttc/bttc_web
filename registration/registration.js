@@ -362,6 +362,9 @@ const PlayerLookup = {
             </button>
           </form>
         </div>
+        <div class="faq-section">
+          <a href="faq.html" class="faq-link">Have questions? Check out our FAQ</a>
+        </div>
       </div>
     </div>
   `
@@ -1242,9 +1245,6 @@ const RegistrationApp = {
       <div class="page-header">
         <h2>Round Robin Registration</h2>
         <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For</span> {{ formattedEventDate }}</p>
-        <div class="faq-section">
-          <a href="faq.html" class="faq-link">Have questions? Check out our FAQ</a>
-        </div>
       </div>
 
       <registration-status 
