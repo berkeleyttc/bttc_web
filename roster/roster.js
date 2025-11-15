@@ -648,13 +648,10 @@ const RosterApp = {
       <div v-else class="roster-table-container">
         <p class="player-count">
           <span class="player-count-left">
-            {{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} registered
-            <span v-if="capacity.playerCap > 0">
-              • {{ capacity.confirmedCount }}/{{ capacity.playerCap }} capacity
-              <span v-if="!capacity.eventOpen" class="event-closed-text">• Event CLOSED</span>
-              <span v-else-if="spotsRemaining > 0">• {{ spotsRemaining }} spot{{ spotsRemaining !== 1 ? 's' : '' }} remaining</span>
-              <span v-else class="capacity-full-text">• Full</span>
-            </span>
+            <span v-if="!capacity.eventOpen" class="event-closed-text">Event CLOSED</span>
+            <span v-else-if="capacity.isAtCapacity" class="capacity-full-text">{{ capacity.playerCap }} capacity • Full</span>
+            <span v-else-if="capacity.playerCap > 0">{{ capacity.playerCap }} capacity • {{ spotsRemaining }} spot{{ spotsRemaining !== 1 ? 's' : '' }} remaining</span>
+            <span v-else>{{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} registered</span>
           </span>
           <span v-if="nextUpdateText" class="next-update">
             • {{ nextUpdateText }}
