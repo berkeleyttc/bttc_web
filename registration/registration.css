@@ -72,18 +72,20 @@ body {
 
 /* Event date styling - bold and bigger */
 .event-date {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #495057;
-  margin: 0.5rem 0 0 0;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
+  font-weight: 700;
+  font-size: 1.75rem;
+  color: #212529;
+  margin: 0 0 0.5rem 0;
 }
 
 /* De-emphasize the label text */
 .event-date-label {
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
   font-weight: 500;
-  color: #2f3438;
-  opacity: 1.0;
+  font-size: 1.75rem;
+  color: #212529;
+  margin: 0 0 0.5rem 0;
 }
 
 /* Mobile-first responsive adjustments */
@@ -662,7 +664,8 @@ button:active {
 
 .support-text {
   font-size: 0.9rem;
-  color: #6c757d;
+  /* color: #6c757d; */
+  color: #dc3545;
   margin: 0 0 0.5rem 0;
 }
 

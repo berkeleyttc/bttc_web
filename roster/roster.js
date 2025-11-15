@@ -129,8 +129,8 @@ const RosterApp = {
       capacity: null                   // Timestamp when capacity was last fetched
     });
     const currentSort = reactive({
-      key: null,                       // Column key being sorted (e.g., 'first_name', 'registered_at')
-      direction: 'asc'                 // Sort direction: 'asc' or 'desc'
+      key: 'rating',                   // Column key being sorted (default: 'rating' for high to low)
+      direction: 'desc'                // Sort direction: 'asc' or 'desc' (default: 'desc' for high to low)
     });
 
     // NOTE: Capacity is now included in /rr/roster response
@@ -167,6 +167,9 @@ const RosterApp = {
           // Backward compatibility: handle old cache format (just array)
           players.value = cachedResult.data;
         }
+        
+        // Apply default sort (rating high to low)
+        applySort();
         
         // Restore capacity data if available
         if (cachedResult.data.capacity) {
@@ -242,6 +245,10 @@ const RosterApp = {
         
         // Set players state with fresh data and timestamp
         players.value = rosterData;
+        
+        // Apply default sort (rating high to low)
+        applySort();
+        
         lastUpdated.value.roster = now;
       } catch (err) {
         // On error, try to use cached data as fallback (even if expired)
@@ -256,6 +263,9 @@ const RosterApp = {
             players.value = cachedResult.data;
             lastUpdated.value.roster = cachedResult.timestamp;
           }
+          
+          // Apply default sort (rating high to low)
+          applySort();
           
           // Restore capacity data if available
           if (cachedResult.data.capacity) {
@@ -277,34 +287,15 @@ const RosterApp = {
     };
 
     /**
-     * Sorts the roster by the specified column
-     * 
-     * BEHAVIOR:
-     * - Clicking same column toggles sort direction (asc ↔ desc)
-     * - Clicking different column sets it as sort key with asc direction
-     * - Handles date sorting for 'registered_at' column
-     * - Handles string sorting for other columns (case-insensitive)
-     * 
-     * SORT LOGIC:
-     * - First click: Sort ascending
-     * - Second click (same column): Sort descending
-     * - Click different column: Sort ascending
-     * 
-     * @param {string} key - The column key to sort by (e.g., 'first_name', 'bttc_id', 'registered_at')
+     * Applies the current sort state to the players array
+     * Helper function to sort players based on currentSort state
      */
-    const sortBy = (key) => {
-      // Toggle sort direction if clicking the same column
-      // Otherwise, start with ascending
-      if (currentSort.key === key && currentSort.direction === 'asc') {
-        currentSort.direction = 'desc';
-      } else {
-        currentSort.direction = 'asc';
+    const applySort = () => {
+      if (!currentSort.key || players.value.length === 0) {
+        return;
       }
       
-      // Set the current sort key
-      currentSort.key = key;
-      
-      // Sort the players array (create copy to avoid mutating original)
+      const key = currentSort.key;
       const sorted = [...players.value].sort((a, b) => {
         let valA = a[key] || '';
         let valB = b[key] || '';
@@ -335,6 +326,38 @@ const RosterApp = {
       });
       
       players.value = sorted;
+    };
+
+    /**
+     * Sorts the roster by the specified column
+     * 
+     * BEHAVIOR:
+     * - Clicking same column toggles sort direction (asc ↔ desc)
+     * - Clicking different column sets it as sort key with asc direction
+     * - Handles date sorting for 'registered_at' column
+     * - Handles string sorting for other columns (case-insensitive)
+     * 
+     * SORT LOGIC:
+     * - First click: Sort ascending
+     * - Second click (same column): Sort descending
+     * - Click different column: Sort ascending
+     * 
+     * @param {string} key - The column key to sort by (e.g., 'first_name', 'bttc_id', 'registered_at')
+     */
+    const sortBy = (key) => {
+      // Toggle sort direction if clicking the same column
+      // Otherwise, start with ascending
+      if (currentSort.key === key && currentSort.direction === 'asc') {
+        currentSort.direction = 'desc';
+      } else {
+        currentSort.direction = 'asc';
+      }
+      
+      // Set the current sort key
+      currentSort.key = key;
+      
+      // Apply the sort
+      applySort();
     };
 
     /**
@@ -548,7 +571,7 @@ const RosterApp = {
     <div class="roster-container">
       <a href="../registration/" class="back-link">← Back to Round Robin Registration</a>
       <h3>Round Robin Registered Players</h3>
-      <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For RR on</span> {{ formattedEventDate }}</p>
+      <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For</span> {{ formattedEventDate }}</p>
       
       <div v-if="loading" class="loading-message">
         Loading roster...

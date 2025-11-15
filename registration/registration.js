@@ -303,7 +303,7 @@ const PlayerLookup = {
       <!-- Expanded state: Show full form -->
       <div v-show="!collapsed" class="lookup-expanded-container">
         <div class="lookup-header">
-          <h3 class="lookup-title">Find Your Player Account</h3>
+          <h3 class="lookup-title">Sign in (Returning Players)</h3>
         </div>
         <div class="lookup-form-container">
           <form @submit="handleSubmit" class="lookup-form">
@@ -344,8 +344,7 @@ const PlayerLookup = {
               :disabled="isLookingUp"
             >
               <span v-if="!isLookingUp" class="button-text">
-                <span class="button-icon">🔍</span>
-                Lookup Player
+                Sign in
               </span>
               <span v-else class="button-text">
                 <span class="button-spinner"></span>
@@ -1226,7 +1225,7 @@ const RegistrationApp = {
 
       <div class="page-header">
         <h2>Round Robin Registration</h2>
-        <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For RR on</span> {{ formattedEventDate }}</p>
+        <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For</span> {{ formattedEventDate }}</p>
       </div>
 
       <registration-status 
@@ -1250,13 +1249,13 @@ const RegistrationApp = {
           
           <div class="error-actions">
             <a href="../signup/" class="signup-button">
-              <span class="signup-button-text">Sign Up as New Player</span>
-              <span class="signup-button-subtext">Create your player account</span>
+              <span class="signup-button-text">Sign up (Returning Players)</span>
+              <span class="signup-button-subtext">Activate your online player account</span>
             </a>
           </div>
           
           <div class="error-support">
-            <p class="support-text">Need help? Contact BTTC support:</p>
+            <p class="support-text">Need help or new to Friday Night League? Contact BTTC support.</p>
             <p class="support-contact">{{ supportPhone }} <span class="support-method">({{ supportMethod }})</span></p>
           </div>
         </div>

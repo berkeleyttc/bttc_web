@@ -78,7 +78,7 @@
   font-family: 'PT Sans Narrow', Arial, sans-serif;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #555;
+  color: #333;
   text-align: center;
   display: block;
   width: 100%;
@@ -87,8 +87,7 @@
 /* De-emphasize the label text */
 .event-date-label {
   font-weight: 500;
-  color: #2f3438;
-  opacity: 1.0;
+  color: #333;
 }
 
 /* Loading Message */
