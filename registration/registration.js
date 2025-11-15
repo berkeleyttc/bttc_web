@@ -1272,8 +1272,8 @@ const RegistrationApp = {
 
       <div v-if="registrationOpen && players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
         <a href="../signup/" class="signup-button">
-          <span class="signup-button-text">Sign Up Another Player</span>
-          <span class="signup-button-subtext">Create another player account associated with this phone number</span>
+          <span class="signup-button-text">Sign Up Another Returning Player</span>
+          <span class="signup-button-subtext">Activate another returning player online account</span>
         </a>
       </div>
 
