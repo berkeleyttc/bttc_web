@@ -1,7 +1,7 @@
 // BTTC Round Robin Roster
 // Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse
 
-const { createApp, ref, reactive, computed, onMounted } = Vue;
+const { createApp, ref, reactive, computed, onMounted, onUnmounted } = Vue;
 
 const CACHE_KEYS = {
   ROSTER: 'bttc_roster_cache',
@@ -129,9 +129,11 @@ const RosterApp = {
       capacity: null                   // Timestamp when capacity was last fetched
     });
     const currentSort = reactive({
-      key: null,                       // Column key being sorted (e.g., 'first_name', 'registered_at')
-      direction: 'asc'                 // Sort direction: 'asc' or 'desc'
+      key: 'rating',                   // Column key being sorted (default: 'rating' for high to low)
+      direction: 'desc'                // Sort direction: 'asc' or 'desc' (default: 'desc' for high to low)
     });
+    const currentTime = ref(Date.now()); // Current time for countdown updates
+    let timeIntervalId = null; // Interval ID for cleanup
 
     // NOTE: Capacity is now included in /rr/roster response
     // No need for separate /rr/capacity calls anymore
@@ -167,6 +169,9 @@ const RosterApp = {
           // Backward compatibility: handle old cache format (just array)
           players.value = cachedResult.data;
         }
+        
+        // Apply default sort (rating high to low)
+        applySort();
         
         // Restore capacity data if available
         if (cachedResult.data.capacity) {
@@ -242,6 +247,10 @@ const RosterApp = {
         
         // Set players state with fresh data and timestamp
         players.value = rosterData;
+        
+        // Apply default sort (rating high to low)
+        applySort();
+        
         lastUpdated.value.roster = now;
       } catch (err) {
         // On error, try to use cached data as fallback (even if expired)
@@ -256,6 +265,9 @@ const RosterApp = {
             players.value = cachedResult.data;
             lastUpdated.value.roster = cachedResult.timestamp;
           }
+          
+          // Apply default sort (rating high to low)
+          applySort();
           
           // Restore capacity data if available
           if (cachedResult.data.capacity) {
@@ -277,34 +289,15 @@ const RosterApp = {
     };
 
     /**
-     * Sorts the roster by the specified column
-     * 
-     * BEHAVIOR:
-     * - Clicking same column toggles sort direction (asc ↔ desc)
-     * - Clicking different column sets it as sort key with asc direction
-     * - Handles date sorting for 'registered_at' column
-     * - Handles string sorting for other columns (case-insensitive)
-     * 
-     * SORT LOGIC:
-     * - First click: Sort ascending
-     * - Second click (same column): Sort descending
-     * - Click different column: Sort ascending
-     * 
-     * @param {string} key - The column key to sort by (e.g., 'first_name', 'bttc_id', 'registered_at')
+     * Applies the current sort state to the players array
+     * Helper function to sort players based on currentSort state
      */
-    const sortBy = (key) => {
-      // Toggle sort direction if clicking the same column
-      // Otherwise, start with ascending
-      if (currentSort.key === key && currentSort.direction === 'asc') {
-        currentSort.direction = 'desc';
-      } else {
-        currentSort.direction = 'asc';
+    const applySort = () => {
+      if (!currentSort.key || players.value.length === 0) {
+        return;
       }
       
-      // Set the current sort key
-      currentSort.key = key;
-      
-      // Sort the players array (create copy to avoid mutating original)
+      const key = currentSort.key;
       const sorted = [...players.value].sort((a, b) => {
         let valA = a[key] || '';
         let valB = b[key] || '';
@@ -335,6 +328,38 @@ const RosterApp = {
       });
       
       players.value = sorted;
+    };
+
+    /**
+     * Sorts the roster by the specified column
+     * 
+     * BEHAVIOR:
+     * - Clicking same column toggles sort direction (asc ↔ desc)
+     * - Clicking different column sets it as sort key with asc direction
+     * - Handles date sorting for 'registered_at' column
+     * - Handles string sorting for other columns (case-insensitive)
+     * 
+     * SORT LOGIC:
+     * - First click: Sort ascending
+     * - Second click (same column): Sort descending
+     * - Click different column: Sort ascending
+     * 
+     * @param {string} key - The column key to sort by (e.g., 'first_name', 'bttc_id', 'registered_at')
+     */
+    const sortBy = (key) => {
+      // Toggle sort direction if clicking the same column
+      // Otherwise, start with ascending
+      if (currentSort.key === key && currentSort.direction === 'asc') {
+        currentSort.direction = 'desc';
+      } else {
+        currentSort.direction = 'asc';
+      }
+      
+      // Set the current sort key
+      currentSort.key = key;
+      
+      // Apply the sort
+      applySort();
     };
 
     /**
@@ -415,8 +440,21 @@ const RosterApp = {
     };
 
     // Fetch roster when component mounts (when page loads)
-    onMounted(() => {
-      fetchRoster();
+    onMounted(async () => {
+      await fetchRoster();
+      
+      // Update current time every second for countdown display
+      timeIntervalId = setInterval(() => {
+        currentTime.value = Date.now();
+      }, 1000);
+    });
+    
+    // Clean up interval when component unmounts
+    onUnmounted(() => {
+      if (timeIntervalId) {
+        clearInterval(timeIntervalId);
+        timeIntervalId = null;
+      }
     });
 
     // Computed properties (derived state from reactive data)
@@ -523,6 +561,49 @@ const RosterApp = {
         return '';
       }
     });
+    
+    /**
+     * Computed: Time until next roster update (in seconds)
+     * Calculates remaining time until cache expires and fresh data will be fetched
+     * Returns null if no roster data has been loaded yet
+     */
+    const nextUpdateIn = computed(() => {
+      if (!lastUpdated.value.roster) return null;
+      
+      const now = currentTime.value;
+      const lastUpdateTime = lastUpdated.value.roster;
+      const age = now - lastUpdateTime;
+      const remaining = CACHE_TTL.ROSTER - age;
+      
+      // If cache has expired, return 0 (update should happen soon)
+      if (remaining <= 0) return 0;
+      
+      return Math.ceil(remaining / 1000); // Return seconds
+    });
+    
+    /**
+     * Computed: Formatted "next update" string
+     * Shows countdown until next update (e.g., "Next update in 30 seconds")
+     * Returns empty string if no data available
+     */
+    const nextUpdateText = computed(() => {
+      const seconds = nextUpdateIn.value;
+      if (seconds === null) return '';
+      
+      if (seconds <= 0) {
+        return 'Refresh page to get latest data';
+      } else if (seconds < 60) {
+        return `Next update in ${seconds} second${seconds !== 1 ? 's' : ''}`;
+      } else {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        if (remainingSeconds === 0) {
+          return `Next update in ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+        } else {
+          return `Next update in ${minutes}m ${remainingSeconds}s`;
+        }
+      }
+    });
 
     return {
       players,
@@ -536,6 +617,7 @@ const RosterApp = {
       rosterLastUpdated,
       capacityLastUpdated,
       formattedEventDate,
+      nextUpdateText,
       sortBy,
       getSortClass,
       formatDatePST,
@@ -548,7 +630,7 @@ const RosterApp = {
     <div class="roster-container">
       <a href="../registration/" class="back-link">← Back to Round Robin Registration</a>
       <h3>Round Robin Registered Players</h3>
-      <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For RR on</span> {{ formattedEventDate }}</p>
+      <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For</span> {{ formattedEventDate }}</p>
       
       <div v-if="loading" class="loading-message">
         Loading roster...
@@ -565,15 +647,15 @@ const RosterApp = {
       
       <div v-else class="roster-table-container">
         <p class="player-count">
-          {{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} registered
-          <span v-if="capacity.playerCap > 0">
-            • {{ capacity.confirmedCount }}/{{ capacity.playerCap }} capacity
-            <span v-if="!capacity.eventOpen" class="event-closed-text">• Event CLOSED</span>
-            <span v-else-if="spotsRemaining > 0">• {{ spotsRemaining }} spot{{ spotsRemaining !== 1 ? 's' : '' }} remaining</span>
-            <span v-else class="capacity-full-text">• Full</span>
+          <span class="player-count-left">
+            <span v-if="!capacity.eventOpen && capacity.playerCap > 0" class="event-closed-text">{{ capacity.confirmedCount }}/{{ capacity.playerCap }} • Registration closed</span>
+            <span v-else-if="!capacity.eventOpen">{{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} registered • Registration closed</span>
+            <span v-else-if="capacity.isAtCapacity" class="capacity-full-text">{{ capacity.confirmedCount }}/{{ capacity.playerCap }} • Full</span>
+            <span v-else-if="capacity.playerCap > 0">{{ capacity.confirmedCount }}/{{ capacity.playerCap }} • {{ spotsRemaining }} spot{{ spotsRemaining !== 1 ? 's' : '' }} remaining</span>
+            <span v-else>{{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} registered</span>
           </span>
-          <span v-if="rosterLastUpdated" class="last-updated">
-            • Updated {{ rosterLastUpdated }}
+          <span v-if="nextUpdateText" class="next-update">
+            • {{ nextUpdateText }}
           </span>
         </p>
         <table class="roster-table">

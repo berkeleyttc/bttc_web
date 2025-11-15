@@ -168,6 +168,15 @@ const setRosterCache = (rosterData, capacityData) => {
   }
 };
 
+// Clear roster cache to force fresh fetch (called after registration/unregistration)
+const clearRosterCache = () => {
+  try {
+    sessionStorage.removeItem(ROSTER_CACHE_KEY);
+  } catch (err) {
+    // sessionStorage unavailable, silently fail
+  }
+};
+
 const savePhoneToHistory = (phone) => {
   try {
     // Format phone for display in history using shared utility (xxx-xxx-xxxx)
@@ -303,7 +312,7 @@ const PlayerLookup = {
       <!-- Expanded state: Show full form -->
       <div v-show="!collapsed" class="lookup-expanded-container">
         <div class="lookup-header">
-          <h3 class="lookup-title">Find Your Player Account</h3>
+          <h3 class="lookup-title">Sign in (Returning Players)</h3>
         </div>
         <div class="lookup-form-container">
           <form @submit="handleSubmit" class="lookup-form">
@@ -344,8 +353,7 @@ const PlayerLookup = {
               :disabled="isLookingUp"
             >
               <span v-if="!isLookingUp" class="button-text">
-                <span class="button-icon">🔍</span>
-                Lookup Player
+                Sign in
               </span>
               <span v-else class="button-text">
                 <span class="button-spinner"></span>
@@ -353,6 +361,9 @@ const PlayerLookup = {
               </span>
             </button>
           </form>
+        </div>
+        <div class="faq-section">
+          <a href="faq.html" class="faq-link">Have questions? Check out our FAQ</a>
         </div>
       </div>
     </div>
@@ -1106,6 +1117,9 @@ const RegistrationApp = {
             updateCapacityFromResponse(result.capacity);
           }
           
+          // Clear roster cache to force fresh fetch when viewing roster
+          clearRosterCache();
+          
           error.value = '';
           // Don't close the dialog - let user see success message and click Close button
         } else {
@@ -1168,6 +1182,10 @@ const RegistrationApp = {
           if (result.capacity) {
             updateCapacityFromResponse(result.capacity);
           }
+          
+          // Clear roster cache to force fresh fetch when viewing roster
+          clearRosterCache();
+          
           // Don't close the dialog - let user see success message and click Close button
         } else {
           unregistrationErrorMessage.value = result.message || 'Unregistration failed. Please try again.';
@@ -1226,7 +1244,7 @@ const RegistrationApp = {
 
       <div class="page-header">
         <h2>Round Robin Registration</h2>
-        <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For RR on</span> {{ formattedEventDate }}</p>
+        <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For</span> {{ formattedEventDate }}</p>
       </div>
 
       <registration-status 
@@ -1250,14 +1268,17 @@ const RegistrationApp = {
           
           <div class="error-actions">
             <a href="../signup/" class="signup-button">
-              <span class="signup-button-text">Sign Up as New Player</span>
-              <span class="signup-button-subtext">Create your player account</span>
+              <span class="signup-button-text">Sign up (Returning Players)</span>
+              <span class="signup-button-subtext">Activate your online player account</span>
             </a>
           </div>
           
           <div class="error-support">
-            <p class="support-text">Need help? Contact BTTC support:</p>
+            <p class="support-text">Need help or new to Friday Night League? Contact BTTC support.</p>
             <p class="support-contact">{{ supportPhone }} <span class="support-method">({{ supportMethod }})</span></p>
+            <div style="margin-top: 1rem; text-align: center;">
+              <a href="faq.html" class="faq-link">View FAQ for common questions</a>
+            </div>
           </div>
         </div>
       </div>
@@ -1273,8 +1294,8 @@ const RegistrationApp = {
 
       <div v-if="registrationOpen && players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
         <a href="../signup/" class="signup-button">
-          <span class="signup-button-text">Sign Up Another Player</span>
-          <span class="signup-button-subtext">Create another player account associated with this phone number</span>
+          <span class="signup-button-text">Sign Up Another Returning Player</span>
+          <span class="signup-button-subtext">Activate another returning player online account</span>
         </a>
       </div>
 

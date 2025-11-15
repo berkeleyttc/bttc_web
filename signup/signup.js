@@ -421,7 +421,7 @@ const PlayerSignupApp = {
           error.value = `Found players matching your search, but they have already completed their signup. If this is incorrect, please contact BTTC support at ${supportPhone} (${supportMethod})`;
         } else {
           // No players found matching search
-          error.value = `No players found. Please check your spelling or contact BTTC support at ${supportPhone} (${supportMethod})`;
+          error.value = `No players found. If this seems wrong or you are new to Friday Night League, contact BTTC support at ${supportPhone} (${supportMethod})`;
         }
         searchResults.value = [];
         return;
