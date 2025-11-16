@@ -793,6 +793,32 @@ const RegistrationApp = {
       }
     });
     
+    /**
+     * Computed property to get the day of the week from the event date
+     * Returns abbreviated day name (e.g., "Fri", "Mon", "Sun")
+     */
+    const eventDayOfWeek = computed(() => {
+      if (!capacity.value.eventDate) return '';
+      
+      try {
+        const date = new Date(capacity.value.eventDate + 'T00:00:00'); // Add time to avoid timezone issues
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          return '';
+        }
+        
+        // Format day as abbreviated day name (e.g., "Fri", "Mon", "Sun")
+        const dayOfWeek = date.toLocaleDateString("en-US", {
+          weekday: 'short'
+        });
+        
+        return dayOfWeek;
+      } catch (err) {
+        return '';
+      }
+    });
+    
     // Closing time: Shows closing day and time (default: Friday 6:45 PM)
     const closingTime = computed(() => {
       const now = new Date();
@@ -1223,6 +1249,7 @@ const RegistrationApp = {
       closingTime,
       nextOpening,
       formattedEventDate,
+      eventDayOfWeek,
       handlePlayerFound,
       handleLookupError,
       handleRegisterPlayer,
@@ -1244,7 +1271,7 @@ const RegistrationApp = {
 
       <div class="page-header">
         <h2>Round Robin Registration</h2>
-        <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For</span> {{ formattedEventDate }}</p>
+        <p v-if="formattedEventDate" class="event-date">for {{ eventDayOfWeek }}, {{ formattedEventDate }}</p>
       </div>
 
       <registration-status 
@@ -1268,7 +1295,7 @@ const RegistrationApp = {
           
           <div class="error-actions">
             <a href="../signup/" class="signup-button">
-              <span class="signup-button-text">Sign up (Returning Players)</span>
+              <span class="signup-button-text">Acitvate account (Returning Players)</span>
               <span class="signup-button-subtext">Activate your online player account</span>
             </a>
           </div>
@@ -1294,7 +1321,7 @@ const RegistrationApp = {
 
       <div v-if="registrationOpen && players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
         <a href="../signup/" class="signup-button">
-          <span class="signup-button-text">Sign Up Another Returning Player</span>
+          <span class="signup-button-text">Activate Another Returning Player</span>
           <span class="signup-button-subtext">Activate another returning player online account</span>
         </a>
       </div>

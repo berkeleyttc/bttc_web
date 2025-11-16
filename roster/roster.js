@@ -563,6 +563,32 @@ const RosterApp = {
     });
     
     /**
+     * Computed property to get the day of the week from the event date
+     * Returns abbreviated day name (e.g., "Fri", "Mon", "Sun")
+     */
+    const eventDayOfWeek = computed(() => {
+      if (!capacity.value.eventDate) return '';
+      
+      try {
+        const date = new Date(capacity.value.eventDate + 'T00:00:00'); // Add time to avoid timezone issues
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          return '';
+        }
+        
+        // Format day as abbreviated day name (e.g., "Fri", "Mon", "Sun")
+        const dayOfWeek = date.toLocaleDateString("en-US", {
+          weekday: 'short'
+        });
+        
+        return dayOfWeek;
+      } catch (err) {
+        return '';
+      }
+    });
+    
+    /**
      * Computed: Time until next roster update (in seconds)
      * Calculates remaining time until cache expires and fresh data will be fetched
      * Returns null if no roster data has been loaded yet
@@ -617,6 +643,7 @@ const RosterApp = {
       rosterLastUpdated,
       capacityLastUpdated,
       formattedEventDate,
+      eventDayOfWeek,
       nextUpdateText,
       sortBy,
       getSortClass,
@@ -630,7 +657,7 @@ const RosterApp = {
     <div class="roster-container">
       <a href="../registration/" class="back-link">← Back to Round Robin Registration</a>
       <h3>Round Robin Registered Players</h3>
-      <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For</span> {{ formattedEventDate }}</p>
+      <p v-if="formattedEventDate" class="event-date">For {{ eventDayOfWeek }}, {{ formattedEventDate }}</p>
       
       <div v-if="loading" class="loading-message">
         Loading roster...
