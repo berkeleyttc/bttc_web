@@ -9,7 +9,8 @@ const RegistrationStatus = {
     isOpen: Boolean,
     closingTime: String,
     nextOpening: String,
-    devMode: Boolean
+    devMode: Boolean,
+    registrationClosed: Boolean  // If true, registration is manually closed
   },
   template: `
     <div class="status-banner" :class="statusClass">
@@ -22,6 +23,7 @@ const RegistrationStatus = {
       <div class="status-details">
         <span v-if="isOpen && !devMode">Closes on closing day at {{ closingTime }} PST</span>
         <span v-else-if="isOpen && devMode">Developer override active</span>
+        <span v-else-if="registrationClosed">Registration is currently closed. Please review this month's schedule on our homepage.</span>
         <span v-else>Next opening: {{ nextOpening }} PST</span>
       </div>
     </div>
@@ -731,7 +733,9 @@ const RegistrationApp = {
   setup() {
     // Load configuration constants from ENV (or use defaults)
     const devOverride = typeof ENV !== 'undefined' ? (ENV.DEV_OVERRIDE ?? false) : false;
+    const registrationClosed = typeof ENV !== 'undefined' ? (ENV.REGISTRATION_CLOSED ?? false) : false;
     console.log('DEV_OVERRIDE mode:', devOverride ? 'ENABLED' : 'DISABLED');
+    console.log('REGISTRATION_CLOSED mode:', registrationClosed ? 'ENABLED' : 'DISABLED');
     
     // Opening configuration (default: Wednesday at 00:00)
     const openingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_DAY : 3;  // Wednesday = 3
@@ -897,7 +901,9 @@ const RegistrationApp = {
 
     // Methods
     const isRegistrationOpen = () => {
+      // Priority order: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule
       if (devOverride) return true;
+      if (registrationClosed) return false;
 
       const now = new Date();
       const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
@@ -1256,6 +1262,7 @@ const RegistrationApp = {
       unregistrationErrorMessage,
       error,
       devOverride,
+      registrationClosed,
       closingTime,
       nextOpening,
       formattedEventDate,
@@ -1290,6 +1297,7 @@ const RegistrationApp = {
         :closing-time="closingTime"
         :next-opening="nextOpening"
         :dev-mode="devOverride"
+        :registration-closed="registrationClosed"
       />
 
       <player-lookup 
