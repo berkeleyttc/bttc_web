@@ -108,6 +108,7 @@ const MAX_HISTORY_ITEMS = 10;
 const EVENT_METADATA_CACHE_KEY = 'bttc_event_metadata';
 const EVENT_METADATA_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (event date never changes)
 const ROSTER_CACHE_KEY = 'bttc_roster_cache'; // Same cache key as roster-vue.js
+const PHONE_COOKIE_KEY = 'bttc_signed_in_phone'; // Cookie key for storing signed-in phone number
 
 const getPhoneHistory = () => {
   try {
@@ -261,6 +262,12 @@ const PlayerLookup = {
         // Refresh history list in UI
         phoneHistory.value = getPhoneHistory();
         
+        // Save phone number to cookie for auto-sign-in on future visits
+        // Only save if we got a valid response (even if no players found, the lookup was successful)
+        if (data && typeof getCookie !== 'undefined' && typeof setCookie !== 'undefined') {
+          setCookie(PHONE_COOKIE_KEY, phone, 365); // Store for 1 year
+        }
+        
         // Collapse the search form after successful lookup (whether players found or not)
         // This enables "Search Again" functionality for both success and "not found" cases
         collapsed.value = true;
@@ -286,8 +293,58 @@ const PlayerLookup = {
       }
     };
 
-    onMounted(() => {
+    onMounted(async () => {
       phoneHistory.value = getPhoneHistory();
+      
+      // Check for saved phone number cookie and auto-sign-in if found
+      if (typeof getCookie !== 'undefined' && props.registrationOpen) {
+        const savedPhone = getCookie(PHONE_COOKIE_KEY);
+        if (savedPhone) {
+          // Validate the saved phone number
+          const validation = validatePhone(savedPhone);
+          if (validation.valid) {
+            // Set the phone input and automatically perform lookup
+            phoneInput.value = formatPhoneNumber(validation.phone);
+            
+            // Perform automatic lookup
+            const cleanedInput = validation.phone;
+            isLookingUp.value = true;
+            
+            try {
+              const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
+              const url = `${apiUrl}/rr/search?phone=${encodeURIComponent(cleanedInput)}`;
+              
+              const fetchOptions = getFetchOptions();
+              const response = await fetch(url, fetchOptions);
+              const data = await handleApiResponse(response);
+              
+              // Success: Refresh history list in UI
+              phoneHistory.value = getPhoneHistory();
+              
+              // Collapse the search form after successful lookup
+              collapsed.value = true;
+              
+              // Emit results to parent component
+              emit('player-found', data);
+              
+            } catch (error) {
+              // On error, clear the cookie and show error
+              if (typeof deleteCookie !== 'undefined') {
+                deleteCookie(PHONE_COOKIE_KEY);
+              }
+              const friendlyMessage = getErrorMessage(error, 'auto sign-in');
+              emit('lookup-error', friendlyMessage);
+            } finally {
+              isLookingUp.value = false;
+            }
+          } else {
+            // Invalid phone in cookie, remove it
+            if (typeof deleteCookie !== 'undefined') {
+              deleteCookie(PHONE_COOKIE_KEY);
+            }
+          }
+        }
+      }
     });
 
     return {
