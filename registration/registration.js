@@ -1,7 +1,7 @@
 // BTTC Round Robin Registration
 // Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateToken, formatPhoneNumber
 
-const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
+const { createApp, ref, computed, onMounted, watch } = Vue;
 
 
 const RegistrationStatus = {

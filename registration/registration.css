@@ -80,13 +80,6 @@ body {
 }
 
 /* De-emphasize the label text */
-.event-date-label {
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-  font-weight: 500;
-  font-size: 1.75rem;
-  color: #212529;
-  margin: 0 0 0.5rem 0;
-}
 
 /* Mobile-first responsive adjustments */
 @media (max-width: 480px) {
@@ -219,11 +212,6 @@ form {
   }
 }
 
-.lookup-description {
-  color: #6c757d;
-  font-size: 0.95rem;
-  margin: 0.5rem 0 0 0;
-}
 
 .lookup-form {
   display: flex;
@@ -489,19 +477,6 @@ button:active {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
-.entry .player-capacity-limited {
-  color: #666;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
-.pin-label {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #495057;
-  margin-bottom: 0.5rem;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
 
 .register-form,
 .unregister-form {
@@ -689,7 +664,6 @@ button:active {
 
 .support-text {
   font-size: 0.9rem;
-  /* color: #6c757d; */
   color: #dc3545;
   margin: 0 0 0.5rem 0;
 }
@@ -780,36 +754,6 @@ button:active {
   color: #6c757d;
 }
 
-/* Legacy roster link for compatibility */
-.roster-link {
-  font-weight: bold;
-  color: #0d6efd;
-  text-decoration: underline;
-  margin-top: 0.5rem;
-  display: inline-block;
-  padding: 0.5rem;
-  min-height: 44px;
-  touch-action: manipulation;
-}
-
-.token-field {
-  width: 100%;
-  margin-top: 0.25rem;
-  margin-bottom: 0.75rem;
-  padding: 0.875rem;
-  font-size: 1.1rem;
-  text-align: center;
-  letter-spacing: 0.5rem;
-  font-weight: 600;
-  font-family: 'Courier New', monospace;
-}
-
-/* Mobile token field adjustments */
-@media (max-width: 480px) {
-  .token-field {
-    width: 100%;
-  }
-}
 
 .confirm-btn {
   margin-top: 0.5rem;
@@ -830,12 +774,6 @@ button:active {
 }
 
 @media (min-width: 481px) {
-  .token-field {
-    width: 70%;
-    display: inline-block;
-    margin-right: 0.5rem;
-  }
-
   .confirm-btn {
     width: auto;
     display: inline-block;
@@ -884,32 +822,10 @@ button:active {
   border: 1px solid #f5c6cb;
 }
 
-.status-loading {
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
-}
-
 .status-details {
   font-size: 0.85rem;
   margin-top: 0.5rem;
   font-weight: normal;
-}
-
-/* Disable form when registration is closed */
-.registration-disabled {
-  opacity: 0.6;
-}
-
-.registration-disabled .lookup-button,
-.registration-disabled .phone-input {
-  pointer-events: none;
-  cursor: not-allowed;
-}
-
-/* Allow registration buttons to work even when registration is closed */
-.registration-disabled .confirm-btn {
-  pointer-events: auto;
 }
 
 /* Capacity Banner Styles */
@@ -1285,20 +1201,6 @@ button:active {
   font-weight: normal;
   color: #0f5132;
   line-height: 1.6;
-}
-
-/* Inline roster link in success message */
-.roster-inline-link {
-  color: #0d6efd;
-  text-decoration: underline;
-  font-weight: 600;
-  transition: color 0.2s ease;
-}
-
-.roster-inline-link:hover,
-.roster-inline-link:focus {
-  color: #0b5ed7;
-  text-decoration: none;
 }
 
 @media (max-width: 480px) {
