@@ -262,10 +262,17 @@ const PlayerLookup = {
         // Refresh history list in UI
         phoneHistory.value = getPhoneHistory();
         
+        // Check if players were actually found
+        const playerList = Array.isArray(data) ? data : (data.players || []);
+        const playersFound = data.result !== "None" && playerList.length > 0;
+        
         // Save phone number to cookie for auto-sign-in on future visits
-        // Only save if we got a valid response (even if no players found, the lookup was successful)
-        if (data && typeof getCookie !== 'undefined' && typeof setCookie !== 'undefined') {
+        // Only save if players were actually found (not for "Player Not Found" cases)
+        if (playersFound && typeof getCookie !== 'undefined' && typeof setCookie !== 'undefined') {
           setCookie(PHONE_COOKIE_KEY, phone, 365); // Store for 1 year
+        } else if (!playersFound && typeof deleteCookie !== 'undefined') {
+          // If no players found, clear any existing cookie to prevent auto-sign-in with invalid phone
+          deleteCookie(PHONE_COOKIE_KEY);
         }
         
         // Collapse the search form after successful lookup (whether players found or not)
@@ -317,6 +324,15 @@ const PlayerLookup = {
               const fetchOptions = getFetchOptions();
               const response = await fetch(url, fetchOptions);
               const data = await handleApiResponse(response);
+              
+              // Check if players were actually found
+              const playerList = Array.isArray(data) ? data : (data.players || []);
+              const playersFound = data.result !== "None" && playerList.length > 0;
+              
+              // If no players found, clear the cookie to prevent future auto-sign-in attempts
+              if (!playersFound && typeof deleteCookie !== 'undefined') {
+                deleteCookie(PHONE_COOKIE_KEY);
+              }
               
               // Success: Refresh history list in UI
               phoneHistory.value = getPhoneHistory();
@@ -1367,18 +1383,26 @@ const RegistrationApp = {
       <div v-if="registrationOpen && error" class="error-section">
         <div class="error-content">
           <h3 class="error-title">Player Not Found</h3>
+          <p class="error-subtitle">
+            If your account is already activated, confirm entered phone number and try again.
+          </p>
           
           <div class="error-actions">
             <a href="../signup/" class="signup-button">
-              <span class="signup-button-text">Acitvate account (Returning Players)</span>
+              <span class="signup-button-text">Activate Account (Returning Players)</span>
               <span class="signup-button-subtext">Activate your online player account</span>
             </a>
           </div>
           
           <div class="error-support">
-            <p class="support-text">Need help or new to Friday Night League? Contact BTTC support.</p>
-            <p class="support-contact">{{ supportPhone }} <span class="support-method">({{ supportMethod }})</span></p>
-            <div style="margin-top: 1rem; text-align: center;">
+            <p class="support-text">
+              Need help or new to Friday Night League? Contact BTTC support.
+            </p>
+            <p class="support-contact">
+              {{ supportPhone }} 
+              <span class="support-method">({{ supportMethod }})</span>
+            </p>
+            <div class="error-faq-link">
               <a href="faq.html" class="faq-link">View FAQ for common questions</a>
             </div>
           </div>

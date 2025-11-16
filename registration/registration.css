@@ -589,6 +589,13 @@ button:active {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
+.error-subtitle {
+  font-size: 1rem;
+  color: #dc3545;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
 .error-message {
   font-size: 1rem;
   color: #6c757d;
@@ -678,6 +685,11 @@ button:active {
 .support-method {
   font-weight: normal;
   color: #6c757d;
+}
+
+.error-faq-link {
+  margin-top: 1rem;
+  text-align: center;
 }
 
 /* Mobile adjustments for error section */
