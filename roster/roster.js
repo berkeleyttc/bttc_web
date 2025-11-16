@@ -107,6 +107,9 @@ const RosterApp = {
     const supportMethod = typeof ENV !== 'undefined' ? ENV.SUPPORT_METHOD : 'TEXT ONLY';
     const defaultPlayerCap = typeof ENV !== 'undefined' ? ENV.DEFAULT_PLAYER_CAP : 64;
     const fallbackPlayerCap = typeof ENV !== 'undefined' ? ENV.FALLBACK_PLAYER_CAP : 65;
+    const devOverride = typeof ENV !== 'undefined' ? (ENV.DEV_OVERRIDE ?? false) : false;
+    const registrationClosed = typeof ENV !== 'undefined' ? (ENV.REGISTRATION_CLOSED ?? false) : false;
+    const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
     
     // API endpoint for fetching roster
     const API_URL = `${apiUrl}/rr/roster`;
@@ -630,7 +633,64 @@ const RosterApp = {
         }
       }
     });
-
+    
+    /**
+     * Computed: Check if today's date is after the event date
+     * Returns true if event date exists and today is after it
+     */
+    const isAfterEventDate = computed(() => {
+      if (!capacity.value.eventDate) return false;
+      
+      try {
+        const now = new Date();
+        const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
+        const eventDate = new Date(capacity.value.eventDate + 'T00:00:00');
+        
+        // Compare dates (ignore time, just compare dates)
+        const today = new Date(pstNow.getFullYear(), pstNow.getMonth(), pstNow.getDate());
+        const event = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+        
+        return today > event;
+      } catch (err) {
+        return false;
+      }
+    });
+    
+    /**
+     * Computed: Determine if we should show the closed message instead of roster
+     * Shows closed message if:
+     * - Event is closed (capacity.eventOpen === false)
+     * - Today is after the event date
+     * - DEV_OVERRIDE is false (if true, always show roster)
+     * - REGISTRATION_CLOSED is honored (if true, show closed message)
+     */
+    const shouldShowClosedMessage = computed(() => {
+      // If DEV_OVERRIDE is true, always show roster
+      if (devOverride) return false;
+      
+      // If event is not closed, show roster
+      if (capacity.value.eventOpen) return false;
+      
+      // If event is closed and today is after event date, show closed message
+      if (isAfterEventDate.value) return true;
+      
+      // If REGISTRATION_CLOSED is true, show closed message
+      if (registrationClosed) return true;
+      
+      // Otherwise, show roster
+      return false;
+    });
+    
+    /**
+     * Computed: Closed message text (same as registration page)
+     */
+    const closedMessage = computed(() => {
+      if (registrationClosed) {
+        return 'Registration is currently closed. Please review this month\'s schedule on our homepage.';
+      }
+      return 'Registration is currently closed.';
+    });
+    
     return {
       players,
       loading,
@@ -645,6 +705,8 @@ const RosterApp = {
       formattedEventDate,
       eventDayOfWeek,
       nextUpdateText,
+      shouldShowClosedMessage,
+      closedMessage,
       sortBy,
       getSortClass,
       formatDatePST,
@@ -657,22 +719,32 @@ const RosterApp = {
     <div class="roster-container">
       <a href="../registration/" class="back-link">← Back to Round Robin Registration</a>
       <h3>Round Robin Registered Players</h3>
-      <p v-if="formattedEventDate" class="event-date">For {{ eventDayOfWeek }}, {{ formattedEventDate }}</p>
+      <p v-if="formattedEventDate && capacity.eventOpen" class="event-date">For {{ eventDayOfWeek }}, {{ formattedEventDate }}</p>
       
-      <div v-if="loading" class="loading-message">
-        Loading roster...
+      <!-- Show closed message if event is closed and today is after event date -->
+      <div v-if="shouldShowClosedMessage" class="status-banner status-closed">
+        <div>🔴 Registration is CLOSED</div>
+        <div class="status-details">
+          {{ closedMessage }}
+        </div>
       </div>
       
-      <div v-else-if="error" class="error-message">
-        <p>{{ error }}</p>
-        <p>If the problem persists, please contact BTTC support at {{ supportPhone }} ({{ supportMethod }})</p>
-      </div>
-      
-      <div v-else-if="!hasPlayers" class="empty-message">
-        <p>No players registered yet.</p>
-      </div>
-      
-      <div v-else class="roster-table-container">
+      <!-- Show roster content if not showing closed message -->
+      <template v-else>
+        <div v-if="loading" class="loading-message">
+          Loading roster...
+        </div>
+        
+        <div v-else-if="error" class="error-message">
+          <p>{{ error }}</p>
+          <p>If the problem persists, please contact BTTC support at {{ supportPhone }} ({{ supportMethod }})</p>
+        </div>
+        
+        <div v-else-if="!hasPlayers" class="empty-message">
+          <p>No players registered yet.</p>
+        </div>
+        
+        <div v-else class="roster-table-container">
         <p class="player-count">
           <span class="player-count-left">
             <span v-if="!capacity.eventOpen && capacity.playerCap > 0" class="event-closed-text">{{ capacity.confirmedCount }}/{{ capacity.playerCap }} • Registration closed</span>
@@ -716,7 +788,8 @@ const RosterApp = {
             </tr>
           </tbody>
         </table>
-      </div>
+        </div>
+      </template>
     </div>
   `
 };
