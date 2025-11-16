@@ -41,6 +41,7 @@ const ENV = {
   // Development
   // DEV_OVERRIDE: true
   DEV_OVERRIDE: true
+  DEV_OVERRIDE: true,
   
   // Registration Control
   // If true, registration is closed regardless of schedule (priority: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule)
