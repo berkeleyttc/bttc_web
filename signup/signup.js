@@ -88,7 +88,7 @@ const PlayerSearch = {
   template: `
     <div>
       <h1>Complete Your Player Profile</h1>
-      <p class="subtitle">Find yourself in our system and complete your player signup</p>
+      <p class="subtitle">Returning players find yourself in our system and complete your player signup</p>
       
       <div class="search-type">
         <label>

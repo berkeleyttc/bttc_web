@@ -143,12 +143,37 @@ form {
   text-align: center;
 }
 
+.lookup-title-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
 .lookup-title {
   font-size: 1.5rem;
   font-weight: 700;
   color: #212529;
-  margin: 0.5rem 0;
+  margin: 0.5rem 0 0.25rem 0;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.lookup-subtext {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin: 0 0 0.5rem 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.lookup-subtext a {
+  color: #0d6efd;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.lookup-subtext a:hover {
+  color: #0b5ed7;
+  text-decoration: underline;
 }
 
 /* Collapsed link - minimal footprint, no container styling */
@@ -1293,12 +1318,22 @@ button:active {
   }
 }
 
+/* Support Section */
+.support-section {
+  margin: 1.5rem 0 0.5rem 0;
+  text-align: center;
+}
+
 /* FAQ Link Section */
 .faq-section {
-  margin: 1.5rem 0;
+  margin: 0.5rem 0 1.5rem 0;
   padding-top: 1rem;
   text-align: center;
   border-top: 1px solid #dee2e6;
+}
+
+.faq-section .lookup-subtext {
+  margin: 0;
 }
 
 .faq-link {
@@ -1307,7 +1342,8 @@ button:active {
   text-decoration: none;
   font-size: 0.95rem;
   font-weight: 500;
-  padding: 0.5rem 0;
+  padding: 0;
+  margin-top: 0.125rem;
   transition: color 0.2s ease;
 }
 

@@ -202,6 +202,10 @@ const PlayerLookup = {
   },
   emits: ['player-found', 'lookup-error'],
   setup(props, { emit }) {
+    // Load support contact information from ENV
+    const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
+    const supportMethod = typeof ENV !== 'undefined' ? ENV.SUPPORT_METHOD : 'TEXT ONLY';
+    
     // Component state
     const phoneInput = ref('');      // User's phone input (can include formatting)
     const isLookingUp = ref(false);   // Loading state during API call
@@ -290,6 +294,8 @@ const PlayerLookup = {
       phoneError,
       phoneHistory,
       collapsed,
+      supportPhone,
+      supportMethod,
       filterPhoneInput,
       handleSubmit,
       toggleCollapse
@@ -312,7 +318,10 @@ const PlayerLookup = {
       <!-- Expanded state: Show full form -->
       <div v-show="!collapsed" class="lookup-expanded-container">
         <div class="lookup-header">
-          <h3 class="lookup-title">Sign in (Returning Players)</h3>
+          <div class="lookup-title-group">
+            <h3 class="lookup-title">Sign in (Returning Players)</h3>
+            <p class="lookup-subtext">Need to activate your account? <a href="../signup/">Activate</a></p>
+          </div>
         </div>
         <div class="lookup-form-container">
           <form @submit="handleSubmit" class="lookup-form">
@@ -363,7 +372,8 @@ const PlayerLookup = {
           </form>
         </div>
         <div class="faq-section">
-          <a href="faq.html" class="faq-link">Have questions? Check out our FAQ</a>
+        <p class="lookup-subtext">New players please contact BTTC support - <span class="support-contact">{{ supportPhone }} <span class="support-method">({{ supportMethod }})</span></span></p>
+        <a href="faq.html" class="faq-link">Have questions? Check out our FAQ</a>
         </div>
       </div>
     </div>
