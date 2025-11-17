@@ -1,7 +1,7 @@
 // BTTC Round Robin Registration
 // Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateToken, formatPhoneNumber
 
-const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
+const { createApp, ref, computed, onMounted, watch } = Vue;
 
 
 const RegistrationStatus = {
@@ -9,7 +9,8 @@ const RegistrationStatus = {
     isOpen: Boolean,
     closingTime: String,
     nextOpening: String,
-    devMode: Boolean
+    devMode: Boolean,
+    registrationClosed: Boolean  // If true, registration is manually closed
   },
   template: `
     <div class="status-banner" :class="statusClass">
@@ -22,6 +23,7 @@ const RegistrationStatus = {
       <div class="status-details">
         <span v-if="isOpen && !devMode">Closes on closing day at {{ closingTime }} PST</span>
         <span v-else-if="isOpen && devMode">Developer override active</span>
+        <span v-else-if="registrationClosed">Registration is currently closed. Please review this month's schedule on our homepage.</span>
         <span v-else>Next opening: {{ nextOpening }} PST</span>
       </div>
     </div>
@@ -106,6 +108,7 @@ const MAX_HISTORY_ITEMS = 10;
 const EVENT_METADATA_CACHE_KEY = 'bttc_event_metadata';
 const EVENT_METADATA_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (event date never changes)
 const ROSTER_CACHE_KEY = 'bttc_roster_cache'; // Same cache key as roster-vue.js
+const PHONE_COOKIE_KEY = 'bttc_signed_in_phone'; // Cookie key for storing signed-in phone number
 
 const getPhoneHistory = () => {
   try {
@@ -168,6 +171,15 @@ const setRosterCache = (rosterData, capacityData) => {
   }
 };
 
+// Clear roster cache to force fresh fetch (called after registration/unregistration)
+const clearRosterCache = () => {
+  try {
+    sessionStorage.removeItem(ROSTER_CACHE_KEY);
+  } catch (err) {
+    // sessionStorage unavailable, silently fail
+  }
+};
+
 const savePhoneToHistory = (phone) => {
   try {
     // Format phone for display in history using shared utility (xxx-xxx-xxxx)
@@ -193,6 +205,10 @@ const PlayerLookup = {
   },
   emits: ['player-found', 'lookup-error'],
   setup(props, { emit }) {
+    // Load support contact information from ENV
+    const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
+    const supportMethod = typeof ENV !== 'undefined' ? ENV.SUPPORT_METHOD : 'TEXT ONLY';
+    
     // Component state
     const phoneInput = ref('');      // User's phone input (can include formatting)
     const isLookingUp = ref(false);   // Loading state during API call
@@ -246,6 +262,19 @@ const PlayerLookup = {
         // Refresh history list in UI
         phoneHistory.value = getPhoneHistory();
         
+        // Check if players were actually found
+        const playerList = Array.isArray(data) ? data : (data.players || []);
+        const playersFound = data.result !== "None" && playerList.length > 0;
+        
+        // Save phone number to cookie for auto-sign-in on future visits
+        // Only save if players were actually found (not for "Player Not Found" cases)
+        if (playersFound && typeof getCookie !== 'undefined' && typeof setCookie !== 'undefined') {
+          setCookie(PHONE_COOKIE_KEY, phone, 365); // Store for 1 year
+        } else if (!playersFound && typeof deleteCookie !== 'undefined') {
+          // If no players found, clear any existing cookie to prevent auto-sign-in with invalid phone
+          deleteCookie(PHONE_COOKIE_KEY);
+        }
+        
         // Collapse the search form after successful lookup (whether players found or not)
         // This enables "Search Again" functionality for both success and "not found" cases
         collapsed.value = true;
@@ -271,8 +300,67 @@ const PlayerLookup = {
       }
     };
 
-    onMounted(() => {
+    onMounted(async () => {
       phoneHistory.value = getPhoneHistory();
+      
+      // Check for saved phone number cookie and auto-sign-in if found
+      if (typeof getCookie !== 'undefined' && props.registrationOpen) {
+        const savedPhone = getCookie(PHONE_COOKIE_KEY);
+        if (savedPhone) {
+          // Validate the saved phone number
+          const validation = validatePhone(savedPhone);
+          if (validation.valid) {
+            // Set the phone input and automatically perform lookup
+            phoneInput.value = formatPhoneNumber(validation.phone);
+            
+            // Perform automatic lookup
+            const cleanedInput = validation.phone;
+            isLookingUp.value = true;
+            
+            try {
+              const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
+              const url = `${apiUrl}/rr/search?phone=${encodeURIComponent(cleanedInput)}`;
+              
+              const fetchOptions = getFetchOptions();
+              const response = await fetch(url, fetchOptions);
+              const data = await handleApiResponse(response);
+              
+              // Check if players were actually found
+              const playerList = Array.isArray(data) ? data : (data.players || []);
+              const playersFound = data.result !== "None" && playerList.length > 0;
+              
+              // If no players found, clear the cookie to prevent future auto-sign-in attempts
+              if (!playersFound && typeof deleteCookie !== 'undefined') {
+                deleteCookie(PHONE_COOKIE_KEY);
+              }
+              
+              // Success: Refresh history list in UI
+              phoneHistory.value = getPhoneHistory();
+              
+              // Collapse the search form after successful lookup
+              collapsed.value = true;
+              
+              // Emit results to parent component
+              emit('player-found', data);
+              
+            } catch (error) {
+              // On error, clear the cookie and show error
+              if (typeof deleteCookie !== 'undefined') {
+                deleteCookie(PHONE_COOKIE_KEY);
+              }
+              const friendlyMessage = getErrorMessage(error, 'auto sign-in');
+              emit('lookup-error', friendlyMessage);
+            } finally {
+              isLookingUp.value = false;
+            }
+          } else {
+            // Invalid phone in cookie, remove it
+            if (typeof deleteCookie !== 'undefined') {
+              deleteCookie(PHONE_COOKIE_KEY);
+            }
+          }
+        }
+      }
     });
 
     return {
@@ -281,6 +369,8 @@ const PlayerLookup = {
       phoneError,
       phoneHistory,
       collapsed,
+      supportPhone,
+      supportMethod,
       filterPhoneInput,
       handleSubmit,
       toggleCollapse
@@ -303,7 +393,10 @@ const PlayerLookup = {
       <!-- Expanded state: Show full form -->
       <div v-show="!collapsed" class="lookup-expanded-container">
         <div class="lookup-header">
-          <h3 class="lookup-title">Find Your Player Account</h3>
+          <div class="lookup-title-group">
+            <h3 class="lookup-title">Sign in (Returning Players)</h3>
+            <p class="lookup-subtext">Need to activate your account? <a href="../signup/">Activate</a></p>
+          </div>
         </div>
         <div class="lookup-form-container">
           <form @submit="handleSubmit" class="lookup-form">
@@ -344,8 +437,7 @@ const PlayerLookup = {
               :disabled="isLookingUp"
             >
               <span v-if="!isLookingUp" class="button-text">
-                <span class="button-icon">🔍</span>
-                Lookup Player
+                Sign in
               </span>
               <span v-else class="button-text">
                 <span class="button-spinner"></span>
@@ -353,6 +445,10 @@ const PlayerLookup = {
               </span>
             </button>
           </form>
+        </div>
+        <div class="faq-section">
+        <p class="lookup-subtext">New players please contact BTTC support - <span class="support-contact">{{ supportPhone }} <span class="support-method">({{ supportMethod }})</span></span></p>
+        <a href="faq.html" class="faq-link">Have questions? Check out our FAQ</a>
         </div>
       </div>
     </div>
@@ -710,7 +806,9 @@ const RegistrationApp = {
   setup() {
     // Load configuration constants from ENV (or use defaults)
     const devOverride = typeof ENV !== 'undefined' ? (ENV.DEV_OVERRIDE ?? false) : false;
+    const registrationClosed = typeof ENV !== 'undefined' ? (ENV.REGISTRATION_CLOSED ?? false) : false;
     console.log('DEV_OVERRIDE mode:', devOverride ? 'ENABLED' : 'DISABLED');
+    console.log('REGISTRATION_CLOSED mode:', registrationClosed ? 'ENABLED' : 'DISABLED');
     
     // Opening configuration (default: Wednesday at 00:00)
     const openingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_DAY : 3;  // Wednesday = 3
@@ -777,6 +875,32 @@ const RegistrationApp = {
         });
         
         return formatted;
+      } catch (err) {
+        return '';
+      }
+    });
+    
+    /**
+     * Computed property to get the day of the week from the event date
+     * Returns abbreviated day name (e.g., "Fri", "Mon", "Sun")
+     */
+    const eventDayOfWeek = computed(() => {
+      if (!capacity.value.eventDate) return '';
+      
+      try {
+        const date = new Date(capacity.value.eventDate + 'T00:00:00'); // Add time to avoid timezone issues
+        
+        // Check if date is valid
+        if (isNaN(date.getTime())) {
+          return '';
+        }
+        
+        // Format day as abbreviated day name (e.g., "Fri", "Mon", "Sun")
+        const dayOfWeek = date.toLocaleDateString("en-US", {
+          weekday: 'short'
+        });
+        
+        return dayOfWeek;
       } catch (err) {
         return '';
       }
@@ -850,7 +974,9 @@ const RegistrationApp = {
 
     // Methods
     const isRegistrationOpen = () => {
+      // Priority order: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule
       if (devOverride) return true;
+      if (registrationClosed) return false;
 
       const now = new Date();
       const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
@@ -1106,6 +1232,9 @@ const RegistrationApp = {
             updateCapacityFromResponse(result.capacity);
           }
           
+          // Clear roster cache to force fresh fetch when viewing roster
+          clearRosterCache();
+          
           error.value = '';
           // Don't close the dialog - let user see success message and click Close button
         } else {
@@ -1168,6 +1297,10 @@ const RegistrationApp = {
           if (result.capacity) {
             updateCapacityFromResponse(result.capacity);
           }
+          
+          // Clear roster cache to force fresh fetch when viewing roster
+          clearRosterCache();
+          
           // Don't close the dialog - let user see success message and click Close button
         } else {
           unregistrationErrorMessage.value = result.message || 'Unregistration failed. Please try again.';
@@ -1202,9 +1335,11 @@ const RegistrationApp = {
       unregistrationErrorMessage,
       error,
       devOverride,
+      registrationClosed,
       closingTime,
       nextOpening,
       formattedEventDate,
+      eventDayOfWeek,
       handlePlayerFound,
       handleLookupError,
       handleRegisterPlayer,
@@ -1226,7 +1361,7 @@ const RegistrationApp = {
 
       <div class="page-header">
         <h2>Round Robin Registration</h2>
-        <p v-if="formattedEventDate" class="event-date"><span class="event-date-label">For RR on</span> {{ formattedEventDate }}</p>
+        <p v-if="formattedEventDate" class="event-date">for {{ eventDayOfWeek }}, {{ formattedEventDate }}</p>
       </div>
 
       <registration-status 
@@ -1235,6 +1370,7 @@ const RegistrationApp = {
         :closing-time="closingTime"
         :next-opening="nextOpening"
         :dev-mode="devOverride"
+        :registration-closed="registrationClosed"
       />
 
       <player-lookup 
@@ -1247,17 +1383,28 @@ const RegistrationApp = {
       <div v-if="registrationOpen && error" class="error-section">
         <div class="error-content">
           <h3 class="error-title">Player Not Found</h3>
+          <p class="error-subtitle">
+            If your account is already activated, confirm entered phone number and try again.
+          </p>
           
           <div class="error-actions">
             <a href="../signup/" class="signup-button">
-              <span class="signup-button-text">Sign Up as New Player</span>
-              <span class="signup-button-subtext">Create your player account</span>
+              <span class="signup-button-text">Activate Account (Returning Players)</span>
+              <span class="signup-button-subtext">Activate your online player account</span>
             </a>
           </div>
           
           <div class="error-support">
-            <p class="support-text">Need help? Contact BTTC support:</p>
-            <p class="support-contact">{{ supportPhone }} <span class="support-method">({{ supportMethod }})</span></p>
+            <p class="support-text">
+              Need help or new to Friday Night League? Contact BTTC support.
+            </p>
+            <p class="support-contact">
+              {{ supportPhone }} 
+              <span class="support-method">({{ supportMethod }})</span>
+            </p>
+            <div class="error-faq-link">
+              <a href="faq.html" class="faq-link">View FAQ for common questions</a>
+            </div>
           </div>
         </div>
       </div>
@@ -1273,8 +1420,8 @@ const RegistrationApp = {
 
       <div v-if="registrationOpen && players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
         <a href="../signup/" class="signup-button">
-          <span class="signup-button-text">Sign Up Another Player</span>
-          <span class="signup-button-subtext">Create another player account associated with this phone number</span>
+          <span class="signup-button-text">Activate Another Returning Player</span>
+          <span class="signup-button-subtext">Activate another returning player online account</span>
         </a>
       </div>
 

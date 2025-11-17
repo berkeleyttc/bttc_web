@@ -72,19 +72,14 @@ body {
 
 /* Event date styling - bold and bigger */
 .event-date {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #495057;
-  margin: 0.5rem 0 0 0;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
+  font-weight: 700;
+  font-size: 1.75rem;
+  color: #212529;
+  margin: 0 0 0.5rem 0;
 }
 
 /* De-emphasize the label text */
-.event-date-label {
-  font-weight: 500;
-  color: #2f3438;
-  opacity: 1.0;
-}
 
 /* Mobile-first responsive adjustments */
 @media (max-width: 480px) {
@@ -141,12 +136,37 @@ form {
   text-align: center;
 }
 
+.lookup-title-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
 .lookup-title {
   font-size: 1.5rem;
   font-weight: 700;
   color: #212529;
-  margin: 0.5rem 0;
+  margin: 0.5rem 0 0.25rem 0;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.lookup-subtext {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin: 0 0 0.5rem 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.lookup-subtext a {
+  color: #0d6efd;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.lookup-subtext a:hover {
+  color: #0b5ed7;
+  text-decoration: underline;
 }
 
 /* Collapsed link - minimal footprint, no container styling */
@@ -192,11 +212,6 @@ form {
   }
 }
 
-.lookup-description {
-  color: #6c757d;
-  font-size: 0.95rem;
-  margin: 0.5rem 0 0 0;
-}
 
 .lookup-form {
   display: flex;
@@ -462,19 +477,6 @@ button:active {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
-.entry .player-capacity-limited {
-  color: #666;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
-.pin-label {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #495057;
-  margin-bottom: 0.5rem;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
 
 .register-form,
 .unregister-form {
@@ -587,6 +589,13 @@ button:active {
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
+.error-subtitle {
+  font-size: 1rem;
+  color: #dc3545;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
 .error-message {
   font-size: 1rem;
   color: #6c757d;
@@ -662,7 +671,7 @@ button:active {
 
 .support-text {
   font-size: 0.9rem;
-  color: #6c757d;
+  color: #dc3545;
   margin: 0 0 0.5rem 0;
 }
 
@@ -676,6 +685,11 @@ button:active {
 .support-method {
   font-weight: normal;
   color: #6c757d;
+}
+
+.error-faq-link {
+  margin-top: 1rem;
+  text-align: center;
 }
 
 /* Mobile adjustments for error section */
@@ -752,36 +766,6 @@ button:active {
   color: #6c757d;
 }
 
-/* Legacy roster link for compatibility */
-.roster-link {
-  font-weight: bold;
-  color: #0d6efd;
-  text-decoration: underline;
-  margin-top: 0.5rem;
-  display: inline-block;
-  padding: 0.5rem;
-  min-height: 44px;
-  touch-action: manipulation;
-}
-
-.token-field {
-  width: 100%;
-  margin-top: 0.25rem;
-  margin-bottom: 0.75rem;
-  padding: 0.875rem;
-  font-size: 1.1rem;
-  text-align: center;
-  letter-spacing: 0.5rem;
-  font-weight: 600;
-  font-family: 'Courier New', monospace;
-}
-
-/* Mobile token field adjustments */
-@media (max-width: 480px) {
-  .token-field {
-    width: 100%;
-  }
-}
 
 .confirm-btn {
   margin-top: 0.5rem;
@@ -802,12 +786,6 @@ button:active {
 }
 
 @media (min-width: 481px) {
-  .token-field {
-    width: 70%;
-    display: inline-block;
-    margin-right: 0.5rem;
-  }
-
   .confirm-btn {
     width: auto;
     display: inline-block;
@@ -856,32 +834,10 @@ button:active {
   border: 1px solid #f5c6cb;
 }
 
-.status-loading {
-  background-color: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
-}
-
 .status-details {
   font-size: 0.85rem;
   margin-top: 0.5rem;
   font-weight: normal;
-}
-
-/* Disable form when registration is closed */
-.registration-disabled {
-  opacity: 0.6;
-}
-
-.registration-disabled .lookup-button,
-.registration-disabled .phone-input {
-  pointer-events: none;
-  cursor: not-allowed;
-}
-
-/* Allow registration buttons to work even when registration is closed */
-.registration-disabled .confirm-btn {
-  pointer-events: auto;
 }
 
 /* Capacity Banner Styles */
@@ -1259,20 +1215,6 @@ button:active {
   line-height: 1.6;
 }
 
-/* Inline roster link in success message */
-.roster-inline-link {
-  color: #0d6efd;
-  text-decoration: underline;
-  font-weight: 600;
-  transition: color 0.2s ease;
-}
-
-.roster-inline-link:hover,
-.roster-inline-link:focus {
-  color: #0b5ed7;
-  text-decoration: none;
-}
-
 @media (max-width: 480px) {
   .dialog-message {
     padding: 0.875rem;
@@ -1287,5 +1229,50 @@ button:active {
     font-size: 0.85rem;
     margin-top: 0.5rem;
     padding-top: 0.5rem;
+  }
+}
+
+/* Support Section */
+.support-section {
+  margin: 1.5rem 0 0.5rem 0;
+  text-align: center;
+}
+
+/* FAQ Link Section */
+.faq-section {
+  margin: 0.5rem 0 1.5rem 0;
+  padding-top: 1rem;
+  text-align: center;
+  border-top: 1px solid #dee2e6;
+}
+
+.faq-section .lookup-subtext {
+  margin: 0;
+}
+
+.faq-link {
+  display: inline-block;
+  color: #607890;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 0;
+  margin-top: 0.125rem;
+  transition: color 0.2s ease;
+}
+
+.faq-link:hover {
+  color: #036;
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .faq-section {
+    margin: 1rem 0;
+    padding-top: 0.75rem;
+  }
+  
+  .faq-link {
+    font-size: 0.9rem;
   }
 }
