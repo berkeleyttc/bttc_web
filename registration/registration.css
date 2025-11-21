@@ -19,7 +19,7 @@
 
 /* Vue.js App Container */
 #vue-registration-app {
-  min-height: 100vh;
+  /* Removed min-height: 100vh to allow footer to appear directly below */
 }
 
 * {
