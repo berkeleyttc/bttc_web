@@ -821,6 +821,7 @@ const RegistrationApp = {
     const closingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_MINUTE : 45;  // 45 minutes
     
     const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
+    const closedEventDates = typeof ENV !== 'undefined' ? (ENV.CLOSED_EVENT_DATES || []) : [];
     const defaultPlayerCap = typeof ENV !== 'undefined' ? ENV.DEFAULT_PLAYER_CAP : 64;
     const fallbackPlayerCap = typeof ENV !== 'undefined' ? ENV.FALLBACK_PLAYER_CAP : 64;
     const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
@@ -933,13 +934,21 @@ const RegistrationApp = {
     });
 
     // Next opening: Shows next opening day and time (default: Wednesday at 12:00 AM)
-    const nextOpening = computed(() => {
+    // This is a ref instead of computed because it needs to check CLOSED_EVENT_DATES ENV variable
+    const nextOpening = ref('Calculating...');
+
+    /**
+     * Calculates the next opening date, skipping weeks where the event is closed
+     * Checks CLOSED_EVENT_DATES ENV variable to skip weeks with cancelled events
+     */
+    const calculateNextOpening = () => {
       const now = new Date();
       const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
       const dayOfWeek = pstNow.getDay();
       const hours = pstNow.getHours();
       const minutes = pstNow.getMinutes();
       
+      // Calculate the base next opening date (without checking for closed events)
       let daysUntilOpeningDay;
       
       // Check if we're currently on the opening day and past opening time
@@ -957,11 +966,52 @@ const RegistrationApp = {
         daysUntilOpeningDay = 7 - (dayOfWeek - openingDay);
       }
 
-      const nextOpeningDate = new Date(pstNow);
-      nextOpeningDate.setDate(nextOpeningDate.getDate() + daysUntilOpeningDay);
-      nextOpeningDate.setHours(openingHour, openingMinute, 0, 0);
-
-      return nextOpeningDate.toLocaleString("en-US", {
+      // Start checking from the calculated next opening date
+      let weeksToCheck = 0;
+      const maxWeeksToCheck = 52; // Limit to 52 weeks ahead (1 year) to avoid infinite loops
+      
+      while (weeksToCheck < maxWeeksToCheck) {
+        const candidateOpeningDate = new Date(pstNow);
+        candidateOpeningDate.setDate(candidateOpeningDate.getDate() + daysUntilOpeningDay + (weeksToCheck * 7));
+        candidateOpeningDate.setHours(openingHour, openingMinute, 0, 0);
+        
+        // Calculate the Friday for this opening week (opening is Wednesday, Friday is 2 days later)
+        const fridayForThisWeek = new Date(candidateOpeningDate);
+        fridayForThisWeek.setDate(fridayForThisWeek.getDate() + (closingDay - openingDay));
+        
+        // Format Friday as YYYY-MM-DD for comparison
+        const year = fridayForThisWeek.getFullYear();
+        const month = String(fridayForThisWeek.getMonth() + 1).padStart(2, '0');
+        const day = String(fridayForThisWeek.getDate()).padStart(2, '0');
+        const fridayDateStr = `${year}-${month}-${day}`;
+        
+        // Check if this Friday is in the closed event dates list
+        if (closedEventDates.includes(fridayDateStr)) {
+          // This Friday is closed - skip this week and check next
+          weeksToCheck++;
+          continue;
+        }
+        
+        // This Friday is not closed - use this opening date
+        const formattedDate = candidateOpeningDate.toLocaleString("en-US", {
+          timeZone: timezone,
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit'
+        });
+        nextOpening.value = formattedDate;
+        return;
+      }
+      
+      // If we couldn't find an open event within maxWeeksToCheck, fall back to the calculated date
+      const fallbackDate = new Date(pstNow);
+      fallbackDate.setDate(fallbackDate.getDate() + daysUntilOpeningDay);
+      fallbackDate.setHours(openingHour, openingMinute, 0, 0);
+      
+      nextOpening.value = fallbackDate.toLocaleString("en-US", {
         timeZone: timezone,
         weekday: 'long',
         year: 'numeric',
@@ -970,7 +1020,7 @@ const RegistrationApp = {
         hour: 'numeric',
         minute: '2-digit'
       });
-    });
+    };
 
     // Methods
     const isRegistrationOpen = () => {
@@ -1314,9 +1364,20 @@ const RegistrationApp = {
     // Lifecycle
     onMounted(() => {
       checkRegistrationStatus();
+      // Calculate next opening (checks ENV to skip closed weeks)
+      calculateNextOpening();
       // Only fetch event metadata if registration is open
       if (registrationOpen.value) {
         fetchEventMetadata(); // Fetch event date from cache or API
+      }
+    });
+
+    // Watch for registration status changes and recalculate next opening if needed
+    watch(registrationOpen, (isOpen) => {
+      // Recalculate next opening when registration status changes
+      // This ensures we show the correct next opening after registration closes
+      if (!isOpen) {
+        calculateNextOpening();
       }
     });
 
