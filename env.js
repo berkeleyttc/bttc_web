@@ -49,6 +49,6 @@ const ENV = {
   // Array of Friday dates (YYYY-MM-DD format) when events are cancelled/closed (e.g., holidays)
   // These weeks will be skipped when calculating the next opening date
   // Example: ['2025-12-26', '2026-01-02'] to skip Christmas and New Year's weeks
-  CLOSED_EVENT_DATES: ['2025-11-14']
+  CLOSED_EVENT_DATES: ['2025-11-28']
 };
 
