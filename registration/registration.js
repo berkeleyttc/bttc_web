@@ -907,6 +907,42 @@ const RegistrationApp = {
       }
     });
     
+    /**
+     * Computed: Whether to show the roster section
+     * Shows from Wednesday midnight (00:00) to Friday midnight (00:00)
+     * Wednesday = 3, Friday = 5
+     * Priority order: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule
+     */
+    const showRosterSection = computed(() => {
+      // Priority order: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule
+      if (devOverride) return true;
+      if (registrationClosed) return false;
+
+      const now = new Date();
+      const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
+      const dayOfWeek = pstNow.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+      const hours = pstNow.getHours();
+      const minutes = pstNow.getMinutes();
+      
+      // Wednesday (day 3): show if at or after midnight (00:00)
+      if (dayOfWeek === 3) {
+        return hours >= 0 && minutes >= 0;
+      }
+      
+      // Thursday (day 4): always show
+      if (dayOfWeek === 4) {
+        return true;
+      }
+      
+      // Friday (day 5): hide at midnight (00:00) or later
+      if (dayOfWeek === 5) {
+        return false; // Hide on Friday (starts hiding at Friday 00:00)
+      }
+      
+      // All other days: hide
+      return false;
+    });
+    
     // Closing time: Shows closing day and time (default: Friday 6:45 PM)
     const closingTime = computed(() => {
       const now = new Date();
@@ -1401,6 +1437,7 @@ const RegistrationApp = {
       nextOpening,
       formattedEventDate,
       eventDayOfWeek,
+      showRosterSection,
       handlePlayerFound,
       handleLookupError,
       handleRegisterPlayer,
@@ -1413,7 +1450,7 @@ const RegistrationApp = {
   },
   template: `
     <div class="container">
-      <div v-if="registrationOpen" class="roster-section">
+      <div v-if="showRosterSection" class="roster-section">
         <a href="../roster/" class="roster-link-button">
           <span class="roster-text">View Players Registered for Round Robin</span>
           <span class="roster-subtext">See current RR registrations</span>
