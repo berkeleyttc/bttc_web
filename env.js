@@ -43,7 +43,7 @@ const ENV = {
   
   // Registration Control
   // If true, registration is closed regardless of schedule (priority: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule)
-  REGISTRATION_CLOSED: true,
+  REGISTRATION_CLOSED: false,
   
   // Closed Event Dates
   // Array of Friday dates (YYYY-MM-DD format) when events are cancelled/closed (e.g., holidays)
