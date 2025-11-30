@@ -43,12 +43,6 @@ const ENV = {
   
   // Registration Control
   // If true, registration is closed regardless of schedule (priority: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule)
-  REGISTRATION_CLOSED: true,
-  
-  // Closed Event Dates
-  // Array of Friday dates (YYYY-MM-DD format) when events are cancelled/closed (e.g., holidays)
-  // These weeks will be skipped when calculating the next opening date
-  // Example: ['2025-12-26', '2026-01-02'] to skip Christmas and New Year's weeks
-  CLOSED_EVENT_DATES: ['2025-11-28']
+  REGISTRATION_CLOSED: false
 };
 
