@@ -459,7 +459,8 @@ const PlayerList = {
   props: {
     players: Array,        // Array of player objects from search
     capacity: Object,      // Capacity info: { isAtCapacity, confirmedCount, playerCap, spotsAvailable }
-    capacityLastUpdated: Number  // Timestamp when capacity was last fetched (optional)
+    capacityLastUpdated: Number,  // Timestamp when capacity was last fetched (optional)
+    devOverride: Boolean  // If true, bypasses all day/time constraints
   },
   emits: ['register-player', 'unregister-player'],
   setup(props, { emit }) {
@@ -471,10 +472,22 @@ const PlayerList = {
       emit('unregister-player', index);
     };
 
+    // Computed: Whether event is effectively open (devOverride bypasses all constraints)
+    const isEventOpen = computed(() => {
+      return props.devOverride || props.capacity.eventOpen;
+    });
+
+    // Computed: Whether registration is effectively available (devOverride bypasses capacity)
+    const canRegister = computed(() => {
+      return props.devOverride || (props.capacity.eventOpen && !props.capacity.isAtCapacity);
+    });
+
     return {
       registerPlayer,
       unregisterPlayer,
-      capacityLastUpdated: props.capacityLastUpdated  // Expose prop to template
+      capacityLastUpdated: props.capacityLastUpdated,  // Expose prop to template
+      isEventOpen,
+      canRegister
     };
   },
   template: `
@@ -495,7 +508,7 @@ const PlayerList = {
             <span class="status-icon">✓</span>
             <span class="player-registered-label">Already registered</span>
           </p>
-          <div v-if="!capacity.eventOpen" class="unregister-form">
+          <div v-if="!isEventOpen" class="unregister-form">
             <p class="registration-full-message">
               <span class="status-icon">🔒</span>
               Event registrations are currently closed
@@ -514,14 +527,14 @@ const PlayerList = {
           </div>
         </div>
         <div v-else class="entry-content">
-          <div v-if="!capacity.eventOpen" class="register-form full-message">
+          <div v-if="!isEventOpen" class="register-form full-message">
             <p class="registration-full-message">
               <span class="status-icon">🔒</span>
               Event registrations are currently closed
             </p>
             <p class="full-message-hint">Please check back later or contact BTTC support for more information.</p>
           </div>
-          <div v-else-if="capacity.isAtCapacity" class="register-form full-message">
+          <div v-else-if="!canRegister" class="register-form full-message">
             <p class="registration-full-message">
               <span class="status-icon">❌</span>
               Registration is full ({{ capacity.confirmedCount }}/{{ capacity.playerCap }})
@@ -908,14 +921,15 @@ const RegistrationApp = {
     
     /**
      * Computed: Whether to show the roster section
-     * Shows from Wednesday midnight (00:00) to Saturday midnight (00:00)
-     * Wednesday = 3, Saturday = 6
+     * Roster is ONLY open from Wednesday 00:00 to Saturday 00:00
+     * AND if REGISTRATION_CLOSED = false
+     * DEV_OVERRIDE = true unlocks the roster (bypasses all constraints)
      * Priority order: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule
      */
     const showRosterSection = computed(() => {
       // Priority order: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule
-      if (devOverride) return true;
-      if (registrationClosed) return false;
+      if (devOverride) return true;  // DEV_OVERRIDE unlocks roster
+      if (registrationClosed) return false;  // REGISTRATION_CLOSED hides roster
 
       const now = new Date();
       const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
@@ -940,10 +954,10 @@ const RegistrationApp = {
       
       // Saturday (day 6): hide at midnight (00:00) or later
       if (dayOfWeek === 6) {
-        return false; // Hide on Saturday (starts hiding at Saturday 00:00)
+        return false; // Hide starting at Saturday 00:00
       }
       
-      // All other days: hide
+      // All other days (Sunday, Monday, Tuesday): hide
       return false;
     });
     
@@ -1188,12 +1202,13 @@ const RegistrationApp = {
         return;
       }
 
-      if (!capacity.value.eventOpen) {
+      // DEV_OVERRIDE bypasses all event constraints
+      if (!devOverride && !capacity.value.eventOpen) {
         alert('This event is not currently accepting registrations. Please check back later or contact support.');
         return;
       }
 
-      if (capacity.value.isAtCapacity) {
+      if (!devOverride && capacity.value.isAtCapacity) {
         alert(`Registration is full! All ${capacity.value.playerCap} spots have been taken.`);
         return;
       }
@@ -1212,7 +1227,8 @@ const RegistrationApp = {
     };
 
     const handleUnregisterPlayer = (index) => {
-      if (!capacity.value.eventOpen) {
+      // DEV_OVERRIDE bypasses all event constraints
+      if (!devOverride && !capacity.value.eventOpen) {
         alert('This event is not currently accepting changes. Please check back later or contact support.');
         return;
       }
@@ -1475,6 +1491,7 @@ const RegistrationApp = {
         :players="players"
         :capacity="capacity"
         :capacity-last-updated="capacityLastUpdated"
+        :dev-override="devOverride"
         @register-player="handleRegisterPlayer"
         @unregister-player="handleUnregisterPlayer"
       />

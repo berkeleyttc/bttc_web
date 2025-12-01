@@ -658,27 +658,48 @@ const RosterApp = {
     
     /**
      * Computed: Determine if we should show the closed message instead of roster
-     * Shows closed message if:
-     * - Event is closed (capacity.eventOpen === false)
-     * - Today is after the event date
-     * - DEV_OVERRIDE is false (if true, always show roster)
-     * - REGISTRATION_CLOSED is honored (if true, show closed message)
+     * Roster is ONLY open from Wednesday 00:00 to Saturday 00:00
+     * AND if REGISTRATION_CLOSED = false
+     * DEV_OVERRIDE = true unlocks the roster (bypasses all constraints)
+     * Priority order: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule
      */
     const shouldShowClosedMessage = computed(() => {
-      // If DEV_OVERRIDE is true, always show roster
+      // Priority order: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule
+      // If DEV_OVERRIDE is true, always show roster (don't show closed message)
       if (devOverride) return false;
-      
-      // If event is not closed, show roster
-      if (capacity.value.eventOpen) return false;
-      
-      // If event is closed and today is after event date, show closed message
-      if (isAfterEventDate.value) return true;
       
       // If REGISTRATION_CLOSED is true, show closed message
       if (registrationClosed) return true;
+
+      // Normal schedule check: Wednesday 00:00 to Saturday 00:00
+      const now = new Date();
+      const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
+      const dayOfWeek = pstNow.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+      const hours = pstNow.getHours();
+      const minutes = pstNow.getMinutes();
       
-      // Otherwise, show roster
-      return false;
+      // Wednesday (day 3): show roster if at or after midnight (00:00)
+      if (dayOfWeek === 3) {
+        return !(hours >= 0 && minutes >= 0); // Show closed message if before 00:00
+      }
+      
+      // Thursday (day 4): always show roster
+      if (dayOfWeek === 4) {
+        return false; // Don't show closed message
+      }
+      
+      // Friday (day 5): always show roster
+      if (dayOfWeek === 5) {
+        return false; // Don't show closed message
+      }
+      
+      // Saturday (day 6): hide roster at midnight (00:00) or later
+      if (dayOfWeek === 6) {
+        return true; // Show closed message starting at Saturday 00:00
+      }
+      
+      // All other days (Sunday, Monday, Tuesday): hide roster
+      return true; // Show closed message
     });
     
     /**
