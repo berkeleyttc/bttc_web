@@ -160,6 +160,14 @@ const RosterApp = {
      * API: New API returns { roster: [], capacity: {} } - capacity included, no separate /capacity call needed
      */
     const fetchRoster = async () => {
+      // Skip API call if roster is closed by schedule (unless DEV_OVERRIDE is enabled)
+      // Check shouldShowClosedMessage to determine if roster is closed by schedule
+      if (shouldShowClosedMessage.value) {
+        loading.value = false;
+        players.value = [];
+        return;
+      }
+      
       // Check cache first
       const cachedResult = getCachedData(CACHE_KEYS.ROSTER, CACHE_TTL.ROSTER);
       if (cachedResult && cachedResult.data) {
@@ -719,7 +727,7 @@ const RosterApp = {
     <div class="roster-container">
       <a href="../registration/" class="back-link">← Back to Round Robin Registration</a>
       <h3>Round Robin Registered Players</h3>
-      <p v-if="formattedEventDate && capacity.eventOpen" class="event-date">For {{ eventDayOfWeek }}, {{ formattedEventDate }}</p>
+      <p v-if="formattedEventDate && capacity.eventOpen && !shouldShowClosedMessage" class="event-date">For {{ eventDayOfWeek }}, {{ formattedEventDate }}</p>
       
       <!-- Show closed message if event is closed and today is after event date -->
       <div v-if="shouldShowClosedMessage" class="status-banner status-closed">
