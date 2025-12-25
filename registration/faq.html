@@ -21,11 +21,11 @@
     </div>
     <div>
       <ul id="nav" class="container_12">
+        <li><a href="/registration/">Register</a></li>
         <li><a href="/draw-brackets/">Brackets</a></li>
         <li><a href="/results.html">Results</a></li>
         <li><a href="/coaching.html">Coaching</a></li>
         <li><a href="/about.html">About</a></li>
-        <li><a href="/club_policy.html">Policy</a></li>
       </ul>
     </div>
   </div>
@@ -44,8 +44,8 @@
 
         <div class="faq-section">
           <div v-for="(item, index) in faqItems" :key="index" class="faq-item">
-            <div 
-              class="faq-question" 
+            <div
+              class="faq-question"
               :class="{ active: item.isOpen }"
               @click="toggleItem(index)"
             >
@@ -103,15 +103,15 @@
               question: 'I don\'t have an online account / "No player found" error',
               answer: `
                 <p>If you see a "No player found" message, your phone number isn't linked to an online account yet.</p>
-                
+
                 <p><strong>For returning BTTC players (you've played before):</strong></p>
                 <div class="faq-highlight">
                   <p><strong>Solution:</strong> Go to the <a href="../signup/" class="faq-link">Sign Up page</a> to activate your online account. This is a one-time process that links your phone number to your existing player record.</p>
                 </div>
-                
+
                 <p><strong>For brand new BTTC members (never played before):</strong></p>
                 <p>You'll need to attend in person first to get a player rating. After your first event, you can then sign up for an online account. See the main <a href="../index.html" class="faq-link">homepage</a> for new member information.</p>
-                
+
                 <p>If you believe your phone number/name should already be in the system, contact BTTC support at <strong>510-926-6913</strong> (text only).</p>
               `,
               isOpen: false
