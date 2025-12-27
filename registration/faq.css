@@ -5,6 +5,7 @@
  */
 
 .faq {
+  margin: 0 auto;
   padding: 2rem 1rem;
 
   .faq-header {
@@ -41,6 +42,10 @@
 
   .faq-item:hover {
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+
+    .faq-question {
+      background-color: #e9ecef;
+    }
   }
 
   .faq-question {
@@ -56,8 +61,12 @@
     transition: background-color 0.2s ease;
   }
 
-  .faq-question:hover {
-    background: #e9ecef;
+  /* hide native disclosure triangle and keep our custom arrow */
+  summary.faq-question {
+    list-style: none;
+  }
+  summary.faq-question::-webkit-details-marker {
+    display: none;
   }
 
   .faq-question::after {
@@ -71,23 +80,18 @@
     font-size: 0.9rem;
   }
 
-  .faq-question.active::after {
+  /* rotate arrow when the enclosing <details> is open */
+  details[open] .faq-question::after {
     transform: translateY(-50%) rotate(-180deg);
   }
+
+
 
   .faq-answer {
     color: #444;
     font-size: 1rem;
     line-height: 1.6;
-    padding: 0 1.5rem;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease, padding 0.3s ease;
-  }
-
-  .faq-answer.active {
-    max-height: 2000px;
-    padding: 1.5rem;
+    padding: 1rem;
   }
 
   .faq-answer p {
@@ -191,9 +195,19 @@
     .faq-question::after {
       right: 1rem;
     }
+  }
 
-    .faq-answer.active {
-      padding: 1rem;
+  @supports (interpolate-size: allow-keywords) {
+    interpolate-size: allow-keywords;
+
+    details::details-content {
+      transition: all 0.5s ease, content-visibility 0.5s allow-discrete;
+      height: 0;
+      overflow: clip;
+    }
+
+    details[open]::details-content {
+      height: auto;
     }
   }
 }
