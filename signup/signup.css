@@ -1,13 +1,13 @@
 /**
  * BTTC Player Signup - Vue.js Styles
- * 
+ *
  * DEBUGGING GUIDE:
  * - Use browser DevTools to inspect elements and see applied styles
  * - Check console for [PlayerSignup] prefixed logs for JavaScript debugging
  * - If styles aren't applying, check CSS file is loaded (Network tab)
  * - Use browser's element inspector to see computed styles
  * - Common issues: z-index conflicts, overflow hidden, display none
- * 
+ *
  * @file css/player-signup.css
  */
 
@@ -15,610 +15,603 @@
    RESET & BASE STYLES
    ======================================== */
 
-* {
-  box-sizing: border-box;
-}
+.signup {
+  * {
+    box-sizing: border-box;
+  }
 
-body {
-  background-color: #EBE9E4;
-  margin: 0;
-  padding: 0;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.container {
-  background: #fff;
-  margin: 2rem auto;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  max-width: 600px;
-  width: calc(100% - 2rem);
-  text-align: center;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
-@media (max-width: 480px) {
   .container {
-    margin: 0.5rem auto;
-    padding: 1rem;
-    width: calc(100% - 1rem);
-    border-radius: 8px;
+    background: #fff;
+    margin: 2rem auto;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    max-width: 600px;
+    width: calc(100% - 2rem);
+    text-align: center;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
   }
-}
 
-h1 {
-  color: #333;
-  margin-bottom: 0.5rem;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-  font-weight: 700;
-}
+  @media (max-width: 480px) {
+    .container {
+      margin: 0.5rem auto;
+      padding: 1rem;
+      width: calc(100% - 1rem);
+      border-radius: 8px;
+    }
+  }
 
-.subtitle {
-  color: #666;
-  margin-bottom: 2rem;
-  font-size: 1.1rem;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
+  h1 {
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
+    font-weight: 700;
+  }
 
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-top: 1rem;
-}
+  .subtitle {
+    color: #666;
+    margin-bottom: 2rem;
+    font-size: 1.1rem;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
+  }
 
-.search-container {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-@media (max-width: 480px) {
-  .search-container {
+  form {
+    display: flex;
     flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
   }
-}
 
-input[type="text"],
-input[type="email"],
-input[type="tel"],
-input[type="number"] {
-  padding: 0.875rem;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  width: 100%;
-  box-sizing: border-box;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
+  .search-container {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
 
-@media (max-width: 480px) {
+  @media (max-width: 480px) {
+    .search-container {
+      flex-direction: column;
+    }
+  }
+
   input[type="text"],
   input[type="email"],
   input[type="tel"],
   input[type="number"] {
-    padding: 1rem;
-    font-size: 16px;
-    /* Prevents zoom on iOS */
+    padding: 0.875rem;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
   }
-}
 
-button {
-  padding: 0.875rem;
-  background-color: #0d6efd;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  min-height: 44px;
-}
+  @media (max-width: 480px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="number"] {
+      padding: 1rem;
+      font-size: 16px;
+      /* Prevents zoom on iOS */
+    }
+  }
 
-button:hover,
-button:focus {
-  background-color: #0b5ed7;
-  outline: none;
-}
-
-button:active {
-  transform: translateY(1px);
-  background-color: #0a58ca;
-}
-
-button:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-@media (max-width: 480px) {
   button {
-    padding: 1rem;
-    font-size: 1.1rem;
-    min-height: 48px;
+    padding: 0.875rem;
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    min-height: 44px;
   }
-}
 
-.search-type {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  margin-bottom: 1rem;
-}
+  button:hover,
+  button:focus {
+    background-color: #0b5ed7;
+    outline: none;
+  }
 
-.search-type label {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-weight: bold;
-}
+  button:active {
+    transform: translateY(1px);
+    background-color: #0a58ca;
+  }
 
-.search-type input[type="radio"] {
-  margin-right: 0.5rem;
-  width: 18px;
-  height: 18px;
-}
+  button:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
 
-.player-result {
-  border: 1px solid #ddd;
-  background: #fafafa;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-top: 1rem;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
+  @media (max-width: 480px) {
+    button {
+      padding: 1rem;
+      font-size: 1.1rem;
+      min-height: 48px;
+    }
+  }
 
-.player-result.already-signed-up {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
+  .search-type {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
 
-.player-result:hover {
-  background: #e9ecef;
-  border-color: #0d6efd;
-}
+  .search-type label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: bold;
+  }
 
-.player-result.selected {
-  background: #d4edda;
-  border-color: #198754;
-}
+  .search-type input[type="radio"] {
+    margin-right: 0.5rem;
+    width: 18px;
+    height: 18px;
+  }
 
-.player-name {
-  font-weight: bold;
-  font-size: 1.1rem;
-  color: #333;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
-.player-id {
-  color: #666;
-  font-size: 0.9rem;
-  margin-top: 0.25rem;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
-.player-signed-up {
-  color: #198754;
-  font-weight: 700;
-  margin-top: 0.5rem;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
-.result {
-  margin-top: 1.5rem;
-}
-
-.error {
-  color: #dc3545;
-  font-weight: bold;
-  background: #f8d7da;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid #f5c6cb;
-}
-
-.success {
-  color: #198754;
-  font-weight: bold;
-  background: #d4edda;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid #c3e6cb;
-}
-
-.info {
-  color: #0c5460;
-  background: #d1ecf1;
-  padding: 1rem;
-  border-radius: 8px;
-  border: 1px solid #bee5eb;
-  margin-top: 1rem;
-  font-size: 0.9rem;
-  font-family: 'PT Sans Narrow', Arial, sans-serif;
-}
-
-/* Dialog Styles */
-.dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  padding: 1rem;
-  box-sizing: border-box;
-}
-
-.dialog-overlay.show {
-  display: flex;
-}
-
-.dialog-box {
-  background: white;
-  border-radius: 12px;
-  padding: 2rem;
-  max-width: 500px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  -webkit-overflow-scrolling: touch;
-}
-
-@media (max-width: 480px) {
-  .dialog-box {
+  .player-result {
+    border: 1px solid #ddd;
+    background: #fafafa;
     padding: 1rem;
     border-radius: 8px;
-    margin: 0.5rem;
-    width: calc(100% - 1rem);
+    margin-top: 1rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
   }
-}
 
-.dialog-title {
-  font-size: 1.3rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
-  text-align: center;
-  color: #333;
-}
-
-.player-info {
-  background: #f8f9fa;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-  text-align: left;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
-  color: #555;
-}
-
-.form-group input {
-  width: 100%;
-}
-
-.form-group .help-text {
-  font-size: 0.85rem;
-  color: #666;
-  margin-top: 0.25rem;
-}
-
-.token-section {
-  background: #e7f3ff;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  border: 1px solid #b3d9ff;
-}
-
-.token-section h4 {
-  margin: 0 0 0.5rem 0;
-  color: #0c5460;
-  font-size: 1rem;
-}
-
-.dialog-buttons {
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-  margin-top: 1.5rem;
-}
-
-@media (max-width: 480px) {
-  .dialog-buttons {
-    flex-direction: column;
-    gap: 0.75rem;
+  .player-result.already-signed-up {
+    cursor: not-allowed;
+    opacity: 0.6;
   }
-}
 
-.dialog-btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  touch-action: manipulation;
-  min-height: 44px;
-}
+  .player-result:hover {
+    background: #e9ecef;
+    border-color: #0d6efd;
+  }
 
-@media (max-width: 480px) {
-  .dialog-btn {
+  .player-result.selected {
+    background: #d4edda;
+    border-color: #198754;
+  }
+
+  .player-name {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #333;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
+  }
+
+  .player-id {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
+  }
+
+  .player-signed-up {
+    color: #198754;
+    font-weight: 700;
+    margin-top: 0.5rem;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
+  }
+
+  .result {
+    margin-top: 1.5rem;
+  }
+
+  .error {
+    color: #dc3545;
+    font-weight: bold;
+    background: #f8d7da;
     padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #f5c6cb;
+  }
+
+  .success {
+    color: #198754;
+    font-weight: bold;
+    background: #d4edda;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #c3e6cb;
+  }
+
+  .info {
+    color: #0c5460;
+    background: #d1ecf1;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #bee5eb;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
+  }
+
+  /* Dialog Styles */
+  .dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 1rem;
+    box-sizing: border-box;
+  }
+
+  .dialog-overlay.show {
+    display: flex;
+  }
+
+  .dialog-box {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (max-width: 480px) {
+    .dialog-box {
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 0.5rem;
+      width: calc(100% - 1rem);
+    }
+  }
+
+  .dialog-title {
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    text-align: center;
+    color: #333;
+  }
+
+  .player-info {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+    text-align: left;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: #555;
+  }
+
+  .form-group input {
     width: 100%;
   }
-}
 
-.dialog-btn-primary {
-  background-color: #198754;
-  color: white;
-}
-
-.dialog-btn-primary:hover,
-.dialog-btn-primary:focus {
-  background-color: #157347;
-}
-
-.dialog-btn-primary:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-}
-
-.dialog-btn-secondary {
-  background-color: #6c757d;
-  color: white;
-}
-
-.dialog-btn-secondary:hover,
-.dialog-btn-secondary:focus {
-  background-color: #5a6268;
-}
-
-.validation-error {
-  color: #dc3545;
-  font-size: 0.85rem;
-  margin-top: 0.25rem;
-}
-
-.back-link {
-  display: inline-block;
-  margin-bottom: 1.5rem;
-  padding: 0.5rem 1rem;
-  color: #0d6efd;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 1rem;
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.back-link:hover {
-  color: #0a58ca;
-  background-color: #e9ecef;
-  border-color: #0d6efd;
-  text-decoration: none;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-@media (max-width: 480px) {
-  .back-link {
-    font-size: 0.9rem;
-    padding: 0.4rem 0.8rem;
-  }
-}
-
-/* Prominent Registration Link Button */
-.registration-link-button {
-  display: block;
-  background: #198754;
-  color: #ffffff;
-  border: 2px solid #198754;
-  border-radius: 8px;
-  padding: 1.25rem 2rem;
-  text-decoration: none;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.registration-link-button:hover {
-  background: #157347;
-  border-color: #157347;
-  box-shadow: 0 4px 8px rgba(25, 135, 84, 0.3);
-  transform: translateY(-1px);
-}
-
-.registration-link-button-text {
-  display: block;
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #ffffff;
-  margin-bottom: 0.25rem;
-}
-
-.registration-link-button-subtext {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: normal;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-@media (max-width: 480px) {
-  .registration-link-button {
-    padding: 1rem 1.5rem;
-  }
-  
-  .registration-link-button-text {
-    font-size: 1.1rem;
-  }
-}
-
-/* Loading Spinner */
-.loading-spinner {
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #0d6efd;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  animation: spin 1s linear infinite;
-  display: inline-block;
-  vertical-align: middle;
-  margin-left: 0.5rem;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-/* Phone Input with Country Code */
-.phone-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-.phone-input-wrapper .country-code {
-  position: absolute;
-  left: 0.875rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.phone-input-wrapper input {
-  padding-left: 3rem;
-  flex: 1;
-}
-
-@media (max-width: 480px) {
-  .phone-input-wrapper .country-code {
-    left: 1rem;
-    font-size: 16px;
-  }
-  
-  .phone-input-wrapper input {
-    padding-left: 3.25rem;
-  }
-}
-
-/* Dialog Message Styles - Success/Error Inline Messages */
-.dialog-message {
-  padding: 1rem;
-  border-radius: 6px;
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.dialog-message-success {
-  background-color: #d1e7dd;
-  color: #0f5132;
-  border: 1px solid #badbcc;
-}
-
-.dialog-message-error {
-  background-color: #f8d7da;
-  color: #842029;
-  border: 1px solid #f5c2c7;
-}
-
-.dialog-message .message-icon {
-  font-size: 1.5rem;
-  font-weight: bold;
-  flex-shrink: 0;
-}
-
-.dialog-message-success .message-icon {
-  color: #198754;
-}
-
-.dialog-message-error .message-icon {
-  color: #dc3545;
-}
-
-.dialog-message .message-text {
-  flex: 1;
-  font-weight: 500;
-}
-
-/* Success next steps - appears after success message */
-.success-next-steps {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #badbcc;
-  font-size: 0.9rem;
-  font-weight: normal;
-  color: #0f5132;
-  line-height: 1.6;
-}
-
-/* Inline RR registration link in success message */
-.rr-inline-link {
-  color: #0d6efd;
-  text-decoration: underline;
-  font-weight: 600;
-  transition: color 0.2s ease;
-}
-
-.rr-inline-link:hover,
-.rr-inline-link:focus {
-  color: #0b5ed7;
-  text-decoration: none;
-}
-
-@media (max-width: 480px) {
-  .dialog-message {
-    padding: 0.875rem;
-    font-size: 0.9rem;
-  }
-  
-  .dialog-message .message-icon {
-    font-size: 1.25rem;
-  }
-  
-  .success-next-steps {
+  .form-group .help-text {
     font-size: 0.85rem;
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
+    color: #666;
+    margin-top: 0.25rem;
+  }
+
+  .token-section {
+    background: #e7f3ff;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid #b3d9ff;
+  }
+
+  .token-section h4 {
+    margin: 0 0 0.5rem 0;
+    color: #0c5460;
+    font-size: 1rem;
+  }
+
+  .dialog-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+  }
+
+  @media (max-width: 480px) {
+    .dialog-buttons {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+  }
+
+  .dialog-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    min-height: 44px;
+  }
+
+  @media (max-width: 480px) {
+    .dialog-btn {
+      padding: 1rem;
+      width: 100%;
+    }
+  }
+
+  .dialog-btn-primary {
+    background-color: #198754;
+    color: white;
+  }
+
+  .dialog-btn-primary:hover,
+  .dialog-btn-primary:focus {
+    background-color: #157347;
+  }
+
+  .dialog-btn-primary:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+  }
+
+  .dialog-btn-secondary {
+    background-color: #6c757d;
+    color: white;
+  }
+
+  .dialog-btn-secondary:hover,
+  .dialog-btn-secondary:focus {
+    background-color: #5a6268;
+  }
+
+  .validation-error {
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+  }
+
+  .back-link {
+    display: inline-block;
+    margin-bottom: 1.5rem;
+    padding: 0.5rem 1rem;
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1rem;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .back-link:hover {
+    color: #0a58ca;
+    background-color: #e9ecef;
+    border-color: #0d6efd;
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  @media (max-width: 480px) {
+    .back-link {
+      font-size: 0.9rem;
+      padding: 0.4rem 0.8rem;
+    }
+  }
+
+  /* Prominent Registration Link Button */
+  .registration-link-button {
+    display: block;
+    background: #198754;
+    color: #ffffff;
+    border: 2px solid #198754;
+    border-radius: 8px;
+    padding: 1.25rem 2rem;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .registration-link-button:hover {
+    background: #157347;
+    border-color: #157347;
+    box-shadow: 0 4px 8px rgba(25, 135, 84, 0.3);
+    transform: translateY(-1px);
+  }
+
+  .registration-link-button-text {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 0.25rem;
+  }
+
+  .registration-link-button-subtext {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: normal;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  @media (max-width: 480px) {
+    .registration-link-button {
+      padding: 1rem 1.5rem;
+    }
+
+    .registration-link-button-text {
+      font-size: 1.1rem;
+    }
+  }
+
+  /* Loading Spinner */
+  .loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #0d6efd;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 0.5rem;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Phone Input with Country Code */
+  .phone-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .phone-input-wrapper .country-code {
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .phone-input-wrapper input {
+    padding-left: 3rem;
+    flex: 1;
+  }
+
+  @media (max-width: 480px) {
+    .phone-input-wrapper .country-code {
+      left: 1rem;
+      font-size: 16px;
+    }
+
+    .phone-input-wrapper input {
+      padding-left: 3.25rem;
+    }
+  }
+
+  /* Dialog Message Styles - Success/Error Inline Messages */
+  .dialog-message {
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .dialog-message-success {
+    background-color: #d1e7dd;
+    color: #0f5132;
+    border: 1px solid #badbcc;
+  }
+
+  .dialog-message-error {
+    background-color: #f8d7da;
+    color: #842029;
+    border: 1px solid #f5c2c7;
+  }
+
+  .dialog-message .message-icon {
+    font-size: 1.5rem;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+
+  .dialog-message-success .message-icon {
+    color: #198754;
+  }
+
+  .dialog-message-error .message-icon {
+    color: #dc3545;
+  }
+
+  .dialog-message .message-text {
+    flex: 1;
+    font-weight: 500;
+  }
+
+  /* Success next steps - appears after success message */
+  .success-next-steps {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #badbcc;
+    font-size: 0.9rem;
+    font-weight: normal;
+    color: #0f5132;
+    line-height: 1.6;
+  }
+
+  /* Inline RR registration link in success message */
+  .rr-inline-link {
+    color: #0d6efd;
+    text-decoration: underline;
+    font-weight: 600;
+    transition: color 0.2s ease;
+  }
+
+  .rr-inline-link:hover,
+  .rr-inline-link:focus {
+    color: #0b5ed7;
+    text-decoration: none;
+  }
+
+  @media (max-width: 480px) {
+    .dialog-message {
+      padding: 0.875rem;
+      font-size: 0.9rem;
+    }
+
+    .dialog-message .message-icon {
+      font-size: 1.25rem;
+    }
+
+    .success-next-steps {
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+    }
   }
 }
