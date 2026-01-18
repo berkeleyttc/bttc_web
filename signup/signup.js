@@ -366,14 +366,188 @@ const PlayerDialog = {
   `
 };
 
+const NewPlayerForm = {
+  emits: ['new-player-submit', 'form-error'],
+  setup(props, { emit }) {
+    // Form state
+    const firstName = ref('');
+    const lastName = ref('');
+    const phoneNumber = ref('');
+    const email = ref('');
+    const isSubmitting = ref(false);
+    
+    // Validation errors
+    const firstNameError = ref('');
+    const lastNameError = ref('');
+    const phoneError = ref('');
+    const emailError = ref('');
+
+    const filterPhoneInput = (e) => {
+      const numericOnly = e.target.value.replace(/\D/g, '');
+      phoneNumber.value = formatPhoneNumber(numericOnly);
+    };
+
+    const clearValidationErrors = () => {
+      firstNameError.value = '';
+      lastNameError.value = '';
+      phoneError.value = '';
+      emailError.value = '';
+    };
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      clearValidationErrors();
+      let isValid = true;
+
+      // Validate first name
+      const firstNameTrimmed = firstName.value.trim();
+      if (!firstNameTrimmed) {
+        firstNameError.value = 'First name is required';
+        isValid = false;
+      }
+
+      // Validate last name
+      const lastNameTrimmed = lastName.value.trim();
+      if (!lastNameTrimmed) {
+        lastNameError.value = 'Last name is required';
+        isValid = false;
+      }
+
+      // Validate phone number
+      const phone = phoneNumber.value.trim();
+      const phoneValidation = validatePhone(phone);
+      if (!phoneValidation.valid) {
+        phoneError.value = phoneValidation.message || 'Please enter a valid 10-digit phone number';
+        isValid = false;
+      }
+
+      // Validate email (only if provided)
+      const emailValue = email.value.trim();
+      if (emailValue) {
+        const emailValidation = validateEmail(emailValue);
+        if (!emailValidation.valid) {
+          emailError.value = emailValidation.message || 'Please enter a valid email address';
+          isValid = false;
+        }
+      }
+
+      if (!isValid) return;
+
+      // Set submitting state
+      isSubmitting.value = true;
+
+      // Emit submit event with form data
+      emit('new-player-submit', {
+        firstName: firstNameTrimmed,
+        lastName: lastNameTrimmed,
+        phoneNumber: phone,
+        email: emailValue,
+        setSubmitting: (value) => { isSubmitting.value = value; }
+      });
+    };
+
+    return {
+      firstName,
+      lastName,
+      phoneNumber,
+      email,
+      isSubmitting,
+      firstNameError,
+      lastNameError,
+      phoneError,
+      emailError,
+      filterPhoneInput,
+      handleSubmit
+    };
+  },
+  template: `
+    <div>
+      <h1>Sign Up as New Player</h1>
+      <p class="subtitle">Create your account to register for Round Robin events</p>
+      
+      <form @submit="handleSubmit">
+        <div class="form-group">
+          <label for="firstName">First Name *</label>
+          <input 
+            type="text" 
+            id="firstName"
+            v-model="firstName"
+            placeholder="Enter your first name"
+            required 
+            :disabled="isSubmitting"
+          />
+          <div v-if="firstNameError" class="validation-error">{{ firstNameError }}</div>
+        </div>
+
+        <div class="form-group">
+          <label for="lastName">Last Name *</label>
+          <input 
+            type="text" 
+            id="lastName"
+            v-model="lastName"
+            placeholder="Enter your last name"
+            required 
+            :disabled="isSubmitting"
+          />
+          <div v-if="lastNameError" class="validation-error">{{ lastNameError }}</div>
+        </div>
+
+        <div class="form-group">
+          <label for="newPlayerPhone">Phone Number *</label>
+          <div class="phone-input-wrapper">
+            <span class="country-code">+1</span>
+            <input 
+              type="tel" 
+              id="newPlayerPhone"
+              v-model="phoneNumber"
+              placeholder="xxx-xxx-xxxx"
+              maxlength="12"
+              inputmode="numeric"
+              pattern="[0-9-]*"
+              required 
+              :disabled="isSubmitting"
+              @input="filterPhoneInput"
+            />
+          </div>
+          <div class="help-text">Enter 10-digit US phone number</div>
+          <div v-if="phoneError" class="validation-error">{{ phoneError }}</div>
+        </div>
+
+        <div class="form-group">
+          <label for="newPlayerEmail">Email Address (optional)</label>
+          <input 
+            type="email" 
+            id="newPlayerEmail"
+            v-model="email"
+            placeholder="e.g., john@example.com" 
+            :disabled="isSubmitting"
+          />
+          <div v-if="emailError" class="validation-error">{{ emailError }}</div>
+        </div>
+
+        <button type="submit" :disabled="isSubmitting">
+          <span v-if="!isSubmitting">Create Account</span>
+          <span v-else>Creating Account<span class="loading-spinner"></span></span>
+        </button>
+      </form>
+
+      <div class="info" style="margin-top: 1.5rem;">
+        <strong>New to BTTC?</strong> After creating your account, you can register for Round Robin events immediately!
+      </div>
+    </div>
+  `
+};
+
 const PlayerSignupApp = {
   components: {
     PlayerSearch,   // Search form component
     PlayerResults, // Results display component
-    PlayerDialog   // Signup form modal component
+    PlayerDialog,   // Signup form modal component
+    NewPlayerForm   // New player signup form
   },
   setup() {
     // Application state
+    const signupMode = ref('returning');   // 'returning' or 'new'
     const searchResults = ref([]);        // Players found from search
     const totalFound = ref(0);             // Total matches (may include already signed up)
     const availableForSignup = ref(0);     // Count of players available for signup
@@ -515,7 +689,65 @@ const PlayerSignupApp = {
       }
     };
 
+    /**
+     * Handles new player signup submission (brand new players)
+     * Creates a new player record in the system
+     */
+    const handleNewPlayerSubmit = async (formData) => {
+      const { firstName, lastName, phoneNumber, email, setSubmitting } = formData;
+
+      // Clear any previous messages
+      error.value = '';
+      successMessage.value = '';
+
+      // Strip dashes from phone number for backend
+      const cleanedPhone = phoneNumber.replace(/\D/g, '');
+
+      // Build API payload for new player
+      const payload = {
+        first_name: firstName,
+        last_name: lastName,
+        phone_number: cleanedPhone,
+        email: email
+        // Note: No bttc_id since this is a brand new player
+        // Backend will assign internal_user_id
+      };
+
+      try {
+        const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
+        const url = `${apiUrl}/player/signup`;
+
+        const fetchOptions = getFetchOptions({
+          method: 'POST',
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const response = await fetch(url, fetchOptions);
+        const data = await handleApiResponse(response);
+
+        if (data.success) {
+          // Success: Show success message and prompt to register
+          successMessage.value = `Account created successfully! Welcome, ${firstName}!`;
+        } else {
+          // API returned error
+          error.value = data.message || 'Account creation failed. Please try again.';
+        }
+      } catch (err) {
+        const friendlyMessage = getErrorMessage(err, 'account creation');
+        error.value = friendlyMessage;
+      } finally {
+        setSubmitting(false);
+      }
+    };
+
+    const handleFormError = (errorMessage) => {
+      error.value = errorMessage;
+      successMessage.value = '';
+    };
+
     return {
+      signupMode,
       searchResults,
       totalFound,
       availableForSignup,
@@ -529,7 +761,9 @@ const PlayerSignupApp = {
       handleSearchError,
       handlePlayerSelected,
       handleDialogClose,
-      handleDialogSubmit
+      handleDialogSubmit,
+      handleNewPlayerSubmit,
+      handleFormError
     };
   },
   template: `
@@ -547,22 +781,47 @@ const PlayerSignupApp = {
       </div>
 
       <template v-else>
-        <player-search 
-          @players-found="handlePlayersFound"
-          @search-error="handleSearchError"
-        />
-
-        <div v-if="error" class="result">
-          <div class="error">{{ error }}</div>
+        <!-- Mode selector -->
+        <div class="search-type" style="margin-bottom: 2rem;">
+          <label>
+            <input type="radio" v-model="signupMode" value="returning" /> Returning Player
+          </label>
+          <label>
+            <input type="radio" v-model="signupMode" value="new" /> New Player
+          </label>
         </div>
 
-        <player-results 
-          v-if="searchResults.length > 0"
-          :players="searchResults"
-          :total-found="totalFound"
-          :available-for-signup="availableForSignup"
-          @player-selected="handlePlayerSelected"
-        />
+        <!-- Returning player flow -->
+        <template v-if="signupMode === 'returning'">
+          <player-search 
+            @players-found="handlePlayersFound"
+            @search-error="handleSearchError"
+          />
+
+          <div v-if="error" class="result">
+            <div class="error">{{ error }}</div>
+          </div>
+
+          <player-results 
+            v-if="searchResults.length > 0"
+            :players="searchResults"
+            :total-found="totalFound"
+            :available-for-signup="availableForSignup"
+            @player-selected="handlePlayerSelected"
+          />
+        </template>
+
+        <!-- New player flow -->
+        <template v-if="signupMode === 'new'">
+          <new-player-form
+            @new-player-submit="handleNewPlayerSubmit"
+            @form-error="handleFormError"
+          />
+
+          <div v-if="error" class="result">
+            <div class="error">{{ error }}</div>
+          </div>
+        </template>
       </template>
 
       <player-dialog 

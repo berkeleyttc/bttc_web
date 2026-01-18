@@ -306,6 +306,7 @@
     margin-bottom: 0.5rem;
     font-weight: bold;
     color: #555;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
   }
 
   .form-group input {
@@ -316,6 +317,7 @@
     font-size: 0.85rem;
     color: #666;
     margin-top: 0.25rem;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
   }
 
   .token-section {
