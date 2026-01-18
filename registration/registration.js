@@ -1261,6 +1261,7 @@ const RegistrationApp = {
       try {
         const payload = {
           bttc_id: player.bttc_id,
+          internal_user_id: parseInt(player.internal_user_id),
           first_name: player.first_name,
           last_name: player.last_name,
           payment_method: data.paymentMethod,
@@ -1330,6 +1331,7 @@ const RegistrationApp = {
       try {
         const payload = {
           bttc_id: player.bttc_id,
+          internal_user_id: parseInt(player.internal_user_id),
           first_name: player.first_name,
           last_name: player.last_name,
           comments: data.comments
