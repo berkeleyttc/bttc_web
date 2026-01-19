@@ -426,6 +426,323 @@
     }
   }
 
+  /* Step Progress Indicator */
+  .step-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 2rem 0;
+    padding: 1rem 0;
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+  }
+
+  .step.active .step-number {
+    background: #0d6efd;
+    color: white;
+  }
+
+  .step.completed .step-number {
+    background: #198754;
+    color: white;
+  }
+
+  .step-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: 600;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
+  }
+
+  .step.active .step-label {
+    color: #0d6efd;
+  }
+
+  .step.completed .step-label {
+    color: #198754;
+  }
+
+  .step-divider {
+    width: 60px;
+    height: 2px;
+    background: #e9ecef;
+    margin: 0 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  @media (max-width: 480px) {
+    .step-progress {
+      margin: 1.5rem 0;
+    }
+
+    .step-number {
+      width: 36px;
+      height: 36px;
+      font-size: 1rem;
+    }
+
+    .step-label {
+      font-size: 0.75rem;
+    }
+
+    .step-divider {
+      width: 40px;
+      margin: 0 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+  }
+
+  /* Survey Styles */
+  .survey-intro {
+    background: #e7f3ff;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid #b3d9ff;
+  }
+
+  .survey-intro p {
+    margin: 0;
+    color: #0c5460;
+  }
+
+  .survey-intro p:first-child {
+    margin-bottom: 0.5rem;
+  }
+
+  .survey-question {
+    background: #f8f9fa;
+    padding: 1.25rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    border: 1px solid #e9ecef;
+  }
+
+  .survey-question h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #212529;
+    margin: 0 0 1rem 0;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
+  }
+
+  .radio-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    padding: 0.75rem;
+    border-radius: 6px;
+    background: white;
+    border: 2px solid #e9ecef;
+    transition: all 0.2s ease;
+  }
+
+  .radio-option:hover {
+    background: #f8f9fa;
+    border-color: #0d6efd;
+  }
+
+  .radio-option:has(input:checked) {
+    background: #e7f3ff;
+    border-color: #0d6efd;
+  }
+
+  .radio-option input[type="radio"] {
+    margin-top: 0.2rem;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .radio-option span {
+    flex: 1;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #333;
+    cursor: pointer;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
+  }
+
+  @media (max-width: 480px) {
+    .survey-question {
+      padding: 1rem;
+    }
+
+    .survey-question h3 {
+      font-size: 1rem;
+    }
+
+    .radio-option {
+      padding: 0.625rem;
+    }
+
+    .radio-option span {
+      font-size: 0.9rem;
+    }
+
+    .radio-option input[type="radio"] {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  /* Optional Skills Section */
+  .optional-section {
+    background: #fff3cd;
+    border-color: #ffc107;
+  }
+
+  .optional-section h3 {
+    color: #856404;
+  }
+
+  .checkbox-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    padding: 0.75rem;
+    border-radius: 6px;
+    background: white;
+    border: 2px solid #e9ecef;
+    transition: all 0.2s ease;
+  }
+
+  .checkbox-option:hover {
+    background: #fffbf0;
+    border-color: #ffc107;
+  }
+
+  .checkbox-option:has(input:checked) {
+    background: #fff8e1;
+    border-color: #ffc107;
+  }
+
+  .checkbox-option input[type="checkbox"] {
+    margin-top: 0.2rem;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .checkbox-option span {
+    flex: 1;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #333;
+    cursor: pointer;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
+  }
+
+  @media (max-width: 480px) {
+    .checkbox-option {
+      padding: 0.625rem;
+    }
+
+    .checkbox-option span {
+      font-size: 0.9rem;
+    }
+
+    .checkbox-option input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  /* Form Buttons */
+  .form-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-top: 2rem;
+  }
+
+  .btn-back,
+  .btn-next,
+  .btn-submit {
+    padding: 0.875rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 44px;
+    font-family: 'PT Sans Narrow', Arial, sans-serif;
+  }
+
+  .btn-back {
+    background: #6c757d;
+    color: white;
+    flex: 0 0 auto;
+  }
+
+  .btn-back:hover {
+    background: #5a6268;
+  }
+
+  .btn-back:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-next,
+  .btn-submit {
+    background: #198754;
+    color: white;
+    flex: 1;
+  }
+
+  .btn-next:hover,
+  .btn-submit:hover {
+    background: #157347;
+  }
+
+  .btn-next:disabled,
+  .btn-submit:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  @media (max-width: 480px) {
+    .form-buttons {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .btn-back,
+    .btn-next,
+    .btn-submit {
+      width: 100%;
+      padding: 1rem;
+    }
+  }
+
   /* Prominent Registration Link Button */
   .registration-link-button {
     display: block;

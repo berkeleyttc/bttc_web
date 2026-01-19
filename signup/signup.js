@@ -369,18 +369,34 @@ const PlayerDialog = {
 const NewPlayerForm = {
   emits: ['new-player-submit', 'form-error'],
   setup(props, { emit }) {
-    // Form state
+    // Multi-step state
+    const currentStep = ref(1); // 1 = Basic Info, 2 = Rating Survey
+    const totalSteps = 2;
+
+    // Step 1: Basic info form state
     const firstName = ref('');
     const lastName = ref('');
     const phoneNumber = ref('');
     const email = ref('');
-    const isSubmitting = ref(false);
     
-    // Validation errors
+    // Step 2: Survey responses
+    const surveyA = ref(''); // Playing Experience
+    const surveyB = ref(''); // Rally & Consistency
+    const surveyC = ref(''); // Spin & Serves
+    const surveyD = ref(''); // Receive & Tactics
+    const surveyE = ref(''); // Footwork & Match Play
+    const surveyF = ref(false); // Loop forehand
+    const surveyG = ref(false); // Loop backhand
+    const surveyH = ref(false); // Counter-loop
+    const surveyI = ref(false); // Chop defense
+    
+    // Validation and submission
+    const isSubmitting = ref(false);
     const firstNameError = ref('');
     const lastNameError = ref('');
     const phoneError = ref('');
     const emailError = ref('');
+    const surveyError = ref('');
 
     const filterPhoneInput = (e) => {
       const numericOnly = e.target.value.replace(/\D/g, '');
@@ -392,28 +408,26 @@ const NewPlayerForm = {
       lastNameError.value = '';
       phoneError.value = '';
       emailError.value = '';
+      surveyError.value = '';
     };
 
-    const handleSubmit = (e) => {
-      e.preventDefault();
+    // Step 1: Validate basic info
+    const validateStep1 = () => {
       clearValidationErrors();
       let isValid = true;
 
-      // Validate first name
       const firstNameTrimmed = firstName.value.trim();
       if (!firstNameTrimmed) {
         firstNameError.value = 'First name is required';
         isValid = false;
       }
 
-      // Validate last name
       const lastNameTrimmed = lastName.value.trim();
       if (!lastNameTrimmed) {
         lastNameError.value = 'Last name is required';
         isValid = false;
       }
 
-      // Validate phone number
       const phone = phoneNumber.value.trim();
       const phoneValidation = validatePhone(phone);
       if (!phoneValidation.valid) {
@@ -421,7 +435,6 @@ const NewPlayerForm = {
         isValid = false;
       }
 
-      // Validate email (only if provided)
       const emailValue = email.value.trim();
       if (emailValue) {
         const emailValidation = validateEmail(emailValue);
@@ -431,32 +444,98 @@ const NewPlayerForm = {
         }
       }
 
-      if (!isValid) return;
+      return isValid;
+    };
 
-      // Set submitting state
+    // Step 2: Validate survey (all A-E questions must be answered)
+    const validateStep2 = () => {
+      clearValidationErrors();
+      
+      if (!surveyA.value || !surveyB.value || !surveyC.value || !surveyD.value || !surveyE.value) {
+        surveyError.value = 'Please answer all required questions (A-E)';
+        return false;
+      }
+      
+      return true;
+    };
+
+    const handleNext = () => {
+      if (currentStep.value === 1) {
+        if (validateStep1()) {
+          currentStep.value = 2;
+          // Scroll to top when moving to next step
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+    };
+
+    const handleBack = () => {
+      if (currentStep.value > 1) {
+        currentStep.value--;
+        clearValidationErrors();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    };
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      
+      // Final validation
+      if (!validateStep1() || !validateStep2()) {
+        return;
+      }
+
       isSubmitting.value = true;
 
-      // Emit submit event with form data
+      // Build rating survey object
+      const ratingSurvey = {
+        a: surveyA.value,
+        b: surveyB.value,
+        c: surveyC.value,
+        d: surveyD.value,
+        e: surveyE.value,
+        f: surveyF.value,
+        g: surveyG.value,
+        h: surveyH.value,
+        i: surveyI.value
+      };
+
+      // Emit submit event with all data
       emit('new-player-submit', {
-        firstName: firstNameTrimmed,
-        lastName: lastNameTrimmed,
-        phoneNumber: phone,
-        email: emailValue,
+        firstName: firstName.value.trim(),
+        lastName: lastName.value.trim(),
+        phoneNumber: phoneNumber.value.trim(),
+        email: email.value.trim(),
+        ratingSurvey: ratingSurvey,
         setSubmitting: (value) => { isSubmitting.value = value; }
       });
     };
 
     return {
+      currentStep,
+      totalSteps,
       firstName,
       lastName,
       phoneNumber,
       email,
+      surveyA,
+      surveyB,
+      surveyC,
+      surveyD,
+      surveyE,
+      surveyF,
+      surveyG,
+      surveyH,
+      surveyI,
       isSubmitting,
       firstNameError,
       lastNameError,
       phoneError,
       emailError,
+      surveyError,
       filterPhoneInput,
+      handleNext,
+      handleBack,
       handleSubmit
     };
   },
@@ -465,75 +544,234 @@ const NewPlayerForm = {
       <h1>Sign Up as New Player</h1>
       <p class="subtitle">Create your account to register for Round Robin events</p>
       
-      <form @submit="handleSubmit">
-        <div class="form-group">
-          <label for="firstName">First Name *</label>
-          <input 
-            type="text" 
-            id="firstName"
-            v-model="firstName"
-            placeholder="Enter your first name"
-            required 
-            :disabled="isSubmitting"
-          />
-          <div v-if="firstNameError" class="validation-error">{{ firstNameError }}</div>
+      <!-- Progress Indicator -->
+      <div class="step-progress">
+        <div class="step" :class="{ 'active': currentStep === 1, 'completed': currentStep > 1 }">
+          <div class="step-number">1</div>
+          <div class="step-label">Basic Info</div>
         </div>
-
-        <div class="form-group">
-          <label for="lastName">Last Name *</label>
-          <input 
-            type="text" 
-            id="lastName"
-            v-model="lastName"
-            placeholder="Enter your last name"
-            required 
-            :disabled="isSubmitting"
-          />
-          <div v-if="lastNameError" class="validation-error">{{ lastNameError }}</div>
+        <div class="step-divider"></div>
+        <div class="step" :class="{ 'active': currentStep === 2 }">
+          <div class="step-number">2</div>
+          <div class="step-label">Skill Survey</div>
         </div>
+      </div>
 
-        <div class="form-group">
-          <label for="newPlayerPhone">Phone Number *</label>
-          <div class="phone-input-wrapper">
-            <span class="country-code">+1</span>
+      <form @submit.prevent="handleSubmit">
+        <!-- Step 1: Basic Information -->
+        <div v-show="currentStep === 1" class="form-step">
+          <div class="form-group">
+            <label for="firstName">First Name *</label>
             <input 
-              type="tel" 
-              id="newPlayerPhone"
-              v-model="phoneNumber"
-              placeholder="xxx-xxx-xxxx"
-              maxlength="12"
-              inputmode="numeric"
-              pattern="[0-9-]*"
+              type="text" 
+              id="firstName"
+              v-model="firstName"
+              placeholder="Enter your first name"
               required 
               :disabled="isSubmitting"
-              @input="filterPhoneInput"
             />
+            <div v-if="firstNameError" class="validation-error">{{ firstNameError }}</div>
           </div>
-          <div class="help-text">Enter 10-digit US phone number</div>
-          <div v-if="phoneError" class="validation-error">{{ phoneError }}</div>
+
+          <div class="form-group">
+            <label for="lastName">Last Name *</label>
+            <input 
+              type="text" 
+              id="lastName"
+              v-model="lastName"
+              placeholder="Enter your last name"
+              required 
+              :disabled="isSubmitting"
+            />
+            <div v-if="lastNameError" class="validation-error">{{ lastNameError }}</div>
+          </div>
+
+          <div class="form-group">
+            <label for="newPlayerPhone">Phone Number *</label>
+            <div class="phone-input-wrapper">
+              <span class="country-code">+1</span>
+              <input 
+                type="tel" 
+                id="newPlayerPhone"
+                v-model="phoneNumber"
+                placeholder="xxx-xxx-xxxx"
+                maxlength="12"
+                inputmode="numeric"
+                pattern="[0-9-]*"
+                required 
+                :disabled="isSubmitting"
+                @input="filterPhoneInput"
+              />
+            </div>
+            <div class="help-text">Enter 10-digit US phone number</div>
+            <div v-if="phoneError" class="validation-error">{{ phoneError }}</div>
+          </div>
+
+          <div class="form-group">
+            <label for="newPlayerEmail">Email Address (optional)</label>
+            <input 
+              type="email" 
+              id="newPlayerEmail"
+              v-model="email"
+              placeholder="e.g., john@example.com" 
+              :disabled="isSubmitting"
+            />
+            <div v-if="emailError" class="validation-error">{{ emailError }}</div>
+          </div>
+
+          <button type="button" @click="handleNext" class="btn-next">
+            Next: Skill Survey →
+          </button>
         </div>
 
-        <div class="form-group">
-          <label for="newPlayerEmail">Email Address (optional)</label>
-          <input 
-            type="email" 
-            id="newPlayerEmail"
-            v-model="email"
-            placeholder="e.g., john@example.com" 
-            :disabled="isSubmitting"
-          />
-          <div v-if="emailError" class="validation-error">{{ emailError }}</div>
-        </div>
+        <!-- Step 2: Rating Survey -->
+        <div v-show="currentStep === 2" class="form-step">
+          <div class="survey-intro">
+            <p><strong>Help us understand your skill level</strong></p>
+            <p class="help-text">For each question, select the highest statement that's fully true for you.</p>
+          </div>
 
-        <button type="submit" :disabled="isSubmitting">
-          <span v-if="!isSubmitting">Create Account</span>
-          <span v-else>Creating Account<span class="loading-spinner"></span></span>
-        </button>
+          <div v-if="surveyError" class="validation-error" style="margin-bottom: 1rem;">{{ surveyError }}</div>
+
+          <!-- Question A -->
+          <div class="survey-question">
+            <h3>A. Playing Experience & Results</h3>
+            <label class="radio-option">
+              <input type="radio" name="surveyA" value="A0" v-model="surveyA" />
+              <span>I mostly play casually with friends/family; I've never played in a club or league.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyA" value="A1" v-model="surveyA" />
+              <span>I occasionally play at clubs or meetups, but I rarely keep score seriously.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyA" value="A2" v-model="surveyA" />
+              <span>I regularly play in club sessions or leagues and usually win some and lose some.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyA" value="A3" v-model="surveyA" />
+              <span>I frequently play in leagues or tournaments and usually finish in the top half (or better) of my group.</span>
+            </label>
+          </div>
+
+          <!-- Question B -->
+          <div class="survey-question">
+            <h3>B. Rally & Consistency</h3>
+            <label class="radio-option">
+              <input type="radio" name="surveyB" value="B0" v-model="surveyB" />
+              <span>I struggle to keep more than a few balls on the table in a rally.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyB" value="B1" v-model="surveyB" />
+              <span>I can keep a rally going at a controlled pace on both forehand and backhand if my opponent isn't attacking.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyB" value="B2" v-model="surveyB" />
+              <span>I can reliably rally on both wings, change direction (cross-court/down-the-line), and keep 10+ balls on the table in a cooperative drill.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyB" value="B3" v-model="surveyB" />
+              <span>I can rally at high speed with consistency, including counters and blocks against moderate attacks.</span>
+            </label>
+          </div>
+
+          <!-- Question C -->
+          <div class="survey-question">
+            <h3>C. Spin & Serves</h3>
+            <label class="radio-option">
+              <input type="radio" name="surveyC" value="C0" v-model="surveyC" />
+              <span>My serves are mostly flat; I don't really control spin.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyC" value="C1" v-model="surveyC" />
+              <span>I can put some topspin or backspin on my serves, but it doesn't vary much.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyC" value="C2" v-model="surveyC" />
+              <span>I use spinny serves (topspin, backspin, sidespin), can serve short or long, and can aim to different parts of the table.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyC" value="C3" v-model="surveyC" />
+              <span>I use advanced serves (e.g. pendulum, reverse, hook, heavy backspin/side) with good disguise and placement, and I often win points or weak returns from my serve.</span>
+            </label>
+          </div>
+
+          <!-- Question D -->
+          <div class="survey-question">
+            <h3>D. Receive, Spin Handling & Tactics</h3>
+            <label class="radio-option">
+              <input type="radio" name="surveyD" value="D0" v-model="surveyD" />
+              <span>I find it very difficult to return spin serves or spinny shots; many of my returns go long or into the net.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyD" value="D1" v-model="surveyD" />
+              <span>I can usually return simple spin serves, but heavy spin often causes errors.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyD" value="D2" v-model="surveyD" />
+              <span>I can read and handle most spins (top, back, side) on serve and during rallies, and I can choose between safe and aggressive returns.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyD" value="D3" v-model="surveyD" />
+              <span>I can consistently read complex or disguised spin, vary my receive (push, flick, loop, drop shot), and use tactics (placement, tempo changes) to set up my own attack.</span>
+            </label>
+          </div>
+
+          <!-- Question E -->
+          <div class="survey-question">
+            <h3>E. Footwork & Match Play</h3>
+            <label class="radio-option">
+              <input type="radio" name="surveyE" value="E0" v-model="surveyE" />
+              <span>I mostly stand in one spot; I often get caught reaching or out of position.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyE" value="E1" v-model="surveyE" />
+              <span>I can move a bit to reach balls but have trouble recovering for the next shot.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyE" value="E2" v-model="surveyE" />
+              <span>I move reasonably well side-to-side, can adjust my distance from the table, and can play multiple balls while moving.</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" name="surveyE" value="E3" v-model="surveyE" />
+              <span>I anticipate shots well, move efficiently, and can maintain good positioning during fast rallies and wide angles.</span>
+            </label>
+          </div>
+
+          <!-- Optional Skills -->
+          <div class="survey-question optional-section">
+            <h3>Optional: "Skill Check" Extras</h3>
+            <p class="help-text">Check all that apply:</p>
+            
+            <label class="checkbox-option">
+              <input type="checkbox" v-model="surveyF" />
+              <span>F. I can loop a strong backspin ball consistently on my forehand.</span>
+            </label>
+            <label class="checkbox-option">
+              <input type="checkbox" v-model="surveyG" />
+              <span>G. I can loop a strong backspin ball consistently on my backhand.</span>
+            </label>
+            <label class="checkbox-option">
+              <input type="checkbox" v-model="surveyH" />
+              <span>H. I can counter-loop against a topspin ball away from the table.</span>
+            </label>
+            <label class="checkbox-option">
+              <input type="checkbox" v-model="surveyI" />
+              <span>I. I can effectively chop (defensive backspin) from mid or far distance.</span>
+            </label>
+          </div>
+
+          <div class="form-buttons">
+            <button type="button" @click="handleBack" class="btn-back" :disabled="isSubmitting">
+              ← Back
+            </button>
+            <button type="submit" :disabled="isSubmitting" class="btn-submit">
+              <span v-if="!isSubmitting">Create Account</span>
+              <span v-else>Creating Account<span class="loading-spinner"></span></span>
+            </button>
+          </div>
+        </div>
       </form>
-
-      <div class="info" style="margin-top: 1.5rem;">
-        <strong>New to BTTC?</strong> After creating your account, you can register for Round Robin events immediately!
-      </div>
     </div>
   `
 };
@@ -694,7 +932,7 @@ const PlayerSignupApp = {
      * Creates a new player record in the system
      */
     const handleNewPlayerSubmit = async (formData) => {
-      const { firstName, lastName, phoneNumber, email, setSubmitting } = formData;
+      const { firstName, lastName, phoneNumber, email, ratingSurvey, setSubmitting } = formData;
 
       // Clear any previous messages
       error.value = '';
@@ -708,7 +946,8 @@ const PlayerSignupApp = {
         first_name: firstName,
         last_name: lastName,
         phone_number: cleanedPhone,
-        email: email
+        email: email,
+        rating_survey: ratingSurvey
         // Note: No bttc_id since this is a brand new player
         // Backend will assign internal_user_id
       };

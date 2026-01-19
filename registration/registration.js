@@ -394,7 +394,7 @@ const PlayerLookup = {
       <div v-show="!collapsed" class="lookup-expanded-container">
         <div class="lookup-header">
           <div class="lookup-title-group">
-            <h3 class="lookup-title">Sign in (Returning Players)</h3>
+            <h3 class="lookup-title">Sign in</h3>
             <p class="lookup-subtext">Need to activate your account? <a href="../signup/">Activate</a></p>
           </div>
         </div>
@@ -447,7 +447,6 @@ const PlayerLookup = {
           </form>
         </div>
         <div class="faq-section">
-        <p class="lookup-subtext">New players please contact BTTC support - <span class="support-contact">{{ supportPhone }} <span class="support-method">({{ supportMethod }})</span></span></p>
         <a href="faq.html" class="faq-link">Have questions? Check out our FAQ</a>
         </div>
       </div>
