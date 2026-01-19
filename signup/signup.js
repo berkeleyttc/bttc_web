@@ -370,8 +370,8 @@ const NewPlayerForm = {
   emits: ['new-player-submit', 'form-error'],
   setup(props, { emit }) {
     // Multi-step state
-    const currentStep = ref(1); // 1 = Basic Info, 2 = Rating Survey
-    const totalSteps = 2;
+    const currentStep = ref(1); // 1 = Basic Info, 2 = Rating Method, 3 = Survey/Rating Input
+    const totalSteps = 3;
 
     // Step 1: Basic info form state
     const firstName = ref('');
@@ -379,7 +379,13 @@ const NewPlayerForm = {
     const phoneNumber = ref('');
     const email = ref('');
     
-    // Step 2: Survey responses
+    // Step 2: Rating method selection
+    const ratingMethod = ref(''); // 'novice', 'survey', or 'has_rating'
+    
+    // Step 3a: Manual rating input (if has_rating)
+    const manualRating = ref('');
+    
+    // Step 3b: Survey responses (if survey)
     const surveyA = ref(''); // Playing Experience
     const surveyB = ref(''); // Rally & Consistency
     const surveyC = ref(''); // Spin & Serves
@@ -396,6 +402,8 @@ const NewPlayerForm = {
     const lastNameError = ref('');
     const phoneError = ref('');
     const emailError = ref('');
+    const ratingMethodError = ref('');
+    const manualRatingError = ref('');
     const surveyError = ref('');
 
     const filterPhoneInput = (e) => {
@@ -408,6 +416,8 @@ const NewPlayerForm = {
       lastNameError.value = '';
       phoneError.value = '';
       emailError.value = '';
+      ratingMethodError.value = '';
+      manualRatingError.value = '';
       surveyError.value = '';
     };
 
@@ -447,23 +457,59 @@ const NewPlayerForm = {
       return isValid;
     };
 
-    // Step 2: Validate survey (all A-E questions must be answered)
+    // Step 2: Validate rating method selection
     const validateStep2 = () => {
       clearValidationErrors();
       
-      if (!surveyA.value || !surveyB.value || !surveyC.value || !surveyD.value || !surveyE.value) {
-        surveyError.value = 'Please answer all required questions (A-E)';
+      if (!ratingMethod.value) {
+        ratingMethodError.value = 'Please select an option';
         return false;
       }
       
       return true;
     };
 
+    // Step 3: Validate based on rating method
+    const validateStep3 = () => {
+      clearValidationErrors();
+      
+      if (ratingMethod.value === 'novice') {
+        // No validation needed, auto-assign 100
+        return true;
+      } else if (ratingMethod.value === 'has_rating') {
+        // Validate manual rating input
+        const rating = manualRating.value.trim();
+        if (!rating) {
+          manualRatingError.value = 'Please enter your rating';
+          return false;
+        }
+        const ratingNum = parseInt(rating, 10);
+        if (isNaN(ratingNum) || ratingNum < 0 || ratingNum > 3500) {
+          manualRatingError.value = 'Please enter a valid rating between 0 and 3500';
+          return false;
+        }
+        return true;
+      } else if (ratingMethod.value === 'survey') {
+        // Validate survey questions
+        if (!surveyA.value || !surveyB.value || !surveyC.value || !surveyD.value || !surveyE.value) {
+          surveyError.value = 'Please answer all required questions (A-E)';
+          return false;
+        }
+        return true;
+      }
+      
+      return false;
+    };
+
     const handleNext = () => {
       if (currentStep.value === 1) {
         if (validateStep1()) {
           currentStep.value = 2;
-          // Scroll to top when moving to next step
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } else if (currentStep.value === 2) {
+        if (validateStep2()) {
+          currentStep.value = 3;
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }
       }
@@ -481,35 +527,53 @@ const NewPlayerForm = {
       e.preventDefault();
       
       // Final validation
-      if (!validateStep1() || !validateStep2()) {
+      if (!validateStep1() || !validateStep2() || !validateStep3()) {
         return;
       }
 
       isSubmitting.value = true;
 
-      // Build rating survey object
-      const ratingSurvey = {
-        a: surveyA.value,
-        b: surveyB.value,
-        c: surveyC.value,
-        d: surveyD.value,
-        e: surveyE.value,
-        f: surveyF.value,
-        g: surveyG.value,
-        h: surveyH.value,
-        i: surveyI.value
-      };
-
-      // Emit submit event with all data
-      emit('new-player-submit', {
+      // Build payload based on rating method
+      const payload = {
         firstName: firstName.value.trim(),
         lastName: lastName.value.trim(),
         phoneNumber: phoneNumber.value.trim(),
         email: email.value.trim(),
-        ratingSurvey: ratingSurvey,
         setSubmitting: (value) => { isSubmitting.value = value; }
-      });
+      };
+
+      if (ratingMethod.value === 'novice') {
+        // Novice player: auto-assign rating 100
+        payload.rating = 100;
+      } else if (ratingMethod.value === 'has_rating') {
+        // Has rating: use manual input
+        payload.rating = parseInt(manualRating.value.trim(), 10);
+      } else if (ratingMethod.value === 'survey') {
+        // Survey: send survey responses
+        payload.ratingSurvey = {
+          a: surveyA.value,
+          b: surveyB.value,
+          c: surveyC.value,
+          d: surveyD.value,
+          e: surveyE.value,
+          f: surveyF.value,
+          g: surveyG.value,
+          h: surveyH.value,
+          i: surveyI.value
+        };
+      }
+
+      // Emit submit event with payload
+      emit('new-player-submit', payload);
     };
+
+    // Computed: Dynamic step 3 label based on rating method
+    const step3Label = computed(() => {
+      if (ratingMethod.value === 'survey') return 'Skill Survey';
+      if (ratingMethod.value === 'has_rating') return 'Enter Rating';
+      if (ratingMethod.value === 'novice') return 'Confirm';
+      return 'Details';
+    });
 
     return {
       currentStep,
@@ -518,6 +582,8 @@ const NewPlayerForm = {
       lastName,
       phoneNumber,
       email,
+      ratingMethod,
+      manualRating,
       surveyA,
       surveyB,
       surveyC,
@@ -532,7 +598,10 @@ const NewPlayerForm = {
       lastNameError,
       phoneError,
       emailError,
+      ratingMethodError,
+      manualRatingError,
       surveyError,
+      step3Label,
       filterPhoneInput,
       handleNext,
       handleBack,
@@ -551,9 +620,14 @@ const NewPlayerForm = {
           <div class="step-label">Basic Info</div>
         </div>
         <div class="step-divider"></div>
-        <div class="step" :class="{ 'active': currentStep === 2 }">
+        <div class="step" :class="{ 'active': currentStep === 2, 'completed': currentStep > 2 }">
           <div class="step-number">2</div>
-          <div class="step-label">Skill Survey</div>
+          <div class="step-label">Experience</div>
+        </div>
+        <div class="step-divider"></div>
+        <div class="step" :class="{ 'active': currentStep === 3 }">
+          <div class="step-number">3</div>
+          <div class="step-label">{{ step3Label }}</div>
         </div>
       </div>
 
@@ -620,12 +694,119 @@ const NewPlayerForm = {
           </div>
 
           <button type="button" @click="handleNext" class="btn-next">
-            Next: Skill Survey →
+            Next: Experience Level →
           </button>
         </div>
 
-        <!-- Step 2: Rating Survey -->
+        <!-- Step 2: Rating Method Selection -->
         <div v-show="currentStep === 2" class="form-step">
+          <div class="survey-intro">
+            <p><strong>Tell us about your table tennis experience</strong></p>
+            <p class="help-text">This helps us assign you an appropriate starting rating.</p>
+          </div>
+
+          <div v-if="ratingMethodError" class="validation-error" style="margin-bottom: 1rem;">{{ ratingMethodError }}</div>
+
+          <div class="rating-method-options">
+            <label class="rating-method-option">
+              <input type="radio" name="ratingMethod" value="novice" v-model="ratingMethod" />
+              <div class="option-content">
+                <div class="option-title">I am a novice player, just starting out</div>
+                <div class="option-description">You'll be assigned a starting rating of 100</div>
+              </div>
+            </label>
+
+            <label class="rating-method-option">
+              <input type="radio" name="ratingMethod" value="survey" v-model="ratingMethod" />
+              <div class="option-content">
+                <div class="option-title">I have played before, but don't have/don't know my rating</div>
+                <div class="option-description">We'll ask you a few questions to estimate your skill level</div>
+              </div>
+            </label>
+
+            <label class="rating-method-option">
+              <input type="radio" name="ratingMethod" value="has_rating" v-model="ratingMethod" />
+              <div class="option-content">
+                <div class="option-title">I have played at other clubs/leagues/tournaments and have a rating</div>
+                <div class="option-description">You can enter your existing USATT or club rating</div>
+              </div>
+            </label>
+          </div>
+
+          <div class="form-buttons">
+            <button type="button" @click="handleBack" class="btn-back" :disabled="isSubmitting">
+              ← Back
+            </button>
+            <button type="button" @click="handleNext" class="btn-next" :disabled="!ratingMethod">
+              Next →
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Dynamic Content Based on Rating Method -->
+        <div v-show="currentStep === 3" class="form-step">
+          
+          <!-- Option 1: Novice Player (auto-assign 100) -->
+          <div v-if="ratingMethod === 'novice'" class="novice-confirmation">
+            <div class="confirmation-box">
+              <div class="confirmation-icon">✓</div>
+              <h3>Welcome to BTTC!</h3>
+              <p>You'll be assigned a starting rating of <strong>100</strong>.</p>
+              <p class="help-text">Your rating will be adjusted as you play matches and participate in events.</p>
+            </div>
+
+            <div class="form-buttons">
+              <button type="button" @click="handleBack" class="btn-back" :disabled="isSubmitting">
+                ← Back
+              </button>
+              <button type="submit" :disabled="isSubmitting" class="btn-submit">
+                <span v-if="!isSubmitting">Create Account</span>
+                <span v-else>Creating Account<span class="loading-spinner"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Option 2: Has Rating (manual input) -->
+          <div v-if="ratingMethod === 'has_rating'" class="manual-rating-input">
+            <div class="survey-intro">
+              <p><strong>Enter Your Rating</strong></p>
+              <p class="help-text">Enter your USATT rating or club rating from your previous league/club.</p>
+            </div>
+
+            <div class="form-group">
+              <label for="manualRating">Your Rating *</label>
+              <input 
+                type="number" 
+                id="manualRating"
+                v-model="manualRating"
+                placeholder="e.g., 1500"
+                min="0"
+                max="3500"
+                step="1"
+                required 
+                :disabled="isSubmitting"
+              />
+              <div class="help-text">Enter a rating between 0 and 3500</div>
+              <div v-if="manualRatingError" class="validation-error">{{ manualRatingError }}</div>
+            </div>
+
+            <div class="info">
+              <strong>Don't know your exact rating?</strong> Enter your best estimate, or go back and take the skill survey instead.
+            </div>
+
+            <div class="form-buttons">
+              <button type="button" @click="handleBack" class="btn-back" :disabled="isSubmitting">
+                ← Back
+              </button>
+              <button type="submit" :disabled="isSubmitting" class="btn-submit">
+                <span v-if="!isSubmitting">Create Account</span>
+                <span v-else>Creating Account<span class="loading-spinner"></span></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Option 3: Survey (existing survey content) -->
+          <div v-if="ratingMethod === 'survey'" class="survey-content">
           <div class="survey-intro">
             <p><strong>Help us understand your skill level</strong></p>
             <p class="help-text">For each question, select the highest statement that's fully true for you.</p>
@@ -761,14 +942,15 @@ const NewPlayerForm = {
             </label>
           </div>
 
-          <div class="form-buttons">
-            <button type="button" @click="handleBack" class="btn-back" :disabled="isSubmitting">
-              ← Back
-            </button>
-            <button type="submit" :disabled="isSubmitting" class="btn-submit">
-              <span v-if="!isSubmitting">Create Account</span>
-              <span v-else>Creating Account<span class="loading-spinner"></span></span>
-            </button>
+            <div class="form-buttons">
+              <button type="button" @click="handleBack" class="btn-back" :disabled="isSubmitting">
+                ← Back
+              </button>
+              <button type="submit" :disabled="isSubmitting" class="btn-submit">
+                <span v-if="!isSubmitting">Create Account</span>
+                <span v-else>Creating Account<span class="loading-spinner"></span></span>
+              </button>
+            </div>
           </div>
         </div>
       </form>
@@ -932,7 +1114,7 @@ const PlayerSignupApp = {
      * Creates a new player record in the system
      */
     const handleNewPlayerSubmit = async (formData) => {
-      const { firstName, lastName, phoneNumber, email, ratingSurvey, setSubmitting } = formData;
+      const { firstName, lastName, phoneNumber, email, rating, ratingSurvey, setSubmitting } = formData;
 
       // Clear any previous messages
       error.value = '';
@@ -946,11 +1128,19 @@ const PlayerSignupApp = {
         first_name: firstName,
         last_name: lastName,
         phone_number: cleanedPhone,
-        email: email,
-        rating_survey: ratingSurvey
+        email: email
         // Note: No bttc_id since this is a brand new player
         // Backend will assign internal_user_id
       };
+
+      // Add rating data based on what was provided
+      if (rating !== undefined) {
+        // Novice (100) or manual rating entry
+        payload.rating = rating;
+      } else if (ratingSurvey !== undefined) {
+        // Survey responses
+        payload.rating_survey = ratingSurvey;
+      }
 
       try {
         const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
