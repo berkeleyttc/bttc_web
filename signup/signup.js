@@ -478,7 +478,9 @@ const NewPlayerForm = {
         return true;
       } else if (ratingMethod.value === 'has_rating') {
         // Validate manual rating input
-        const rating = manualRating.value.trim();
+        // Handle both string and number types (number input can return either)
+        const ratingValue = manualRating.value;
+        const rating = typeof ratingValue === 'string' ? ratingValue.trim() : String(ratingValue || '').trim();
         if (!rating) {
           manualRatingError.value = 'Please enter your rating';
           return false;
@@ -547,7 +549,10 @@ const NewPlayerForm = {
         payload.rating = 100;
       } else if (ratingMethod.value === 'has_rating') {
         // Has rating: use manual input
-        payload.rating = parseInt(manualRating.value.trim(), 10);
+        // Handle both string and number types
+        const ratingValue = manualRating.value;
+        const ratingStr = typeof ratingValue === 'string' ? ratingValue.trim() : String(ratingValue || '');
+        payload.rating = parseInt(ratingStr, 10);
       } else if (ratingMethod.value === 'survey') {
         // Survey: send survey responses
         payload.ratingSurvey = {
