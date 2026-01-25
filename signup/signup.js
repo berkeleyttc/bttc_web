@@ -781,8 +781,8 @@ const NewPlayerForm = {
                 id="manualRating"
                 v-model="manualRating"
                 placeholder="e.g., 1500"
-                min="0"
-                max="3500"
+                min="100"
+                max="2500"
                 step="1"
                 required 
                 :disabled="isSubmitting"
