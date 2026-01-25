@@ -484,8 +484,8 @@ const NewPlayerForm = {
           return false;
         }
         const ratingNum = parseInt(rating, 10);
-        if (isNaN(ratingNum) || ratingNum < 0 || ratingNum > 3500) {
-          manualRatingError.value = 'Please enter a valid rating between 0 and 3500';
+        if (isNaN(ratingNum) || ratingNum < 100 || ratingNum > 2500) {
+          manualRatingError.value = 'Please enter a valid rating between 100 and 2500';
           return false;
         }
         return true;
@@ -787,7 +787,7 @@ const NewPlayerForm = {
                 required 
                 :disabled="isSubmitting"
               />
-              <div class="help-text">Enter a rating between 0 and 3500</div>
+              <div class="help-text">Enter a rating between 100 and 2500</div>
               <div v-if="manualRatingError" class="validation-error">{{ manualRatingError }}</div>
             </div>
 
