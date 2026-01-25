@@ -395,7 +395,7 @@ const PlayerLookup = {
         <div class="lookup-header">
           <div class="lookup-title-group">
             <h3 class="lookup-title">Sign in</h3>
-            <p class="lookup-subtext">Need to activate your account? <a href="../signup/">Activate</a></p>
+            <p class="lookup-subtext">Need to create your account? <a href="../signup/">Sign up</a></p>
           </div>
         </div>
         <div class="lookup-form-container">
@@ -1499,8 +1499,8 @@ const RegistrationApp = {
 
       <div v-if="registrationOpen && players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
         <a href="../signup/" class="signup-button">
-          <span class="signup-button-text">Activate Another Returning Player</span>
-          <span class="signup-button-subtext">Activate another returning player online account</span>
+          <span class="signup-button-text">Activate Another Player</span>
+          <span class="signup-button-subtext">Activate another player online account</span>
         </a>
       </div>
 

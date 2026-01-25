@@ -611,7 +611,7 @@ const NewPlayerForm = {
   template: `
     <div>
       <h1>Sign Up as New Player</h1>
-      <p class="subtitle">Create your account to register for Round Robin events</p>
+      <p class="subtitle">For players who have never played in the BTTC league before, create your account to register for Round Robin events</p>
       
       <!-- Progress Indicator -->
       <div class="step-progress">
@@ -749,10 +749,11 @@ const NewPlayerForm = {
           <!-- Option 1: Novice Player (auto-assign 100) -->
           <div v-if="ratingMethod === 'novice'" class="novice-confirmation">
             <div class="confirmation-box">
-              <div class="confirmation-icon">✓</div>
-              <h3>Welcome to BTTC!</h3>
-              <p>You'll be assigned a starting rating of <strong>100</strong>.</p>
-              <p class="help-text">Your rating will be adjusted as you play matches and participate in events.</p>
+              <div class="confirmation-icon">🎯</div>
+              <h3>Ready to Get Started!</h3>
+              <p><strong>Your starting rating:</strong> 100</p>
+              <p class="help-text">This is perfect for beginners. Your rating will be adjusted as you play matches and participate in events.</p>
+              <p class="help-text"><strong>Click "Create Account" below to complete your signup.</strong></p>
             </div>
 
             <div class="form-buttons">
