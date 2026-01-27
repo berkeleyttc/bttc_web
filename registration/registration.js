@@ -394,8 +394,8 @@ const PlayerLookup = {
       <div v-show="!collapsed" class="lookup-expanded-container">
         <div class="lookup-header">
           <div class="lookup-title-group">
-            <h3 class="lookup-title">Sign in (Returning Players)</h3>
-            <p class="lookup-subtext">Need to activate your account? <a href="../signup/">Activate</a></p>
+            <h3 class="lookup-title">Sign in</h3>
+            <p class="lookup-subtext">Need to create your account? <a href="../signup/">Sign up</a></p>
           </div>
         </div>
         <div class="lookup-form-container">
@@ -447,7 +447,6 @@ const PlayerLookup = {
           </form>
         </div>
         <div class="faq-section">
-        <p class="lookup-subtext">New players please contact BTTC support - <span class="support-contact">{{ supportPhone }} <span class="support-method">({{ supportMethod }})</span></span></p>
         <a href="faq.html" class="faq-link">Have questions? Check out our FAQ</a>
         </div>
       </div>
@@ -1261,6 +1260,7 @@ const RegistrationApp = {
       try {
         const payload = {
           bttc_id: player.bttc_id,
+          internal_user_id: parseInt(player.internal_user_id),
           first_name: player.first_name,
           last_name: player.last_name,
           payment_method: data.paymentMethod,
@@ -1330,6 +1330,7 @@ const RegistrationApp = {
       try {
         const payload = {
           bttc_id: player.bttc_id,
+          internal_user_id: parseInt(player.internal_user_id),
           first_name: player.first_name,
           last_name: player.last_name,
           comments: data.comments
@@ -1466,7 +1467,7 @@ const RegistrationApp = {
           
           <div class="error-actions">
             <a href="../signup/" class="signup-button">
-              <span class="signup-button-text">Activate Account (Returning Players)</span>
+              <span class="signup-button-text">Activate Account (All Players)</span>
               <span class="signup-button-subtext">Activate your online player account</span>
             </a>
           </div>
@@ -1498,8 +1499,8 @@ const RegistrationApp = {
 
       <div v-if="registrationOpen && players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
         <a href="../signup/" class="signup-button">
-          <span class="signup-button-text">Activate Another Returning Player</span>
-          <span class="signup-button-subtext">Activate another returning player online account</span>
+          <span class="signup-button-text">Activate Another Player</span>
+          <span class="signup-button-subtext">Activate another player online account</span>
         </a>
       </div>
 
