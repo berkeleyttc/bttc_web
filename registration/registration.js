@@ -1467,7 +1467,7 @@ const RegistrationApp = {
           
           <div class="error-actions">
             <a href="../signup/" class="signup-button">
-              <span class="signup-button-text">Activate Account (Returning Players)</span>
+              <span class="signup-button-text">Activate Account (All Players)</span>
               <span class="signup-button-subtext">Activate your online player account</span>
             </a>
           </div>
