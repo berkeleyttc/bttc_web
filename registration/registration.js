@@ -572,7 +572,7 @@ const RegistrationDialog = {
     const WAIVER_FILE = '../liability_waiver_2025-11-03-v1.html';
     
     // Form state
-    const paymentMethod = ref('');  // 'cash' or 'zelle_venmo'
+    const paymentMethod = ref('zelle_venmo');  // Zelle/Venmo only
     const comments = ref('');         // Optional comments
     const waiverAccepted = ref(false); // Waiver acceptance checkbox
     const validationError = ref('');  // Inline validation errors
@@ -608,7 +608,7 @@ const RegistrationDialog = {
     };
 
     const handleClose = () => {
-      paymentMethod.value = '';
+      paymentMethod.value = 'zelle_venmo';
       comments.value = '';
       waiverAccepted.value = false;
       validationError.value = '';
@@ -619,7 +619,7 @@ const RegistrationDialog = {
     watch(() => props.show, (newValue) => {
       if (newValue) {
         // Reset all form fields when dialog opens
-        paymentMethod.value = '';
+        paymentMethod.value = 'zelle_venmo';
         comments.value = '';
         waiverAccepted.value = false;
         validationError.value = '';
@@ -671,23 +671,14 @@ const RegistrationDialog = {
             <div class="radio-option">
               <input 
                 type="radio" 
-                id="payByCash" 
-                name="paymentMethod" 
-                value="cash"
-                v-model="paymentMethod"
-              />
-              <label for="payByCash">Pay by Cash</label>
-            </div>
-            <div class="radio-option">
-              <input 
-                type="radio" 
                 id="payByDigital" 
                 name="paymentMethod" 
                 value="zelle_venmo"
                 v-model="paymentMethod"
               />
-              <label for="payByDigital">Pay by Zelle/Venmo (recommended)</label>
+              <label for="payByDigital">Pay by Zelle/Venmo</label>
             </div>
+            <p class="payment-note">Payment is required to confirm your spot. If payment isn't received by 6:00 PM (registration close), your registration will be removed.</p>
           </div>
 
           <div class="comments-section">
