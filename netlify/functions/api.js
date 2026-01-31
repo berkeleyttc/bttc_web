@@ -1,5 +1,33 @@
-const BTTC_API_URL = process.env.BTTC_API_URL;
-const BTTC_API_KEY = process.env.BTTC_API_KEY;
+// Toggle this flag to switch between dev and production API
+// Set to true for PR reviews, false for production
+const USE_DEV_API = true;
+
+// Get API URL and API Key based on flag
+const BTTC_API_URL = USE_DEV_API 
+  ? process.env.BTTC_API_DEV_URL 
+  : process.env.BTTC_API_URL;
+const BTTC_API_KEY = USE_DEV_API
+  ? process.env.BTTC_DEV_API_KEY
+  : process.env.BTTC_API_KEY;
+
+// Validate API URL is set
+if (!BTTC_API_URL) {
+  const missingEnvVar = USE_DEV_API ? 'BTTC_API_DEV_URL' : 'BTTC_API_URL';
+  throw new Error(`Missing required environment variable: ${missingEnvVar}`);
+}
+
+// Validate API Key is set
+if (!BTTC_API_KEY) {
+  const missingEnvVar = USE_DEV_API ? 'BTTC_DEV_API_KEY' : 'BTTC_API_KEY';
+  throw new Error(`Missing required environment variable: ${missingEnvVar}`);
+}
+
+// Log which API is being used (only in non-production for debugging)
+if (USE_DEV_API) {
+  console.log('🔧 Using DEV API:', BTTC_API_URL);
+} else {
+  console.log('🚀 Using PRODUCTION API');
+}
 
 exports.handler = async (event, context) => {
   

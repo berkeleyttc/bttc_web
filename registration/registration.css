@@ -943,6 +943,15 @@
     font-size: 1rem;
   }
 
+  .payment-note {
+    margin: 0.75rem 0 0 0;
+    font-size: 0.9rem;
+    color: #c41e3a;
+    font-style: italic;
+    font-weight: bold;
+    line-height: 1.4;
+  }
+
   .radio-option {
     display: flex;
     align-items: center;

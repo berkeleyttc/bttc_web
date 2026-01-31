@@ -322,6 +322,10 @@ const RosterApp = {
           // Numeric comparison for rating column
           valA = Number(valA) || 0;
           valB = Number(valB) || 0;
+        } else if (key === 'status') {
+          // Normalize null/undefined to 'pending' for sorting
+          valA = (a.status ?? 'pending').toString().toLowerCase();
+          valB = (b.status ?? 'pending').toString().toLowerCase();
         } else {
           // String comparison for other fields (case-insensitive)
           valA = valA.toString().toLowerCase();
@@ -807,6 +811,12 @@ const RosterApp = {
               >
                 BTTC Rating
               </th>
+              <th 
+                :class="getSortClass('status')" 
+                @click="sortBy('status')"
+              >
+                Status
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -814,6 +824,7 @@ const RosterApp = {
               <td>{{ formatDatePST(player.registered_at) }}</td>
               <td>{{ player.full_name }}</td>
               <td>{{ player.rating }}</td>
+              <td>{{ ((player.status ?? 'pending') === 'pending' ? 'pending payment' : (player.status ?? 'pending')).toUpperCase() }}</td>
             </tr>
           </tbody>
         </table>

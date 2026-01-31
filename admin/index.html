@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Admin - Registration Approvals - BTTC</title>
+
+  <meta name="description" content="Admin panel for managing round robin registrations at Berkeley Table Tennis Club.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="robots" content="noindex, nofollow">
+
+  <link href="https://fonts.googleapis.com/css?family=Lobster|PT+Sans+Narrow:400,700" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=1">
+  <link rel="stylesheet" href="/admin/admin.css?v=1">
+</head>
+
+<body>
+  <div id="header">
+    <div class="container_12 clearfix">
+      <div id="logo" class="grid_6">
+        <a href="/"><img src="../images/logo.gif" height="60" alt="BTTC Logo"></a>
+      </div>
+    </div>
+    <div>
+      <ul id="nav" class="container_12">
+        <li><a href="/registration/">Register</a></li>
+        <li><a href="/draw-brackets/">Brackets</a></li>
+        <li><a href="/results.html">Results</a></li>
+        <li><a href="/coaching.html">Coaching</a></li>
+        <li><a href="/about.html">About</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Vue.js App Container -->
+  <div id="vue-admin-app">
+    <admin-app></admin-app>
+  </div>
+
+  <!-- Load Vue.js from CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="../env.js"></script>
+  <script src="../js/bttc-utils.js"></script>
+  <script src="/admin/admin.js"></script>
+  <div id="footer">
+    <ul>
+      <li><a href="../about.html">About</a></li>
+      <li><a href="../club_policy.html">Club Policy</a></li>
+      <li><a href="../rating_system.html">Rating System</a></li>
+    </ul>
+  </div>
+</body>
+</html>
