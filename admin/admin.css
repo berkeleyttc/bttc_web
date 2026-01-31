@@ -1,0 +1,520 @@
+/**
+ * BTTC Admin Approval Page - Vue.js Styles
+ * 
+ * Admin panel for managing pending registrations
+ * 
+ * @file admin/admin.css
+ */
+
+/* ========================================
+   RESET & BASE STYLES
+   ======================================== */
+
+/* Vue.js App Container */
+#vue-admin-app {
+  min-height: calc(100vh - 200px);
+}
+
+/* ========================================
+   ADMIN CONTAINER & LAYOUT
+   ======================================== */
+
+/* Admin Container */
+.admin-container {
+  background: #fff;
+  margin: 4rem auto;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  max-width: 1000px;
+  width: 90%;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+/* Back Link */
+.back-link {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 1rem;
+  color: #0d6efd;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.back-link:hover {
+  color: #0a58ca;
+  background-color: #e9ecef;
+  border-color: #0d6efd;
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Heading */
+.admin-container h3 {
+  margin: 0 0 0.5rem 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+}
+
+/* Event Date */
+.event-date {
+  margin: 0.25rem 0 1.5rem 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  display: block;
+  width: 100%;
+}
+
+.event-date-label {
+  font-weight: 500;
+  color: #666;
+}
+
+/* ========================================
+   LOGIN FORM
+   ======================================== */
+
+.dev-mode-banner {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 0.75rem;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ffeaa7;
+}
+
+.login-container {
+  max-width: 400px;
+  margin: 4rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.login-container h3 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.75rem;
+  color: #333;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+.form-group input.error {
+  border-color: #dc3545;
+}
+
+.error-text {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.login-button {
+  width: 100%;
+  padding: 0.875rem;
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-button:hover:not(:disabled) {
+  background-color: #0a58ca;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.login-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ========================================
+   MESSAGES
+   ======================================== */
+
+.loading-message {
+  padding: 2rem;
+  color: #666;
+  font-size: 1.1rem;
+  text-align: center;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.error-message {
+  padding: 1.5rem;
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 8px;
+  margin: 1rem 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  text-align: center;
+}
+
+.error-message p {
+  margin: 0.5rem 0;
+}
+
+.error-message p:first-child {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.empty-message {
+  padding: 2rem;
+  color: #666;
+  font-size: 1.1rem;
+  text-align: center;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.success-message {
+  padding: 1rem;
+  color: #155724;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 8px;
+  margin: 1rem 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  text-align: center;
+  animation: fadeInOut 3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ========================================
+   PLAYER COUNT & INFO
+   ======================================== */
+
+.player-count {
+  text-align: left;
+  margin-bottom: 1rem;
+  color: #666;
+  font-size: 1rem;
+  font-weight: 500;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.logout-container {
+  text-align: right;
+  margin-bottom: 1rem;
+}
+
+.logout-button {
+  padding: 0.5rem 1rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-button:hover {
+  background-color: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* ========================================
+   PENDING PLAYERS TABLE
+   ======================================== */
+
+.pending-table-container {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.pending-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background: #fff;
+}
+
+.pending-table th,
+.pending-table td {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  text-align: left;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.pending-table th {
+  background-color: #f0f0f0;
+  font-weight: 700;
+  color: #333;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+  position: relative;
+  padding-right: 2rem;
+}
+
+.pending-table th:hover {
+  background-color: #e2e2e2;
+}
+
+.pending-table th:last-child {
+  cursor: default;
+  padding-right: 0.75rem;
+}
+
+.pending-table th.sortable::after {
+  content: "";
+  position: absolute;
+  right: 0.5rem;
+  opacity: 0.3;
+}
+
+.pending-table th.sorted-asc::after {
+  content: " ▲";
+  position: absolute;
+  right: 0.5rem;
+  color: #0d6efd;
+  opacity: 1;
+}
+
+.pending-table th.sorted-desc::after {
+  content: " ▼";
+  position: absolute;
+  right: 0.5rem;
+  color: #0d6efd;
+  opacity: 1;
+}
+
+.pending-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.pending-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.pending-table tbody td {
+  color: #555;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-pending {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status-pending-payment {
+  background-color: #cce5ff;
+  color: #004085;
+  border: 1px solid #b8daff;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.confirm-button {
+  padding: 0.5rem 1rem;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.confirm-button:hover:not(:disabled) {
+  background-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.confirm-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.confirm-button.processing {
+  background-color: #6c757d;
+}
+
+/* ========================================
+   MOBILE OPTIMIZATIONS
+   ======================================== */
+
+@media (max-width: 768px) {
+  .admin-container,
+  .login-container {
+    margin: 2rem auto;
+    padding: 1rem;
+    width: 95%;
+  }
+  
+  .admin-container h3 {
+    font-size: 1.5rem;
+  }
+  
+  .pending-table {
+    font-size: 0.85rem;
+  }
+  
+  .pending-table th,
+  .pending-table td {
+    padding: 0.5rem;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .confirm-button {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-container,
+  .login-container {
+    margin: 1rem auto;
+    padding: 0.75rem;
+  }
+  
+  .pending-table {
+    font-size: 0.8rem;
+  }
+  
+  .pending-table th,
+  .pending-table td {
+    padding: 0.4rem;
+  }
+  
+  .player-count {
+    font-size: 0.9rem;
+  }
+}
+
+/* ========================================
+   ACCESSIBILITY
+   ======================================== */
+
+.confirm-button:focus,
+.login-button:focus,
+.logout-button:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+
+.pending-table th:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+
+@media print {
+  .admin-container {
+    box-shadow: none;
+    margin: 0;
+    padding: 1rem;
+  }
+  
+  .back-link,
+  .logout-container,
+  .action-buttons {
+    display: none;
+  }
+  
+  .pending-table th {
+    background-color: #f0f0f0 !important;
+    color: #000 !important;
+  }
+  
+  .pending-table tbody tr {
+    page-break-inside: avoid;
+  }
+}
