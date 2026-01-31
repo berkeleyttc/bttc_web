@@ -1,16 +1,13 @@
 // BTTC Admin Approval Page
 // Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse
 
+
 const { createApp, ref, reactive, computed, onMounted } = Vue;
 
-// Admin credentials (in production, this should be moved to environment variables)
-const ADMIN_CREDENTIALS = {
-  username: 'admin',
-  password: 'bttc2024'
-};
-
-// Session storage key for authentication
+// Session storage keys
 const AUTH_KEY = 'bttc_admin_auth';
+const AUTH_TOKEN_KEY = 'bttc_admin_token';
+const AUTH_EXPIRES_KEY = 'bttc_admin_expires';
 
 const AdminApp = {
   setup() {
@@ -33,12 +30,19 @@ const AdminApp = {
       key: 'registered_at',    // Default sort by registration date
       direction: 'desc'         // Newest first
     });
+    const isLocalDevMode = ref(false);
 
     // Computed properties
     const pendingPlayers = computed(() => {
-      const filtered = players.value.filter(
-        p => p.status === 'PENDING' || p.status === 'PENDING_PAYMENT' || p.status === null || p.status === undefined
-      );
+      const filtered = players.value.filter(p => {
+        if (!p.status || p.status === null || p.status === undefined) {
+          return true; // null/undefined status = pending
+        }
+        
+        // Handle both uppercase and lowercase status values
+        const status = p.status.toString().toLowerCase();
+        return status === 'pending' || status === 'pending_payment';
+      });
       
       // Apply sorting
       return sortPlayers(filtered);
@@ -48,63 +52,155 @@ const AdminApp = {
 
     // Check if already authenticated on mount
     onMounted(() => {
+      // Detect dev mode immediately
+      const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : '/.netlify/functions/api';
+      isLocalDevMode.value = apiUrl.includes('localhost') || apiUrl.includes('0.0.0.0') || apiUrl.includes('127.0.0.1');
+      
+      console.log('[AdminApp] Mode detected:', isLocalDevMode.value ? 'Local Development' : 'Production');
+      
       checkAuth();
     });
 
     // Authentication methods
     const checkAuth = () => {
       try {
-        const auth = sessionStorage.getItem(AUTH_KEY);
-        if (auth === 'true') {
-          isAuthenticated.value = true;
-          fetchPlayers();
+        const isAuth = sessionStorage.getItem(AUTH_KEY);
+        const token = sessionStorage.getItem(AUTH_TOKEN_KEY);
+        const expires = sessionStorage.getItem(AUTH_EXPIRES_KEY);
+        
+        // Check if authenticated and token hasn't expired
+        if (isAuth === 'true' && token && expires) {
+          const expiresAt = parseInt(expires, 10);
+          if (Date.now() < expiresAt) {
+            isAuthenticated.value = true;
+            fetchPlayers();
+            return;
+          }
         }
+        
+        // Clear expired session
+        clearAuth();
       } catch (err) {
         console.error('[AdminApp] Failed to check auth:', err);
+        clearAuth();
+      }
+    };
+
+    const clearAuth = () => {
+      try {
+        sessionStorage.removeItem(AUTH_KEY);
+        sessionStorage.removeItem(AUTH_TOKEN_KEY);
+        sessionStorage.removeItem(AUTH_EXPIRES_KEY);
+      } catch (err) {
+        console.error('[AdminApp] Failed to clear auth:', err);
       }
     };
 
     const login = async () => {
       loginError.value = '';
+      isLoggingIn.value = true;
       
       // Validate inputs
       if (!username.value.trim()) {
         loginError.value = 'Please enter a username.';
+        isLoggingIn.value = false;
         return;
       }
       
       if (!password.value) {
         loginError.value = 'Please enter a password.';
+        isLoggingIn.value = false;
         return;
       }
 
-      // Check credentials
-      if (
-        username.value.trim() === ADMIN_CREDENTIALS.username &&
-        password.value === ADMIN_CREDENTIALS.password
-      ) {
-        try {
-          sessionStorage.setItem(AUTH_KEY, 'true');
-          isAuthenticated.value = true;
-          await fetchPlayers();
-        } catch (err) {
-          console.error('[AdminApp] Failed to set auth:', err);
-          loginError.value = 'Authentication error. Please try again.';
+      try {
+        const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : '/.netlify/functions/api';
+        
+        // Detect if we're in local development mode
+        const isLocalDev = apiUrl.includes('localhost') || apiUrl.includes('0.0.0.0') || apiUrl.includes('127.0.0.1');
+        isLocalDevMode.value = isLocalDev;
+        
+        if (isLocalDev) {
+          // Local development: Use credentials from ENV
+          console.log('[AdminApp] Local development mode - using ENV credentials');
+          
+          const localUsername = typeof ENV !== 'undefined' ? ENV.ADMIN_USERNAME : 'admin';
+          const localPassword = typeof ENV !== 'undefined' ? ENV.ADMIN_PASSWORD : 'bttc2024';
+          
+          if (username.value.trim() === localUsername && password.value === localPassword) {
+            console.log('[AdminApp] Local login successful');
+            
+            // Generate a mock token for local dev
+            const mockToken = 'local-dev-token-' + Date.now();
+            const expiresAt = Date.now() + (24 * 60 * 60 * 1000);
+            
+            // Store authentication state
+            sessionStorage.setItem(AUTH_KEY, 'true');
+            sessionStorage.setItem(AUTH_TOKEN_KEY, mockToken);
+            sessionStorage.setItem(AUTH_EXPIRES_KEY, expiresAt.toString());
+            
+            isAuthenticated.value = true;
+            password.value = '';
+            
+            await fetchPlayers();
+          } else {
+            console.log('[AdminApp] Local login failed');
+            loginError.value = 'Invalid username or password.';
+          }
+        } else {
+          // Production: Use Netlify Function
+          console.log('[AdminApp] Production mode - calling authentication function');
+          
+          const baseUrl = apiUrl.replace('/rr', '').replace('/api', '');
+          
+          const response = await fetch(`${baseUrl}/admin-login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              username: username.value.trim(),
+              password: password.value
+            })
+          });
+
+          const data = await response.json();
+          
+          if (response.ok && data.success) {
+            console.log('[AdminApp] Login successful');
+            
+            // Store authentication state
+            sessionStorage.setItem(AUTH_KEY, 'true');
+            sessionStorage.setItem(AUTH_TOKEN_KEY, data.token);
+            sessionStorage.setItem(AUTH_EXPIRES_KEY, data.expiresAt.toString());
+            
+            isAuthenticated.value = true;
+            password.value = '';
+            
+            await fetchPlayers();
+          } else {
+            console.log('[AdminApp] Login failed:', data.message);
+            loginError.value = data.message || 'Invalid username or password.';
+          }
         }
-      } else {
-        loginError.value = 'Invalid username or password.';
+      } catch (err) {
+        console.error('[AdminApp] Login error:', err);
+        loginError.value = 'Unable to connect to authentication server. Please try again.';
+      } finally {
+        isLoggingIn.value = false;
       }
     };
 
     const logout = () => {
       try {
-        sessionStorage.removeItem(AUTH_KEY);
+        clearAuth();
         isAuthenticated.value = false;
         username.value = '';
         password.value = '';
         players.value = [];
         error.value = null;
         loginError.value = '';
+        console.log('[AdminApp] Logged out successfully');
       } catch (err) {
         console.error('[AdminApp] Failed to logout:', err);
       }
@@ -184,7 +280,7 @@ const AdminApp = {
 
         // Show success message
         const playerName = player.full_name || `${player.first_name} ${player.last_name}`;
-        showSuccess(`Successfully confirmed ${playerName} (BTTC ID: ${player.bttc_id || 'N/A'})`);
+        showSuccess(`Successfully confirmed ${playerName}`);
 
         // Refresh the list
         await fetchPlayers();
@@ -330,6 +426,7 @@ const AdminApp = {
       eventType,
       successMessage,
       currentSort,
+      isLocalDevMode,
       
       // Computed
       pendingPlayers,
@@ -355,6 +452,11 @@ const AdminApp = {
       <!-- Login Form -->
       <div class="login-container">
         <h3>Admin Login</h3>
+        
+        <!-- Dev Mode Indicator -->
+        <div v-if="isLocalDevMode" class="dev-mode-banner">
+          🔧 Local Development Mode
+        </div>
         
         <div v-if="loginError" class="error-message">
           {{ loginError }}
@@ -467,8 +569,8 @@ const AdminApp = {
                   <span
                     class="status-badge"
                     :class="{
-                      'status-pending': player.status === 'PENDING' || !player.status,
-                      'status-pending-payment': player.status === 'PENDING_PAYMENT'
+                      'status-pending': !player.status || player.status.toLowerCase() === 'pending',
+                      'status-pending-payment': player.status && player.status.toLowerCase() === 'pending_payment'
                     }"
                   >
                     {{ formatStatus(player.status) }}
