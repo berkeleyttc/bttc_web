@@ -943,6 +943,42 @@
     font-size: 1rem;
   }
 
+  .pricing-info {
+    background: #f8f9fa;
+    border-left: 3px solid #0d6efd;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+  }
+
+  .pricing-info .payment-note {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+  }
+
+  .pricing-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.8;
+  }
+
+  .pricing-list li {
+    padding: 0.25rem 0 0.25rem 1.5rem;
+    position: relative;
+  }
+
+  .pricing-list li::before {
+    content: "•";
+    position: absolute;
+    left: 0.5rem;
+    color: #0d6efd;
+    font-weight: bold;
+    font-size: 1.2rem;
+  }
+
   .payment-note {
     margin: 0.75rem 0 0 0;
     font-size: 0.9rem;
@@ -957,7 +993,19 @@
   .payment-note:not(:first-of-type) {
     margin-top: 0.5rem;
     color: #555;
-    font-weight: 600;
+    font-weight: 400;
+  }
+
+  .payment-note strong {
+    font-weight: 700;
+  }
+
+  .payment-instructions-heading {
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #333;
+    font-size: 1rem;
+    font-weight: 700;
   }
 
   .payment-instructions {
@@ -989,6 +1037,56 @@
 
   .payment-instructions a:hover {
     color: #0a58ca;
+  }
+
+  .payment-buttons {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+    text-align: center;
+    min-width: 140px;
+  }
+
+  .btn-venmo {
+    background: #008CFF;
+    color: #ffffff;
+    border-color: #008CFF;
+  }
+
+  .btn-venmo:hover {
+    background: #0074D9;
+    border-color: #0074D9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 140, 255, 0.3);
+  }
+
+  .btn-venmo:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 140, 255, 0.2);
+  }
+
+  @media (max-width: 480px) {
+    .payment-buttons {
+      flex-direction: column;
+    }
+    
+    .btn {
+      width: 100%;
+      min-height: 48px;
+    }
   }
 
   .radio-option {

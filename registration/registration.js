@@ -571,8 +571,21 @@ const RegistrationDialog = {
     // Waiver configuration - update filename here when waiver version changes
     const WAIVER_FILE = '../liability_waiver_2025-11-03-v1.html';
     
-    // Get support phone from ENV
+    // ROT13 decoder to prevent URL scraping by crawlers
+    const rot13 = (s) => {
+      return s.replace(/[a-zA-Z]/g, c => String.fromCharCode((c <= 'Z' ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26));
+    };
+    
+    // Get support phone and encoded venmo URL from ENV (keep encoded until click)
     const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
+    // const venmoUrlEncoded = typeof ENV !== 'undefined' ? ENV.VENMO_URL : 'uggcf://irazb.pbz/LBHE_HFREANZR';
+    
+    // Handle Venmo button click - decode URL and open in new tab
+    // const handleVenmoClick = (event) => {
+    //   event.preventDefault();
+    //   const decodedUrl = rot13(venmoUrlEncoded);
+    //   window.open(decodedUrl, '_blank', 'noopener,noreferrer');
+    // };
     
     // Form state
     const paymentMethod = ref('zelle_venmo');  // Zelle/Venmo only
@@ -583,12 +596,6 @@ const RegistrationDialog = {
     const handleConfirm = () => {
       // Clear previous validation errors
       validationError.value = '';
-
-      // Payment method is required
-      if (!paymentMethod.value) {
-        validationError.value = 'Please select a payment method.';
-        return;
-      }
 
       // Waiver acceptance is required
       if (!waiverAccepted.value) {
@@ -602,7 +609,7 @@ const RegistrationDialog = {
         ? `${waiverNote}. ${comments.value}`
         : waiverNote;
 
-      // Emit confirm event with form data
+      // Emit confirm event with form data (payment method is always zelle_venmo)
       const data = {
         paymentMethod: paymentMethod.value,
         comments: fullComments
@@ -636,6 +643,8 @@ const RegistrationDialog = {
       validationError,
       WAIVER_FILE,
       supportPhone,
+      // venmoUrlEncoded,
+      // handleVenmoClick,
       handleConfirm,
       handleClose
     };
@@ -671,7 +680,6 @@ const RegistrationDialog = {
         <!-- Show form only if no success message -->
         <div v-if="!successMessage">
           <div class="payment-options">
-            <h4>Payment Method:</h4>
             <div class="pricing-info">
               <p class="payment-note">
                 <strong>Pricing:</strong>
@@ -682,27 +690,29 @@ const RegistrationDialog = {
                 <li>Free for players with BTTC or USATT rating over 2150</li>
               </ul>
             </div>
-            <div class="radio-option">
-              <input 
-                type="radio" 
-                id="payByDigital" 
-                name="paymentMethod" 
-                value="zelle_venmo"
-                v-model="paymentMethod"
-              />
-              <label for="payByDigital">Pay by Zelle/Venmo</label>
-            </div>
             <p class="payment-note">
-              <strong>Important:</strong> Your registration will remain in <strong>PENDING PAYMENT</strong> status until BTTC confirms your payment.
+              <strong>Available Payment Options:</strong> Venmo or Zelle
             </p>
             <p class="payment-note">
-              <strong>Payment Instructions:</strong>
+              <strong>Important:</strong> Your registration will remain in <strong>PENDING PAYMENT</strong> status until BTTC confirms your payment. Your spot is <strong>NOT GUARANTEED</strong> until the status shows <strong>CONFIRMED</strong>.
             </p>
+            <h4 class="payment-instructions-heading">Payment Instructions:</h4>
             <ul class="payment-instructions">
               <li>Include your <strong>full name</strong> (as registered with BTTC) when paying</li>
               <li>For fastest confirmation, text a payment screenshot to <br><strong>{{ supportPhone }}</strong></li>
               <li>Track your registration status in the registered players page</li>
             </ul>
+            <!-- Venmo button (commented out for future use)
+            <div class="payment-buttons">
+              <a 
+                class="btn btn-venmo" 
+                :href="venmoUrlEncoded" 
+                @click="handleVenmoClick"
+              >
+                Pay with Venmo
+              </a>
+            </div>
+            -->
           </div>
 
           <div class="comments-section">
@@ -852,6 +862,7 @@ const RegistrationApp = {
     const fallbackPlayerCap = typeof ENV !== 'undefined' ? ENV.FALLBACK_PLAYER_CAP : 64;
     const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
     const supportMethod = typeof ENV !== 'undefined' ? ENV.SUPPORT_METHOD : 'TEXT ONLY';
+    const venmoUrl = typeof ENV !== 'undefined' ? ENV.VENMO_URL : 'https://venmo.com/YOUR_USERNAME';
     
     // Application state
     const players = ref([]);                    // Players found by phone number
