@@ -701,7 +701,7 @@ const RegistrationDialog = {
             <ul class="payment-instructions">
               <li>Include your <strong>full name</strong> (as registered with BTTC) when paying</li>
               <li>For fastest confirmation, text a payment screenshot to <br><strong>{{ supportPhone }}</strong></li>
-              <li>Track your registration status in the <a href="/roster/" target="_blank">roster view</a></li>
+              <li>Track your registration status in the registered players page</li>
             </ul>
           </div>
 
