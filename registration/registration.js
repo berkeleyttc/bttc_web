@@ -571,6 +571,9 @@ const RegistrationDialog = {
     // Waiver configuration - update filename here when waiver version changes
     const WAIVER_FILE = '../liability_waiver_2025-11-03-v1.html';
     
+    // Get support phone from ENV
+    const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
+    
     // Form state
     const paymentMethod = ref('zelle_venmo');  // Zelle/Venmo only
     const comments = ref('');         // Optional comments
@@ -632,6 +635,7 @@ const RegistrationDialog = {
       waiverAccepted,
       validationError,
       WAIVER_FILE,
+      supportPhone,
       handleConfirm,
       handleClose
     };
@@ -668,6 +672,16 @@ const RegistrationDialog = {
         <div v-if="!successMessage">
           <div class="payment-options">
             <h4>Payment Method:</h4>
+            <div class="pricing-info">
+              <p class="payment-note">
+                <strong>Pricing:</strong>
+              </p>
+              <ul class="pricing-list">
+                <li>$8.00 adults (17+)</li>
+                <li>$5.00 juniors (16 and under) and seniors (60+)</li>
+                <li>Free for players with BTTC or USATT rating over 2150</li>
+              </ul>
+            </div>
             <div class="radio-option">
               <input 
                 type="radio" 
@@ -678,7 +692,17 @@ const RegistrationDialog = {
               />
               <label for="payByDigital">Pay by Zelle/Venmo</label>
             </div>
-            <p class="payment-note">Payment is required to confirm your spot. If payment isn't received by 6:00 PM (registration close), your registration will be removed.</p>
+            <p class="payment-note">
+              <strong>Important:</strong> Your registration will remain in <strong>PENDING PAYMENT</strong> status until BTTC confirms your payment.
+            </p>
+            <p class="payment-note">
+              <strong>Payment Instructions:</strong>
+            </p>
+            <ul class="payment-instructions">
+              <li>Include your <strong>full name</strong> (as registered with BTTC) when paying</li>
+              <li>For fastest confirmation, text a payment screenshot to <br><strong>{{ supportPhone }}</strong></li>
+              <li>Track your registration status in the <a href="/roster/" target="_blank">roster view</a></li>
+            </ul>
           </div>
 
           <div class="comments-section">
