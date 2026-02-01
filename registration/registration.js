@@ -689,19 +689,25 @@ const RegistrationDialog = {
                 <li>$5.00 juniors (16 and under) and seniors (60+)</li>
                 <li>Free for players with BTTC or USATT rating over 2150</li>
               </ul>
+              <p class="payment-note" style="margin-top: 0.4rem;">
+                <strong>Available Payment Options:</strong> Venmo or Zelle
+              </p>
             </div>
-            <p class="payment-note">
-              <strong>Available Payment Options:</strong> Venmo or Zelle
-            </p>
-            <p class="payment-note">
-              <strong>Important:</strong> Your registration will remain in <strong>PENDING PAYMENT</strong> status until BTTC confirms your payment. Your spot is <strong>NOT GUARANTEED</strong> until the status shows <strong>CONFIRMED</strong>.
-            </p>
-            <h4 class="payment-instructions-heading">Payment Instructions:</h4>
-            <ul class="payment-instructions">
-              <li>Include your <strong>full name</strong> (as registered with BTTC) when paying</li>
-              <li>For fastest confirmation, text a payment screenshot to <br><strong>{{ supportPhone }}</strong></li>
-              <li>Track your registration status in the registered players page</li>
-            </ul>
+            
+            <div class="payment-important-notice">
+              <p class="payment-note">
+                <strong>Important:</strong> Your registration will remain in <strong>PENDING PAYMENT</strong> status until BTTC confirms your payment. Your spot is <strong>NOT GUARANTEED</strong> until the status shows <strong>CONFIRMED</strong>.
+              </p>
+            </div>
+            
+            <div class="payment-instructions-section">
+              <h4 class="payment-instructions-heading">Payment Instructions:</h4>
+              <ul class="payment-instructions">
+                <li>Include your <strong>full name</strong> (as registered with BTTC) when paying</li>
+                <li>For fastest confirmation, text a payment screenshot to <strong>{{ supportPhone }}</strong></li>
+                <li>Track your registration status in the registered players page</li>
+              </ul>
+            </div>
             <!-- Venmo button (commented out for future use)
             <div class="payment-buttons">
               <a 
