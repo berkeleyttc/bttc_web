@@ -593,6 +593,16 @@ const RegistrationDialog = {
     const waiverAccepted = ref(false); // Waiver acceptance checkbox
     const validationError = ref('');  // Inline validation errors
 
+    // Prevent background scroll handler - only block scroll outside dialog
+    const preventScroll = (e) => {
+      // Allow scrolling inside the dialog box
+      if (e.target.closest('.dialog-box')) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
     const handleConfirm = () => {
       // Clear previous validation errors
       validationError.value = '';
@@ -635,9 +645,15 @@ const RegistrationDialog = {
         validationError.value = '';
         // Lock body scroll when dialog opens
         document.body.style.overflow = 'hidden';
+        // Prevent wheel and touch events on body
+        document.body.addEventListener('wheel', preventScroll, { passive: false });
+        document.body.addEventListener('touchmove', preventScroll, { passive: false });
       } else {
         // Unlock body scroll when dialog closes
         document.body.style.overflow = '';
+        // Remove event listeners
+        document.body.removeEventListener('wheel', preventScroll);
+        document.body.removeEventListener('touchmove', preventScroll);
       }
     });
 
@@ -781,6 +797,16 @@ const UnregistrationDialog = {
     // Form state
     const comments = ref('');  // Optional reason for unregistering
 
+    // Prevent background scroll handler - only block scroll outside dialog
+    const preventScroll = (e) => {
+      // Allow scrolling inside the dialog box
+      if (e.target.closest('.dialog-box')) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
     const handleConfirm = () => {
       emit('confirm', {
         comments: comments.value
@@ -798,9 +824,15 @@ const UnregistrationDialog = {
         comments.value = '';
         // Lock body scroll when dialog opens
         document.body.style.overflow = 'hidden';
+        // Prevent wheel and touch events on body
+        document.body.addEventListener('wheel', preventScroll, { passive: false });
+        document.body.addEventListener('touchmove', preventScroll, { passive: false });
       } else {
         // Unlock body scroll when dialog closes
         document.body.style.overflow = '';
+        // Remove event listeners
+        document.body.removeEventListener('wheel', preventScroll);
+        document.body.removeEventListener('touchmove', preventScroll);
       }
     });
 

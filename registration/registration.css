@@ -895,6 +895,8 @@
     z-index: 1000;
     padding: 1rem;
     box-sizing: border-box;
+    overflow: hidden;
+    overscroll-behavior: contain;
   }
 
   .dialog-box {
@@ -907,6 +909,8 @@
     overflow-y: auto;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: auto;
   }
 
   @media (max-width: 480px) {
