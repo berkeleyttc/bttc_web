@@ -633,6 +633,11 @@ const RegistrationDialog = {
         comments.value = '';
         waiverAccepted.value = false;
         validationError.value = '';
+        // Lock body scroll when dialog opens
+        document.body.style.overflow = 'hidden';
+      } else {
+        // Unlock body scroll when dialog closes
+        document.body.style.overflow = '';
       }
     });
 
@@ -791,6 +796,11 @@ const UnregistrationDialog = {
     watch(() => props.show, (newValue) => {
       if (newValue) {
         comments.value = '';
+        // Lock body scroll when dialog opens
+        document.body.style.overflow = 'hidden';
+      } else {
+        // Unlock body scroll when dialog closes
+        document.body.style.overflow = '';
       }
     });
 
