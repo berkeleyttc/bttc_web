@@ -696,7 +696,7 @@ const RegistrationDialog = {
               <div class="payment-card">
                 <h4 class="payment-card-title">Payment instructions</h4>
                 <ul class="payment-instructions">
-                  <li>Include your <strong>full name</strong> with payment</li>
+                  <li>Include your <strong>full name</strong> as registered with BTTC with payment</li>
                   <li>Text a payment screenshot to <strong>{{ supportPhone }}</strong> for faster confirmation</li>
                   <li>Check your status on the registered players page</li>
                 </ul>
