@@ -895,18 +895,22 @@
     z-index: 1000;
     padding: 1rem;
     box-sizing: border-box;
+    overflow: hidden;
+    overscroll-behavior: contain;
   }
 
   .dialog-box {
     background: white;
     border-radius: 12px;
     padding: 1.5rem;
-    max-width: 400px;
+    max-width: 450px;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: auto;
   }
 
   @media (max-width: 480px) {
@@ -921,7 +925,7 @@
   .dialog-title {
     font-size: 1.2rem;
     font-weight: bold;
-    margin-bottom: 1.5rem;
+    /* margin-bottom: 0.5rem; */
     text-align: center;
     color: #333;
   }
@@ -934,13 +938,148 @@
   }
 
   .payment-options {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
 
-  .payment-options h4 {
-    margin-bottom: 1rem;
+  .payment-grid {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .payment-card {
+    background: #f8f9fa;
+    border: 1px solid #e6e8eb;
+    border-radius: 10px;
+    padding: 0.9rem;
+  }
+
+  .payment-card-title {
+    margin: 0 0 0.6rem 0;
+    color: #333;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .payment-card-warning {
+    background: #fff7e6;
+    border-color: #ffe0a6;
+  }
+
+  .pricing-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.9rem;
     color: #555;
-    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .pricing-list li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.2rem 0;
+  }
+
+  .price-tag {
+    display: inline-block;
+    min-width: 3.2rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: #e9f2ff;
+    color: #0d6efd;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  .payment-note {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #5a4b1d;
+    line-height: 1.5;
+  }
+
+  .payment-note strong {
+    font-weight: 700;
+  }
+
+  .payment-methods-note {
+    margin-top: 0.75rem;
+    color: #444;
+  }
+
+  .payment-instructions {
+    list-style: disc;
+    padding: 0 0 0 1.2rem;
+    margin: 0.2rem 0 0 0;
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.6;
+  }
+
+  .payment-instructions li {
+    padding: 0.15rem 0;
+    text-align: left;
+  }
+
+  .payment-instructions a {
+    color: #0d6efd;
+    text-decoration: underline;
+  }
+
+  .payment-instructions a:hover {
+    color: #0a58ca;
+  }
+
+  .payment-buttons {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 2px solid transparent;
+    text-align: center;
+    min-width: 140px;
+  }
+
+  .btn-venmo {
+    background: #008CFF;
+    color: #ffffff;
+    border-color: #008CFF;
+  }
+
+  .btn-venmo:hover {
+    background: #0074D9;
+    border-color: #0074D9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 140, 255, 0.3);
+  }
+
+  .btn-venmo:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 140, 255, 0.2);
+  }
+
+  @media (max-width: 480px) {
+    .payment-buttons {
+      flex-direction: column;
+    }
+    
+    .btn {
+      width: 100%;
+      min-height: 48px;
+    }
   }
 
   .radio-option {
@@ -980,7 +1119,7 @@
   }
 
   .comments-section {
-    margin-bottom: 1.5rem;
+    margin-bottom: 0.5rem;
   }
 
   .comments-section h4 {
@@ -1014,8 +1153,8 @@
   }
 
   .waiver-section {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
     background-color: #fff3cd;
     border: 1px solid #ffc107;
     border-radius: 8px;

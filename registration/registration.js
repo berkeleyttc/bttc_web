@@ -394,8 +394,8 @@ const PlayerLookup = {
       <div v-show="!collapsed" class="lookup-expanded-container">
         <div class="lookup-header">
           <div class="lookup-title-group">
-            <h3 class="lookup-title">Sign in (Returning Players)</h3>
-            <p class="lookup-subtext">Need to activate your account? <a href="../signup/">Activate</a></p>
+            <h3 class="lookup-title">Sign in</h3>
+            <p class="lookup-subtext">Need to create your account? <a href="../signup/">Sign up</a></p>
           </div>
         </div>
         <div class="lookup-form-container">
@@ -447,7 +447,6 @@ const PlayerLookup = {
           </form>
         </div>
         <div class="faq-section">
-        <p class="lookup-subtext">New players please contact BTTC support - <span class="support-contact">{{ supportPhone }} <span class="support-method">({{ supportMethod }})</span></span></p>
         <a href="faq.html" class="faq-link">Have questions? Check out our FAQ</a>
         </div>
       </div>
@@ -572,21 +571,41 @@ const RegistrationDialog = {
     // Waiver configuration - update filename here when waiver version changes
     const WAIVER_FILE = '../liability_waiver_2025-11-03-v1.html';
     
+    // ROT13 decoder to prevent URL scraping by crawlers
+    const rot13 = (s) => {
+      return s.replace(/[a-zA-Z]/g, c => String.fromCharCode((c <= 'Z' ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26));
+    };
+    
+    // Get support phone and encoded venmo URL from ENV (keep encoded until click)
+    const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
+    // const venmoUrlEncoded = typeof ENV !== 'undefined' ? ENV.VENMO_URL : 'uggcf://irazb.pbz/LBHE_HFREANZR';
+    
+    // Handle Venmo button click - decode URL and open in new tab
+    // const handleVenmoClick = (event) => {
+    //   event.preventDefault();
+    //   const decodedUrl = rot13(venmoUrlEncoded);
+    //   window.open(decodedUrl, '_blank', 'noopener,noreferrer');
+    // };
+    
     // Form state
-    const paymentMethod = ref('');  // 'cash' or 'zelle_venmo'
+    const paymentMethod = ref('zelle_venmo');  // Zelle/Venmo only
     const comments = ref('');         // Optional comments
     const waiverAccepted = ref(false); // Waiver acceptance checkbox
     const validationError = ref('');  // Inline validation errors
 
+    // Prevent background scroll handler - only block scroll outside dialog
+    const preventScroll = (e) => {
+      // Allow scrolling inside the dialog box
+      if (e.target.closest('.dialog-box')) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
     const handleConfirm = () => {
       // Clear previous validation errors
       validationError.value = '';
-
-      // Payment method is required
-      if (!paymentMethod.value) {
-        validationError.value = 'Please select a payment method.';
-        return;
-      }
 
       // Waiver acceptance is required
       if (!waiverAccepted.value) {
@@ -600,7 +619,7 @@ const RegistrationDialog = {
         ? `${waiverNote}. ${comments.value}`
         : waiverNote;
 
-      // Emit confirm event with form data
+      // Emit confirm event with form data (payment method is always zelle_venmo)
       const data = {
         paymentMethod: paymentMethod.value,
         comments: fullComments
@@ -609,7 +628,7 @@ const RegistrationDialog = {
     };
 
     const handleClose = () => {
-      paymentMethod.value = '';
+      paymentMethod.value = 'zelle_venmo';
       comments.value = '';
       waiverAccepted.value = false;
       validationError.value = '';
@@ -620,10 +639,21 @@ const RegistrationDialog = {
     watch(() => props.show, (newValue) => {
       if (newValue) {
         // Reset all form fields when dialog opens
-        paymentMethod.value = '';
+        paymentMethod.value = 'zelle_venmo';
         comments.value = '';
         waiverAccepted.value = false;
         validationError.value = '';
+        // Lock body scroll when dialog opens
+        document.body.style.overflow = 'hidden';
+        // Prevent wheel and touch events on body
+        document.body.addEventListener('wheel', preventScroll, { passive: false });
+        document.body.addEventListener('touchmove', preventScroll, { passive: false });
+      } else {
+        // Unlock body scroll when dialog closes
+        document.body.style.overflow = '';
+        // Remove event listeners
+        document.body.removeEventListener('wheel', preventScroll);
+        document.body.removeEventListener('touchmove', preventScroll);
       }
     });
 
@@ -633,6 +663,9 @@ const RegistrationDialog = {
       waiverAccepted,
       validationError,
       WAIVER_FILE,
+      supportPhone,
+      // venmoUrlEncoded,
+      // handleVenmoClick,
       handleConfirm,
       handleClose
     };
@@ -668,34 +701,52 @@ const RegistrationDialog = {
         <!-- Show form only if no success message -->
         <div v-if="!successMessage">
           <div class="payment-options">
-            <h4>Payment Method:</h4>
-            <div class="radio-option">
-              <input 
-                type="radio" 
-                id="payByCash" 
-                name="paymentMethod" 
-                value="cash"
-                v-model="paymentMethod"
-              />
-              <label for="payByCash">Pay by Cash</label>
+            <div class="payment-grid">
+              <div class="payment-card">
+                <h4 class="payment-card-title">Pricing</h4>
+                <ul class="pricing-list">
+                  <li><span class="price-tag">$8</span> Adults (17+)</li>
+                  <li><span class="price-tag">$5</span> Juniors (16 and under) and seniors (60+)</li>
+                  <li><span class="price-tag">Free</span> BTTC or USATT rating over 2150</li>
+                </ul>
+                <p class="payment-note payment-methods-note">
+                  <strong>Available Payment Options:</strong> Venmo or Zelle
+                </p>
+              </div>
+
+              <div class="payment-card">
+                <h4 class="payment-card-title">Payment instructions</h4>
+                <ul class="payment-instructions">
+                  <li>Include your <strong>full name</strong> as registered with BTTC with payment</li>
+                  <li>Text a payment screenshot to <strong>{{ supportPhone }}</strong> for faster confirmation</li>
+                  <li>Check your status on the registered players page</li>
+                </ul>
+              </div>
+
+              <div class="payment-card payment-card-warning">
+                <p class="payment-note">
+                  Status stays <strong>PENDING PAYMENT</strong> until payment is confirmed. Your spot is guaranteed only when it shows <strong>CONFIRMED</strong>.
+                </p>
+              </div>
             </div>
-            <div class="radio-option">
-              <input 
-                type="radio" 
-                id="payByDigital" 
-                name="paymentMethod" 
-                value="zelle_venmo"
-                v-model="paymentMethod"
-              />
-              <label for="payByDigital">Pay by Zelle/Venmo (recommended)</label>
+            <!-- Venmo button (commented out for future use)
+            <div class="payment-buttons">
+              <a 
+                class="btn btn-venmo" 
+                :href="venmoUrlEncoded" 
+                @click="handleVenmoClick"
+              >
+                Pay with Venmo
+              </a>
             </div>
+            -->
           </div>
 
           <div class="comments-section">
             <h4>Comments (optional):</h4>
             <textarea 
               v-model="comments"
-              placeholder="Enter any comments or special requests..."
+              placeholder="Enter any comments or special requests. Let us know if you are arriving late..."
             ></textarea>
           </div>
 
@@ -746,6 +797,16 @@ const UnregistrationDialog = {
     // Form state
     const comments = ref('');  // Optional reason for unregistering
 
+    // Prevent background scroll handler - only block scroll outside dialog
+    const preventScroll = (e) => {
+      // Allow scrolling inside the dialog box
+      if (e.target.closest('.dialog-box')) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
     const handleConfirm = () => {
       emit('confirm', {
         comments: comments.value
@@ -761,6 +822,17 @@ const UnregistrationDialog = {
     watch(() => props.show, (newValue) => {
       if (newValue) {
         comments.value = '';
+        // Lock body scroll when dialog opens
+        document.body.style.overflow = 'hidden';
+        // Prevent wheel and touch events on body
+        document.body.addEventListener('wheel', preventScroll, { passive: false });
+        document.body.addEventListener('touchmove', preventScroll, { passive: false });
+      } else {
+        // Unlock body scroll when dialog closes
+        document.body.style.overflow = '';
+        // Remove event listeners
+        document.body.removeEventListener('wheel', preventScroll);
+        document.body.removeEventListener('touchmove', preventScroll);
       }
     });
 
@@ -838,6 +910,7 @@ const RegistrationApp = {
     const fallbackPlayerCap = typeof ENV !== 'undefined' ? ENV.FALLBACK_PLAYER_CAP : 64;
     const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
     const supportMethod = typeof ENV !== 'undefined' ? ENV.SUPPORT_METHOD : 'TEXT ONLY';
+    const venmoUrl = typeof ENV !== 'undefined' ? ENV.VENMO_URL : 'https://venmo.com/YOUR_USERNAME';
     
     // Application state
     const players = ref([]);                    // Players found by phone number
@@ -1261,6 +1334,7 @@ const RegistrationApp = {
       try {
         const payload = {
           bttc_id: player.bttc_id,
+          internal_user_id: parseInt(player.internal_user_id),
           first_name: player.first_name,
           last_name: player.last_name,
           payment_method: data.paymentMethod,
@@ -1330,6 +1404,7 @@ const RegistrationApp = {
       try {
         const payload = {
           bttc_id: player.bttc_id,
+          internal_user_id: parseInt(player.internal_user_id),
           first_name: player.first_name,
           last_name: player.last_name,
           comments: data.comments
@@ -1466,7 +1541,7 @@ const RegistrationApp = {
           
           <div class="error-actions">
             <a href="../signup/" class="signup-button">
-              <span class="signup-button-text">Activate Account (Returning Players)</span>
+              <span class="signup-button-text">Activate Account (All Players)</span>
               <span class="signup-button-subtext">Activate your online player account</span>
             </a>
           </div>
@@ -1498,8 +1573,8 @@ const RegistrationApp = {
 
       <div v-if="registrationOpen && players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
         <a href="../signup/" class="signup-button">
-          <span class="signup-button-text">Activate Another Returning Player</span>
-          <span class="signup-button-subtext">Activate another returning player online account</span>
+          <span class="signup-button-text">Activate Another Player</span>
+          <span class="signup-button-subtext">Activate another player online account</span>
         </a>
       </div>
 
