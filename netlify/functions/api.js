@@ -1,6 +1,6 @@
 // Toggle this flag to switch between dev and production API
 // Set to true for PR reviews, false for production
-const USE_DEV_API = true;
+const USE_DEV_API = false;
 
 // Get API URL and API Key based on flag
 const BTTC_API_URL = USE_DEV_API 

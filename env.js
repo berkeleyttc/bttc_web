@@ -22,7 +22,7 @@ const ENV = {
   
   // Closing time (when registration closes each week)
   REGISTRATION_CLOSING_DAY: 5, // Friday (0 = Sunday, 5 = Friday)
-  REGISTRATION_CLOSING_HOUR: 18, // 18:45 (6:45 PM)
+  REGISTRATION_CLOSING_HOUR: 18, // 18:00 (6:00 PM)
   REGISTRATION_CLOSING_MINUTE: 0,
   
   TIMEZONE: 'America/Los_Angeles',
@@ -39,7 +39,7 @@ const ENV = {
   PHONE_COUNTRY_CODE: 1,
   
   // Development
-  DEV_OVERRIDE: true,
+  DEV_OVERRIDE: false,
   
   // Registration Control
   // If true, registration is closed regardless of schedule (priority: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule)
