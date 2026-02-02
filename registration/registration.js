@@ -680,33 +680,33 @@ const RegistrationDialog = {
         <!-- Show form only if no success message -->
         <div v-if="!successMessage">
           <div class="payment-options">
-            <div class="pricing-info">
-              <p class="payment-note">
-                <strong>Pricing:</strong>
-              </p>
-              <ul class="pricing-list">
-                <li>$8.00 adults (17+)</li>
-                <li>$5.00 juniors (16 and under) and seniors (60+)</li>
-                <li>Free for players with BTTC or USATT rating over 2150</li>
-              </ul>
-              <p class="payment-note" style="margin-top: 0.4rem;">
-                <strong>Available Payment Options:</strong> Venmo or Zelle
-              </p>
-            </div>
-            
-            <div class="payment-important-notice">
-              <p class="payment-note">
-                <strong>Important:</strong> Your registration will remain in <strong>PENDING PAYMENT</strong> status until BTTC confirms your payment. Your spot is <strong>NOT GUARANTEED</strong> until the status shows <strong>CONFIRMED</strong>.
-              </p>
-            </div>
-            
-            <div class="payment-instructions-section">
-              <h4 class="payment-instructions-heading">Payment Instructions:</h4>
-              <ul class="payment-instructions">
-                <li>Include your <strong>full name</strong> (as registered with BTTC) when paying</li>
-                <li>For fastest confirmation, text a payment screenshot to <br><strong>{{ supportPhone }}</strong></li>
-                <li>Track your registration status in the registered players page</li>
-              </ul>
+            <div class="payment-grid">
+              <div class="payment-card">
+                <h4 class="payment-card-title">Pricing</h4>
+                <ul class="pricing-list">
+                  <li><span class="price-tag">$8</span> Adults (17+)</li>
+                  <li><span class="price-tag">$5</span> Juniors (16 and under) and seniors (60+)</li>
+                  <li><span class="price-tag">Free</span> BTTC or USATT rating over 2150</li>
+                </ul>
+                <p class="payment-note payment-methods-note">
+                  <strong>Available Payment Options:</strong> Venmo or Zelle
+                </p>
+              </div>
+
+              <div class="payment-card">
+                <h4 class="payment-card-title">Payment instructions</h4>
+                <ul class="payment-instructions">
+                  <li>Include your <strong>full name</strong> with payment</li>
+                  <li>Text a payment screenshot to <strong>{{ supportPhone }}</strong> for faster confirmation</li>
+                  <li>Check your status on the registered players page</li>
+                </ul>
+              </div>
+
+              <div class="payment-card payment-card-warning">
+                <p class="payment-note">
+                  Status stays <strong>PENDING PAYMENT</strong> until payment is confirmed. Your spot is guaranteed only when it shows <strong>CONFIRMED</strong>.
+                </p>
+              </div>
             </div>
             <!-- Venmo button (commented out for future use)
             <div class="payment-buttons">
@@ -725,7 +725,7 @@ const RegistrationDialog = {
             <h4>Comments (optional):</h4>
             <textarea 
               v-model="comments"
-              placeholder="Enter any comments or special requests..."
+              placeholder="Enter any comments or special requests. Let us know if you are arriving late..."
             ></textarea>
           </div>
 
