@@ -725,7 +725,7 @@ const RegistrationDialog = {
 
               <div class="payment-card payment-card-warning">
                 <p class="payment-note">
-                  Status stays <strong>PENDING PAYMENT</strong> until payment is confirmed. Your spot is guaranteed only when it shows <strong>CONFIRMED</strong>.
+                  Status stays <strong>PENDING PAYMENT</strong> until BTTC confirms your payment. Your spot is guaranteed only when it shows <strong>CONFIRMED</strong>.
                 </p>
               </div>
             </div>
