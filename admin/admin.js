@@ -554,6 +554,9 @@ const AdminApp = {
                 <th :class="getSortClass('last_name')" @click="sortBy('last_name')">
                   Last Name
                 </th>
+                <th :class="getSortClass('phone_number')" @click="sortBy('phone_number')">
+                  Phone Number
+                </th>
                 <th :class="getSortClass('status')" @click="sortBy('status')">
                   Status
                 </th>
@@ -565,6 +568,7 @@ const AdminApp = {
                 <td>{{ formatRegisteredAt(player.registered_at) }}</td>
                 <td>{{ player.first_name }}</td>
                 <td>{{ player.last_name }}</td>
+                <td>{{ player.phone_number || 'N/A' }}</td>
                 <td>
                   <span
                     class="status-badge"
