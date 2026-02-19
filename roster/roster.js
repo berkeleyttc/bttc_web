@@ -19,16 +19,16 @@ const getCachedData = (cacheKey, ttl) => {
   try {
     const cached = sessionStorage.getItem(cacheKey);
     if (!cached) return null;
-    
+
     const { data, timestamp } = JSON.parse(cached);
     const now = Date.now();
     const age = now - timestamp;
-    
+
     // Check if cache is still valid (within TTL)
     if (age < ttl) {
       return { data, timestamp };
     }
-    
+
     // Cache expired, remove it
     sessionStorage.removeItem(cacheKey);
     return null;
@@ -69,16 +69,16 @@ const getEventMetadataCache = () => {
   try {
     const cached = sessionStorage.getItem(CACHE_KEYS.EVENT_METADATA);
     if (!cached) return null;
-    
+
     const { data, timestamp } = JSON.parse(cached);
     const now = Date.now();
     const age = now - timestamp;
-    
+
     // Check if cache is still valid (24 hours TTL)
     if (age < CACHE_TTL.EVENT_METADATA) {
       return data;
     }
-    
+
     // Cache expired, remove it
     sessionStorage.removeItem(CACHE_KEYS.EVENT_METADATA);
     return null;
@@ -110,10 +110,10 @@ const RosterApp = {
     const devOverride = typeof ENV !== 'undefined' ? (ENV.DEV_OVERRIDE ?? false) : false;
     const registrationClosed = typeof ENV !== 'undefined' ? (ENV.REGISTRATION_CLOSED ?? false) : false;
     const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
-    
+
     // API endpoint for fetching roster
     const API_URL = `${apiUrl}/rr/roster`;
-    
+
     // Application state
     const players = ref([]);          // Array of player objects from API
     const loading = ref(true);        // Loading state during API calls
@@ -143,7 +143,7 @@ const RosterApp = {
 
     /**
      * Fetches roster data from the API with caching
-     * 
+     *
      * FLOW:
      * 1. Check cache first - if valid (< 45 seconds), use cached data immediately
      * 2. Set loading state (shows loading indicator)
@@ -155,7 +155,7 @@ const RosterApp = {
      * 8. Set players state and capacity state
      * 9. On error: Try cached data, then show user-friendly error message
      * 10. Always: Reset loading state
-     * 
+     *
      * CACHING: Roster data cached for 45 seconds to reduce API calls on page refresh
      * API: New API returns { roster: [], capacity: {} } - capacity included, no separate /capacity call needed
      */
@@ -167,12 +167,12 @@ const RosterApp = {
         players.value = [];
         return;
       }
-      
+
       // Check cache first
       const cachedResult = getCachedData(CACHE_KEYS.ROSTER, CACHE_TTL.ROSTER);
       if (cachedResult && cachedResult.data) {
         // Use cached data immediately (no loading state for instant display)
-        
+
         // Restore roster data
         if (Array.isArray(cachedResult.data.roster)) {
           players.value = cachedResult.data.roster;
@@ -180,50 +180,50 @@ const RosterApp = {
           // Backward compatibility: handle old cache format (just array)
           players.value = cachedResult.data;
         }
-        
+
         // Apply default sort (rating high to low)
         applySort();
-        
+
         // Restore capacity data if available
         if (cachedResult.data.capacity) {
           capacity.value = cachedResult.data.capacity;
           lastUpdated.value.capacity = cachedResult.timestamp;
         }
-        
+
         lastUpdated.value.roster = cachedResult.timestamp;
         loading.value = false;  // Reset loading state when using cache
-        
+
         // Cache is valid, no API call needed
         return;
       }
-      
+
       // No valid cache, fetch from API with loading state
       await fetchFreshRoster();
     };
-    
+
     /**
      * Fetches fresh roster data from API and updates cache
      */
     const fetchFreshRoster = async () => {
       loading.value = true;  // Show loading indicator
       error.value = '';      // Clear previous errors
-      
+
       try {
         // Fetch roster from API
         const response = await fetch(API_URL, getFetchOptions());
         const data = await handleApiResponse(response);
-        
+
         // New API response structure: { roster: [], capacity: {} }
         // Handle both new format (object with roster key) and legacy format (direct array) for backward compatibility
         const rosterData = Array.isArray(data) ? data : (data.roster || []);
-        
+
         // Validate response format (should be array of players)
         if (!Array.isArray(rosterData)) {
           throw new Error('Invalid roster data format received from server.');
         }
-        
+
         const now = Date.now();
-        
+
         // Extract capacity from roster response (new API always includes capacity)
         let capacityData = null;
         if (data.capacity) {
@@ -236,10 +236,10 @@ const RosterApp = {
             eventDate: data.capacity.event_date || null,
             eventType: data.capacity.event_type || null
           };
-          
+
           capacity.value = capacityData;
           lastUpdated.value.capacity = now;
-          
+
           // Cache event metadata separately (long TTL since event date never changes)
           // This cache is shared with the registration page to avoid unnecessary API calls
           if (data.capacity.event_date || data.capacity.event_type) {
@@ -248,20 +248,20 @@ const RosterApp = {
         } else {
           // If capacity not included (should not happen with new API), continue without capacity
         }
-        
+
         // Update cache with fresh data (store both roster and capacity)
         const cacheData = {
           roster: rosterData,
           capacity: capacityData
         };
         setCachedData(CACHE_KEYS.ROSTER, cacheData);
-        
+
         // Set players state with fresh data and timestamp
         players.value = rosterData;
-        
+
         // Apply default sort (rating high to low)
         applySort();
-        
+
         lastUpdated.value.roster = now;
       } catch (err) {
         // On error, try to use cached data as fallback (even if expired)
@@ -276,19 +276,19 @@ const RosterApp = {
             players.value = cachedResult.data;
             lastUpdated.value.roster = cachedResult.timestamp;
           }
-          
+
           // Apply default sort (rating high to low)
           applySort();
-          
+
           // Restore capacity data if available
           if (cachedResult.data.capacity) {
             capacity.value = cachedResult.data.capacity;
             lastUpdated.value.capacity = cachedResult.timestamp;
           }
-          
+
           return;
         }
-        
+
         // No cache available, show error
         error.value = getErrorMessage(err, 'loading roster');
         players.value = [];
@@ -307,12 +307,12 @@ const RosterApp = {
       if (!currentSort.key || players.value.length === 0) {
         return;
       }
-      
+
       const key = currentSort.key;
       const sorted = [...players.value].sort((a, b) => {
         let valA = a[key] || '';
         let valB = b[key] || '';
-        
+
         // Handle date sorting for 'registered_at' column
         // Convert to Date objects for proper date comparison
         if (key === 'registered_at') {
@@ -331,7 +331,7 @@ const RosterApp = {
           valA = valA.toString().toLowerCase();
           valB = valB.toString().toLowerCase();
         }
-        
+
         // Compare values based on sort direction
         if (valA < valB) {
           return currentSort.direction === 'asc' ? -1 : 1;
@@ -341,24 +341,24 @@ const RosterApp = {
         }
         return 0;
       });
-      
+
       players.value = sorted;
     };
 
     /**
      * Sorts the roster by the specified column
-     * 
+     *
      * BEHAVIOR:
      * - Clicking same column toggles sort direction (asc ↔ desc)
      * - Clicking different column sets it as sort key with asc direction
      * - Handles date sorting for 'registered_at' column
      * - Handles string sorting for other columns (case-insensitive)
-     * 
+     *
      * SORT LOGIC:
      * - First click: Sort ascending
      * - Second click (same column): Sort descending
      * - Click different column: Sort ascending
-     * 
+     *
      * @param {string} key - The column key to sort by (e.g., 'first_name', 'bttc_id', 'registered_at')
      */
     const sortBy = (key) => {
@@ -369,24 +369,24 @@ const RosterApp = {
       } else {
         currentSort.direction = 'asc';
       }
-      
+
       // Set the current sort key
       currentSort.key = key;
-      
+
       // Apply the sort
       applySort();
     };
 
     /**
      * Gets the CSS class for a column header based on current sort state
-     * 
+     *
      * BEHAVIOR:
      * - If column is not currently sorted: returns 'sortable'
      * - If column is sorted ascending: returns 'sortable sorted-asc'
      * - If column is sorted descending: returns 'sortable sorted-desc'
-     * 
+     *
      * Used to style column headers with sort indicators (arrows).
-     * 
+     *
      * @param {string} key - The column key (e.g., 'first_name', 'bttc_id', 'registered_at')
      * @returns {string} - CSS class name(s) for the column header
      */
@@ -401,15 +401,15 @@ const RosterApp = {
 
     /**
      * Formats a date string in PST/PDT timezone for user-friendly display
-     * 
+     *
      * FLOW:
      * 1. Parse date string from API (ISO format)
      * 2. Convert to PST/PDT timezone (America/Los_Angeles)
      * 3. Format with user-friendly format: Nov 1, 2025, HH:MM:SS AM/PM PST/PDT
      * 4. Handle invalid dates gracefully (return original string)
-     * 
+     *
      * WHY: API returns dates in UTC/ISO format, but users expect PST/PDT times
-     * 
+     *
      * @param {string} dateString - Date string from API (ISO format)
      * @returns {string} - Formatted date string in PST/PDT (e.g., "Nov 1, 2025, 2:30:45 PM PST")
      */
@@ -421,7 +421,7 @@ const RosterApp = {
       try {
         const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
         const date = new Date(dateString);
-        
+
         // Check if date is valid
         if (isNaN(date.getTime())) {
           return dateString; // Return original if invalid
@@ -447,7 +447,7 @@ const RosterApp = {
 
         // Combine formatted date with timezone
         const result = `${formatted} ${timezoneAbbr}`;
-        
+
         return result;
       } catch (err) {
         return dateString; // Return original on error
@@ -457,13 +457,13 @@ const RosterApp = {
     // Fetch roster when component mounts (when page loads)
     onMounted(async () => {
       await fetchRoster();
-      
+
       // Update current time every second for countdown display
       timeIntervalId = setInterval(() => {
         currentTime.value = Date.now();
       }, 1000);
     });
-    
+
     // Clean up interval when component unmounts
     onUnmounted(() => {
       if (timeIntervalId) {
@@ -473,19 +473,19 @@ const RosterApp = {
     });
 
     // Computed properties (derived state from reactive data)
-    
+
     /**
      * Computed: Whether there are any players in the roster
      * Used to conditionally show/hide roster table
      */
     const hasPlayers = computed(() => players.value.length > 0);
-    
+
     /**
      * Computed: Total number of players registered
      * Used in display: "X players registered"
      */
     const playerCount = computed(() => players.value.length);
-    
+
     /**
      * Computed: Number of spots remaining before event reaches capacity
      * Calculated as: playerCap - confirmedCount
@@ -495,23 +495,23 @@ const RosterApp = {
     const spotsRemaining = computed(() => {
       return Math.max(0, capacity.value.playerCap - capacity.value.confirmedCount);
     });
-    
+
     /**
      * Formats a timestamp into a user-friendly "last updated" string
      * Shows relative time for recent updates (e.g., "5 seconds ago") or formatted time for older
-     * 
+     *
      * @param {number|null} timestamp - Timestamp in milliseconds, or null if no data
      * @returns {string} - Formatted "last updated" string
      */
     const formatLastUpdated = (timestamp) => {
       if (!timestamp) return '';
-      
+
       const now = Date.now();
       const age = now - timestamp;
       const seconds = Math.floor(age / 1000);
       const minutes = Math.floor(seconds / 60);
       const hours = Math.floor(minutes / 60);
-      
+
       // Show relative time for recent updates (within 1 hour)
       if (seconds < 60) {
         return seconds <= 1 ? 'just now' : `${seconds} second${seconds !== 1 ? 's' : ''} ago`;
@@ -520,7 +520,7 @@ const RosterApp = {
       } else if (hours < 1) {
         return 'about an hour ago';
       }
-      
+
       // For older data, show formatted time
       const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
       const date = new Date(timestamp);
@@ -531,7 +531,7 @@ const RosterApp = {
         hour12: true
       });
     };
-    
+
     /**
      * Computed: Formatted "last updated" string for roster data
      */
@@ -539,7 +539,7 @@ const RosterApp = {
       if (!lastUpdated.value.roster) return '';
       return formatLastUpdated(lastUpdated.value.roster);
     });
-    
+
     /**
      * Computed: Formatted "last updated" string for capacity data
      */
@@ -547,7 +547,7 @@ const RosterApp = {
       if (!lastUpdated.value.capacity) return '';
       return formatLastUpdated(lastUpdated.value.capacity);
     });
-    
+
     /**
      * Computed: Formatted event date in user-friendly format
      * Converts ISO date (YYYY-MM-DD) to "Month Day, Year" format (e.g., "Nov 2, 2025")
@@ -555,54 +555,54 @@ const RosterApp = {
      */
     const formattedEventDate = computed(() => {
       if (!capacity.value.eventDate) return '';
-      
+
       try {
         const date = new Date(capacity.value.eventDate + 'T00:00:00'); // Add time to avoid timezone issues
-        
+
         // Check if date is valid
         if (isNaN(date.getTime())) {
           return '';
         }
-        
+
         // Format date as "Month Day, Year" (e.g., "Nov 2, 2025")
         const formatted = date.toLocaleDateString("en-US", {
           month: 'short',
           day: 'numeric',
           year: 'numeric'
         });
-        
+
         return formatted;
       } catch (err) {
         return '';
       }
     });
-    
+
     /**
      * Computed property to get the day of the week from the event date
      * Returns abbreviated day name (e.g., "Fri", "Mon", "Sun")
      */
     const eventDayOfWeek = computed(() => {
       if (!capacity.value.eventDate) return '';
-      
+
       try {
         const date = new Date(capacity.value.eventDate + 'T00:00:00'); // Add time to avoid timezone issues
-        
+
         // Check if date is valid
         if (isNaN(date.getTime())) {
           return '';
         }
-        
+
         // Format day as abbreviated day name (e.g., "Fri", "Mon", "Sun")
         const dayOfWeek = date.toLocaleDateString("en-US", {
           weekday: 'short'
         });
-        
+
         return dayOfWeek;
       } catch (err) {
         return '';
       }
     });
-    
+
     /**
      * Computed: Time until next roster update (in seconds)
      * Calculates remaining time until cache expires and fresh data will be fetched
@@ -610,18 +610,18 @@ const RosterApp = {
      */
     const nextUpdateIn = computed(() => {
       if (!lastUpdated.value.roster) return null;
-      
+
       const now = currentTime.value;
       const lastUpdateTime = lastUpdated.value.roster;
       const age = now - lastUpdateTime;
       const remaining = CACHE_TTL.ROSTER - age;
-      
+
       // If cache has expired, return 0 (update should happen soon)
       if (remaining <= 0) return 0;
-      
+
       return Math.ceil(remaining / 1000); // Return seconds
     });
-    
+
     /**
      * Computed: Formatted "next update" string
      * Shows countdown until next update (e.g., "Next update in 30 seconds")
@@ -630,7 +630,7 @@ const RosterApp = {
     const nextUpdateText = computed(() => {
       const seconds = nextUpdateIn.value;
       if (seconds === null) return '';
-      
+
       if (seconds <= 0) {
         return 'Refresh page to get latest data';
       } else if (seconds < 60) {
@@ -645,29 +645,29 @@ const RosterApp = {
         }
       }
     });
-    
+
     /**
      * Computed: Check if today's date is after the event date
      * Returns true if event date exists and today is after it
      */
     const isAfterEventDate = computed(() => {
       if (!capacity.value.eventDate) return false;
-      
+
       try {
         const now = new Date();
         const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
         const eventDate = new Date(capacity.value.eventDate + 'T00:00:00');
-        
+
         // Compare dates (ignore time, just compare dates)
         const today = new Date(pstNow.getFullYear(), pstNow.getMonth(), pstNow.getDate());
         const event = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
-        
+
         return today > event;
       } catch (err) {
         return false;
       }
     });
-    
+
     /**
      * Computed: Determine if we should show the closed message instead of roster
      * Roster is ONLY open from Wednesday 00:00 to Saturday 00:00
@@ -679,7 +679,7 @@ const RosterApp = {
       // Priority order: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule
       // If DEV_OVERRIDE is true, always show roster (don't show closed message)
       if (devOverride) return false;
-      
+
       // If REGISTRATION_CLOSED is true, show closed message
       if (registrationClosed) return true;
 
@@ -689,31 +689,31 @@ const RosterApp = {
       const dayOfWeek = pstNow.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
       const hours = pstNow.getHours();
       const minutes = pstNow.getMinutes();
-      
+
       // Wednesday (day 3): show roster if at or after midnight (00:00)
       if (dayOfWeek === 3) {
         return !(hours >= 0 && minutes >= 0); // Show closed message if before 00:00
       }
-      
+
       // Thursday (day 4): always show roster
       if (dayOfWeek === 4) {
         return false; // Don't show closed message
       }
-      
+
       // Friday (day 5): always show roster
       if (dayOfWeek === 5) {
         return false; // Don't show closed message
       }
-      
+
       // Saturday (day 6): hide roster at midnight (00:00) or later
       if (dayOfWeek === 6) {
         return true; // Show closed message starting at Saturday 00:00
       }
-      
+
       // All other days (Sunday, Monday, Tuesday): hide roster
       return true; // Show closed message
     });
-    
+
     /**
      * Computed: Closed message text (same as registration page)
      */
@@ -723,7 +723,7 @@ const RosterApp = {
       }
       return 'Registration is currently closed.';
     });
-    
+
     return {
       players,
       loading,
@@ -749,11 +749,11 @@ const RosterApp = {
     };
   },
   template: `
-    <div class="roster-container">
+    <div class="roster-container container_12">
       <a href="../registration/" class="back-link">← Back to Round Robin Registration</a>
       <h3>Round Robin Registered Players</h3>
       <p v-if="formattedEventDate && capacity.eventOpen && !shouldShowClosedMessage" class="event-date">For {{ eventDayOfWeek }}, {{ formattedEventDate }}</p>
-      
+
       <!-- Show closed message if event is closed and today is after event date -->
       <div v-if="shouldShowClosedMessage" class="status-banner status-closed">
         <div>🔴 Registration is CLOSED</div>
@@ -761,22 +761,22 @@ const RosterApp = {
           {{ closedMessage }}
         </div>
       </div>
-      
+
       <!-- Show roster content if not showing closed message -->
       <template v-else>
         <div v-if="loading" class="loading-message">
           Loading roster...
         </div>
-        
+
         <div v-else-if="error" class="error-message">
           <p>{{ error }}</p>
           <p>If the problem persists, please contact BTTC support at {{ supportPhone }} ({{ supportMethod }})</p>
         </div>
-        
+
         <div v-else-if="!hasPlayers" class="empty-message">
           <p>No players registered yet.</p>
         </div>
-        
+
         <div v-else class="roster-table-container">
         <p class="player-count">
           <span class="player-count-left">
@@ -793,26 +793,26 @@ const RosterApp = {
         <table class="roster-table">
           <thead>
             <tr>
-              <th 
-                :class="getSortClass('registered_at')" 
+              <th
+                :class="getSortClass('registered_at')"
                 @click="sortBy('registered_at')"
               >
                 Registered At
               </th>
-              <th 
-                :class="getSortClass('full_name')" 
+              <th
+                :class="getSortClass('full_name')"
                 @click="sortBy('full_name')"
               >
                 Full Name
               </th>
-              <th 
-                :class="getSortClass('rating')" 
+              <th
+                :class="getSortClass('rating')"
                 @click="sortBy('rating')"
               >
                 BTTC Rating
               </th>
-              <th 
-                :class="getSortClass('status')" 
+              <th
+                :class="getSortClass('status')"
                 @click="sortBy('status')"
               >
                 Status
