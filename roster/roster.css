@@ -1,6 +1,6 @@
 /**
  * BTTC Round Robin Roster - Vue.js Styles
- * 
+ *
  * DEBUGGING GUIDE:
  * - Use browser DevTools to inspect elements and see applied styles
  * - Check console for [RosterApp] prefixed logs for JavaScript debugging
@@ -8,7 +8,7 @@
  * - Use browser's element inspector to see computed styles
  * - Table sorting uses .sortable, .sorted-asc, .sorted-desc classes
  * - Print styles are separated at bottom of file
- * 
+ *
  * @file css/roster-vue.css
  */
 
@@ -32,8 +32,6 @@
   padding: 2rem;
   border-radius: 12px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  max-width: 900px;
-  width: 90%;
   text-align: center;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
@@ -237,22 +235,21 @@
   .roster-container {
     margin: 2rem auto;
     padding: 1rem;
-    width: 95%;
   }
-  
+
   .roster-container h3 {
     font-size: 1.5rem;
   }
-  
+
   .roster-table {
     font-size: 0.9rem;
   }
-  
+
   .roster-table th,
   .roster-table td {
     padding: 0.5rem;
   }
-  
+
   .back-link {
     font-size: 0.9rem;
     padding: 0.4rem 0.8rem;
@@ -261,19 +258,21 @@
 
 @media (max-width: 480px) {
   .roster-container {
+    width: 100%;
+    border-radius: 0;
     margin: 1rem auto;
     padding: 0.75rem;
   }
-  
+
   .roster-table {
     font-size: 0.85rem;
   }
-  
+
   .roster-table th,
   .roster-table td {
     padding: 0.4rem;
   }
-  
+
   .player-count {
     font-size: 0.85rem;
   }
@@ -303,16 +302,16 @@
     margin: 0;
     padding: 1rem;
   }
-  
+
   .back-link {
     display: none;
   }
-  
+
   .roster-table th {
     background-color: #f0f0f0 !important;
     color: #000 !important;
   }
-  
+
   .roster-table tbody tr {
     page-break-inside: avoid;
   }
