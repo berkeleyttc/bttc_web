@@ -150,6 +150,15 @@
   font-size: 0.9rem;
   font-weight: 500;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.player-count-left {
+  display: inline;
 }
 
 .capacity-full-text {
@@ -349,5 +358,110 @@
   font-size: 0.85rem;
   margin-top: 0.5rem;
   font-weight: normal;
+}
+
+/* Section Titles */
+.roster-section-title,
+.waitlist-section-title {
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #333;
+  text-align: left;
+  margin: 1.5rem 0 0.75rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.roster-section-title {
+  margin-top: 0;
+}
+
+/* Waitlist Section */
+.waitlist-section {
+  margin-top: 2.5rem;
+}
+
+/* Waitlist Table */
+.waitlist-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  background: #fff;
+}
+
+.waitlist-table th,
+.waitlist-table td {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  text-align: left;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+.waitlist-table th {
+  background-color: #fff3cd;
+  font-weight: 700;
+  color: #856404;
+  border-color: #ffc107;
+}
+
+.waitlist-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.waitlist-table tbody tr:hover {
+  background-color: #fffbf0;
+}
+
+.waitlist-table tbody td {
+  color: #555;
+}
+
+.waitlist-table .waitlist-position {
+  font-weight: 600;
+  color: #856404;
+}
+
+/* Mobile Optimizations for Waitlist */
+@media (max-width: 768px) {
+  .waitlist-section-title {
+    font-size: 1.125rem;
+  }
+
+  .waitlist-table {
+    font-size: 0.9rem;
+  }
+
+  .waitlist-table th,
+  .waitlist-table td {
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .waitlist-table {
+    font-size: 0.85rem;
+  }
+
+  .waitlist-table th,
+  .waitlist-table td {
+    padding: 0.4rem;
+  }
+}
+
+/* Print Styles for Waitlist */
+@media print {
+  .waitlist-section {
+    page-break-before: avoid;
+  }
+
+  .waitlist-table th {
+    background-color: #fff3cd !important;
+    color: #000 !important;
+  }
+
+  .waitlist-table tbody tr {
+    page-break-inside: avoid;
+  }
 }
 
