@@ -590,6 +590,7 @@ const RegistrationDialog = {
   props: {
     show: Boolean,    // Controls dialog visibility
     player: Object,   // Player object being registered
+    capacity: Object, // Capacity info to determine if full
     successMessage: String,  // Success message to display inline
     errorMessage: String     // Error message to display inline
   },
@@ -700,7 +701,7 @@ const RegistrationDialog = {
   template: `
     <div v-if="show" class="dialog-overlay" @click="handleClose">
       <div class="dialog-box" @click.stop>
-        <div class="dialog-title">Complete Registration</div>
+        <div class="dialog-title">{{ capacity && capacity.isAtCapacity ? 'Join Waitlist' : 'Complete Registration' }}</div>
 
         <!-- Success Message -->
         <div v-if="successMessage" class="dialog-message dialog-message-success">
@@ -754,6 +755,9 @@ const RegistrationDialog = {
               <div class="payment-card payment-card-warning">
                 <p class="payment-note">
                   Status stays <strong>PENDING PAYMENT</strong> until BTTC confirms your payment. Your spot is guaranteed only when it shows <strong>CONFIRMED</strong>.
+                  <br>
+                  <br>
+                  If you’re on the <strong>WAITLIST</strong>, donot pay. If you're moved to the roster, BTTC support will contact you for payment.
                 </p>
               </div>
             </div>
@@ -804,7 +808,7 @@ const RegistrationDialog = {
             :class="{ 'dialog-btn-disabled': !waiverAccepted }"
             @click.stop="handleConfirm"
           >
-            Register
+            {{ capacity && capacity.isAtCapacity ? 'Join Waitlist' : 'Register' }}
           </button>
           <button v-if="successMessage" type="button" class="dialog-btn dialog-btn-ok" @click="handleClose">Close</button>
         </div>
@@ -1626,6 +1630,7 @@ const RegistrationApp = {
       <registration-dialog 
         :show="showRegistrationDialog"
         :player="currentRegistrationData?.player"
+        :capacity="capacity"
         :success-message="registrationSuccessMessage"
         :error-message="registrationErrorMessage"
         @close="showRegistrationDialog = false"
