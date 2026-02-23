@@ -80,6 +80,9 @@ const CapacityBanner = {
     },
     lastUpdatedText() {
       return this.formatLastUpdated(this.lastUpdated);
+    },
+    waitlistCount() {
+      return this.capacity.waitlistCount || 0;
     }
   },
   template: `
@@ -95,6 +98,7 @@ const CapacityBanner = {
       </div>
       <div class="status-details">
         {{ capacity.confirmedCount }}/{{ capacity.playerCap }} spots filled
+        <span v-if="waitlistCount > 0"> • {{ waitlistCount }} on waitlist</span>
         <span v-if="lastUpdatedText" class="capacity-last-updated">
           • Updated {{ lastUpdatedText }}
         </span>
@@ -457,7 +461,7 @@ const PlayerLookup = {
 const PlayerList = {
   props: {
     players: Array,        // Array of player objects from search
-    capacity: Object,      // Capacity info: { isAtCapacity, confirmedCount, playerCap, spotsAvailable }
+    capacity: Object,      // Capacity info: { isAtCapacity, confirmedCount, playerCap, spotsAvailable, waitlistCount }
     capacityLastUpdated: Number,  // Timestamp when capacity was last fetched (optional)
     devOverride: Boolean  // If true, bypasses all day/time constraints
   },
@@ -477,8 +481,9 @@ const PlayerList = {
     });
 
     // Computed: Whether registration is effectively available (devOverride bypasses capacity)
+    // Note: With waitlist feature, users can always register even when full
     const canRegister = computed(() => {
-      return props.devOverride || (props.capacity.eventOpen && !props.capacity.isAtCapacity);
+      return props.devOverride || props.capacity.eventOpen;
     });
 
     return {
@@ -502,7 +507,8 @@ const PlayerList = {
           <h4 class="player-name-heading">{{ player.first_name }} {{ player.last_name }}</h4>
         </div>
         
-        <div v-if="player.is_registered" class="entry-content">
+        <!-- On Roster: is_registered === true AND is_on_waitlist === false -->
+        <div v-if="player.is_registered && !player.is_on_waitlist" class="entry-content">
           <p class="player-registered-status">
             <span class="status-icon">✓</span>
             <span class="player-registered-label">Already registered</span>
@@ -525,6 +531,34 @@ const PlayerList = {
             <span class="token-error" v-if="player.unregisterError">{{ player.unregisterError }}</span>
           </div>
         </div>
+        
+        <!-- On Waitlist: is_registered === true AND is_on_waitlist === true -->
+        <div v-else-if="player.is_registered && player.is_on_waitlist" class="entry-content">
+          <p class="player-waitlist-status">
+            <span class="status-icon">⏳</span>
+            <span class="player-waitlist-label">You're on the waitlist</span>
+            <span v-if="player.waitlist_position" class="waitlist-position">Position #{{ player.waitlist_position }}</span>
+          </p>
+          <div v-if="!isEventOpen" class="unregister-form">
+            <p class="registration-full-message">
+              <span class="status-icon">🔒</span>
+              Event registrations are currently closed
+            </p>
+            <p class="full-message-hint">You cannot unregister at this time. Please contact BTTC support if needed.</p>
+          </div>
+          <div v-else class="unregister-form">
+            <button 
+              type="button"
+              class="confirm-btn unregister-btn" 
+              @click="unregisterPlayer(index)"
+            >
+              Remove from Waitlist
+            </button>
+            <span class="token-error" v-if="player.unregisterError">{{ player.unregisterError }}</span>
+          </div>
+        </div>
+        
+        <!-- Not Registered: is_registered === false -->
         <div v-else class="entry-content">
           <div v-if="!isEventOpen" class="register-form full-message">
             <p class="registration-full-message">
@@ -533,20 +567,13 @@ const PlayerList = {
             </p>
             <p class="full-message-hint">Please check back later or contact BTTC support for more information.</p>
           </div>
-          <div v-else-if="!canRegister" class="register-form full-message">
-            <p class="registration-full-message">
-              <span class="status-icon">❌</span>
-              Registration is full ({{ capacity.confirmedCount }}/{{ capacity.playerCap }})
-            </p>
-            <p class="full-message-hint">Please check back later or contact BTTC support if you believe this is an error.</p>
-          </div>
           <div v-else class="register-form">
             <button 
               type="button"
               class="confirm-btn" 
               @click="registerPlayer(index)"
             >
-              Register
+              {{ capacity.isAtCapacity ? 'Join Waitlist' : 'Register' }}
             </button>
             <span class="token-error" v-if="player.registerError">{{ player.registerError }}</span>
           </div>
@@ -563,6 +590,7 @@ const RegistrationDialog = {
   props: {
     show: Boolean,    // Controls dialog visibility
     player: Object,   // Player object being registered
+    capacity: Object, // Capacity info to determine if full
     successMessage: String,  // Success message to display inline
     errorMessage: String     // Error message to display inline
   },
@@ -673,7 +701,7 @@ const RegistrationDialog = {
   template: `
     <div v-if="show" class="dialog-overlay" @click="handleClose">
       <div class="dialog-box" @click.stop>
-        <div class="dialog-title">Complete Registration</div>
+        <div class="dialog-title">{{ capacity && capacity.isAtCapacity ? 'Join Waitlist' : 'Complete Registration' }}</div>
 
         <!-- Success Message -->
         <div v-if="successMessage" class="dialog-message dialog-message-success">
@@ -709,14 +737,15 @@ const RegistrationDialog = {
                   <li><span class="price-tag">$5</span> Juniors (16 and under) and seniors (60+)</li>
                   <li><span class="price-tag">Free</span> BTTC or USATT rating over 2150</li>
                 </ul>
-                <p class="payment-note payment-methods-note">
+<!--                <p class="payment-note payment-methods-note">
                   <strong>Available Payment Options:</strong> Venmo or Zelle
-                </p>
+                </p>-->
               </div>
 
               <div class="payment-card">
                 <h4 class="payment-card-title">Payment instructions</h4>
                 <ul class="payment-instructions">
+                  <li>Make a payment to Zelle - <strong>510-757-3662</strong> OR Venmo @<strong>Bunny-Lee-3</strong></li>
                   <li>Include your <strong>full name</strong> as registered with BTTC with payment</li>
                   <li>Text a payment screenshot to <strong>{{ supportPhone }}</strong> for faster confirmation</li>
                   <li>Check your status on the registered players page</li>
@@ -726,6 +755,9 @@ const RegistrationDialog = {
               <div class="payment-card payment-card-warning">
                 <p class="payment-note">
                   Status stays <strong>PENDING PAYMENT</strong> until BTTC confirms your payment. Your spot is guaranteed only when it shows <strong>CONFIRMED</strong>.
+                  <br>
+                  <br>
+                  If you’re on the <strong>WAITLIST</strong>, donot pay. If you're moved to the roster, BTTC support will contact you for payment.
                 </p>
               </div>
             </div>
@@ -776,7 +808,7 @@ const RegistrationDialog = {
             :class="{ 'dialog-btn-disabled': !waiverAccepted }"
             @click.stop="handleConfirm"
           >
-            Register
+            {{ capacity && capacity.isAtCapacity ? 'Join Waitlist' : 'Register' }}
           </button>
           <button v-if="successMessage" type="button" class="dialog-btn dialog-btn-ok" @click="handleClose">Close</button>
         </div>
@@ -920,6 +952,7 @@ const RegistrationApp = {
       confirmedCount: 0,                        // Number of confirmed registrations
       playerCap: fallbackPlayerCap,             // Maximum capacity
       spotsAvailable: 0,                        // Available spots
+      waitlistCount: 0,                         // Number of people on waitlist
       eventOpen: true,                          // Whether event is accepting registrations
       eventDate: null,                          // Event date (ISO format YYYY-MM-DD)
       eventType: null                           // Event type (e.g., "rr", "tournament", "group_training")
@@ -1181,6 +1214,7 @@ const RegistrationApp = {
         confirmedCount: Number(capacityData.confirmed_count || 0),
         playerCap: Number(capacityData.player_cap || defaultPlayerCap),
         spotsAvailable: Number(capacityData.spots_available || 0),
+        waitlistCount: Number(capacityData.waitlist_count || 0),
         eventOpen: !!capacityData.event_open,
         eventDate: capacityData.event_date || null,
         eventType: capacityData.event_type || null
@@ -1250,6 +1284,8 @@ const RegistrationApp = {
       error.value = '';
       players.value = playerList.map(player => ({
         ...player,
+        is_on_waitlist: player.is_on_waitlist || false,
+        waitlist_position: player.waitlist_position || null,
         registerError: '',
         unregisterError: ''
       }));
@@ -1281,10 +1317,7 @@ const RegistrationApp = {
         return;
       }
 
-      if (!devOverride && capacity.value.isAtCapacity) {
-        alert(`Registration is full! All ${capacity.value.playerCap} spots have been taken.`);
-        return;
-      }
+      // Note: No longer checking capacity.isAtCapacity - users can join waitlist when full
 
       const player = players.value[index];
       
@@ -1354,13 +1387,32 @@ const RegistrationApp = {
         const result = await handleApiResponse(response);
         
         if (result.success) {
-          // Set success message instead of alert
-          registrationSuccessMessage.value = result.message || 'Registration completed successfully!';
+          // Check if player was added to waitlist
+          const onWaitlist = result.on_waitlist || false;
+          const waitlistPosition = result.waitlist_position || null;
           
-          // Update local state instead of clearing and forcing a new lookup
-          // Mark the player as registered in the local players array
+          if (onWaitlist) {
+            // Player added to waitlist
+            const positionText = waitlistPosition ? ` Position #${waitlistPosition}` : '';
+            registrationSuccessMessage.value = `You're on the waitlist!${positionText}`;
+          } else {
+            // Player registered normally
+            registrationSuccessMessage.value = result.message || 'Registration completed successfully!';
+          }
+          
+          // Update local state
           if (players.value[index]) {
-            players.value[index].is_registered = true;
+            if (onWaitlist) {
+              // On waitlist: is_registered = true, is_on_waitlist = true
+              players.value[index].is_registered = true;
+              players.value[index].is_on_waitlist = true;
+              players.value[index].waitlist_position = waitlistPosition;
+            } else {
+              // On roster: is_registered = true, is_on_waitlist = false
+              players.value[index].is_registered = true;
+              players.value[index].is_on_waitlist = false;
+              players.value[index].waitlist_position = null;
+            }
             // Clear any error fields
             players.value[index].registerError = '';
             players.value[index].unregisterError = '';
@@ -1377,11 +1429,7 @@ const RegistrationApp = {
           error.value = '';
           // Don't close the dialog - let user see success message and click Close button
         } else {
-          if (result.isAtCapacity) {
-            registrationErrorMessage.value = `Registration is full! All ${result.playerCap} spots have been taken.`;
-          } else {
-            registrationErrorMessage.value = result.message || 'Registration failed. Please try again.';
-          }
+          registrationErrorMessage.value = result.message || 'Registration failed. Please try again.';
         }
       } catch (err) {
         const friendlyMessage = getErrorMessage(err, 'registration');
@@ -1424,10 +1472,11 @@ const RegistrationApp = {
           // Set success message instead of alert
           unregistrationSuccessMessage.value = result.message || 'Unregistration completed successfully!';
           
-          // Update local state instead of making another API call
-          // Mark the player as unregistered in the local players array
+          // Update local state - player is no longer registered (not on roster or waitlist)
           if (players.value[index]) {
             players.value[index].is_registered = false;
+            players.value[index].is_on_waitlist = false;
+            players.value[index].waitlist_position = null;
             // Clear any error fields
             players.value[index].registerError = '';
             players.value[index].unregisterError = '';
@@ -1581,6 +1630,7 @@ const RegistrationApp = {
       <registration-dialog 
         :show="showRegistrationDialog"
         :player="currentRegistrationData?.player"
+        :capacity="capacity"
         :success-message="registrationSuccessMessage"
         :error-message="registrationErrorMessage"
         @close="showRegistrationDialog = false"

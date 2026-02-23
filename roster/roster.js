@@ -115,7 +115,8 @@ const RosterApp = {
     const API_URL = `${apiUrl}/rr/roster`;
 
     // Application state
-    const players = ref([]);          // Array of player objects from API
+    const players = ref([]);          // Array of player objects from API (roster only)
+    const waitlist = ref([]);         // Array of players on waitlist
     const loading = ref(true);        // Loading state during API calls
     const error = ref('');            // Error message to display
     const capacity = ref({
@@ -123,6 +124,7 @@ const RosterApp = {
       confirmedCount: 0,              // Number of confirmed registrations
       playerCap: fallbackPlayerCap,   // Maximum capacity
       spotsAvailable: 0,              // Available spots remaining
+      waitlistCount: 0,               // Number of people on waitlist
       eventOpen: true,                // Whether event is accepting registrations
       eventDate: null,                // Event date (ISO format YYYY-MM-DD)
       eventType: null                 // Event type (e.g., "rr", "tournament", "group_training")
@@ -181,6 +183,11 @@ const RosterApp = {
           players.value = cachedResult.data;
         }
 
+        // Restore waitlist data
+        if (Array.isArray(cachedResult.data.waitlist)) {
+          waitlist.value = cachedResult.data.waitlist;
+        }
+
         // Apply default sort (rating high to low)
         applySort();
 
@@ -213,9 +220,10 @@ const RosterApp = {
         const response = await fetch(API_URL, getFetchOptions());
         const data = await handleApiResponse(response);
 
-        // New API response structure: { roster: [], capacity: {} }
+        // New API response structure: { roster: [], waitlist: [], capacity: {} }
         // Handle both new format (object with roster key) and legacy format (direct array) for backward compatibility
         const rosterData = Array.isArray(data) ? data : (data.roster || []);
+        const waitlistData = Array.isArray(data.waitlist) ? data.waitlist : [];
 
         // Validate response format (should be array of players)
         if (!Array.isArray(rosterData)) {
@@ -232,6 +240,7 @@ const RosterApp = {
             confirmedCount: Number(data.capacity.confirmed_count || 0),
             playerCap: Number(data.capacity.player_cap || defaultPlayerCap),
             spotsAvailable: Number(data.capacity.spots_available || 0),
+            waitlistCount: Number(data.capacity.waitlist_count || 0),
             eventOpen: !!data.capacity.event_open,
             eventDate: data.capacity.event_date || null,
             eventType: data.capacity.event_type || null
@@ -249,15 +258,17 @@ const RosterApp = {
           // If capacity not included (should not happen with new API), continue without capacity
         }
 
-        // Update cache with fresh data (store both roster and capacity)
+        // Update cache with fresh data (store roster, waitlist, and capacity)
         const cacheData = {
           roster: rosterData,
+          waitlist: waitlistData,
           capacity: capacityData
         };
         setCachedData(CACHE_KEYS.ROSTER, cacheData);
 
-        // Set players state with fresh data and timestamp
+        // Set players and waitlist state with fresh data and timestamp
         players.value = rosterData;
+        waitlist.value = waitlistData;
 
         // Apply default sort (rating high to low)
         applySort();
@@ -277,6 +288,11 @@ const RosterApp = {
             lastUpdated.value.roster = cachedResult.timestamp;
           }
 
+          // Restore waitlist data from stale cache
+          if (Array.isArray(cachedResult.data.waitlist)) {
+            waitlist.value = cachedResult.data.waitlist;
+          }
+
           // Apply default sort (rating high to low)
           applySort();
 
@@ -292,6 +308,7 @@ const RosterApp = {
         // No cache available, show error
         error.value = getErrorMessage(err, 'loading roster');
         players.value = [];
+        waitlist.value = [];
         lastUpdated.value.roster = null;
       } finally {
         // Always reset loading state (even on error)
@@ -481,10 +498,21 @@ const RosterApp = {
     const hasPlayers = computed(() => players.value.length > 0);
 
     /**
-     * Computed: Total number of players registered
+     * Computed: Whether there are any players on the waitlist
+     * Used to conditionally show/hide waitlist table
+     */
+    const hasWaitlist = computed(() => waitlist.value.length > 0);
+
+    /**
+     * Computed: Total number of players registered (on roster)
      * Used in display: "X players registered"
      */
     const playerCount = computed(() => players.value.length);
+
+    /**
+     * Computed: Total number of players on waitlist
+     */
+    const waitlistCount = computed(() => waitlist.value.length);
 
     /**
      * Computed: Number of spots remaining before event reaches capacity
@@ -726,12 +754,15 @@ const RosterApp = {
 
     return {
       players,
+      waitlist,
       loading,
       error,
       capacity,
       currentSort,
       hasPlayers,
+      hasWaitlist,
       playerCount,
+      waitlistCount,
       spotsRemaining,
       rosterLastUpdated,
       capacityLastUpdated,
@@ -785,11 +816,15 @@ const RosterApp = {
             <span v-else-if="capacity.isAtCapacity" class="capacity-full-text">{{ capacity.confirmedCount }}/{{ capacity.playerCap }} • Full</span>
             <span v-else-if="capacity.playerCap > 0">{{ capacity.confirmedCount }}/{{ capacity.playerCap }} • {{ spotsRemaining }} spot{{ spotsRemaining !== 1 ? 's' : '' }} remaining</span>
             <span v-else>{{ playerCount }} player{{ playerCount !== 1 ? 's' : '' }} registered</span>
+            <span v-if="capacity.waitlistCount > 0"> • {{ capacity.waitlistCount }} on waitlist</span>
           </span>
           <span v-if="nextUpdateText" class="next-update">
-            • {{ nextUpdateText }}
+            {{ nextUpdateText }}
           </span>
         </p>
+        
+        <!-- Roster Table -->
+        <h4 class="roster-section-title">On the Roster</h4>
         <table class="roster-table">
           <thead>
             <tr>
@@ -828,6 +863,29 @@ const RosterApp = {
             </tr>
           </tbody>
         </table>
+
+        <!-- Waitlist Table -->
+        <div v-if="hasWaitlist" class="waitlist-section">
+          <h4 class="waitlist-section-title">Waitlist ({{ waitlistCount }} player{{ waitlistCount !== 1 ? 's' : '' }})</h4>
+          <table class="waitlist-table">
+            <thead>
+              <tr>
+                <th>Position</th>
+                <th>Registered At</th>
+                <th>Full Name</th>
+                <th>BTTC Rating</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="player in waitlist" :key="player.position">
+                <td class="waitlist-position">#{{ player.position }}</td>
+                <td>{{ formatDatePST(player.registered_at) }}</td>
+                <td>{{ player.full_name }}</td>
+                <td>{{ player.rating }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         </div>
       </template>
     </div>
