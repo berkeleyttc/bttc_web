@@ -871,15 +871,17 @@ const RosterApp = {
             <thead>
               <tr>
                 <th>Position</th>
+                <th>Registered At</th>
                 <th>Full Name</th>
-                <th>Added At</th>
+                <th>BTTC Rating</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="player in waitlist" :key="player.position">
                 <td class="waitlist-position">#{{ player.position }}</td>
+                <td>{{ formatDatePST(player.registered_at) }}</td>
                 <td>{{ player.full_name }}</td>
-                <td>{{ formatDatePST(player.created_at) }}</td>
+                <td>{{ player.rating }}</td>
               </tr>
             </tbody>
           </table>
