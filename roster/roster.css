@@ -158,7 +158,13 @@
 }
 
 .player-count-left {
-  display: inline;
+  flex: 1;
+  min-width: 0;
+}
+
+.next-update {
+  margin-left: auto;
+  white-space: nowrap;
 }
 
 .capacity-full-text {
@@ -399,10 +405,9 @@
 }
 
 .waitlist-table th {
-  background-color: #fff3cd;
+  background-color: #f0f0f0;
   font-weight: 700;
-  color: #856404;
-  border-color: #ffc107;
+  color: #333;
 }
 
 .waitlist-table tbody tr {

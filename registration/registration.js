@@ -736,14 +736,15 @@ const RegistrationDialog = {
                   <li><span class="price-tag">$5</span> Juniors (16 and under) and seniors (60+)</li>
                   <li><span class="price-tag">Free</span> BTTC or USATT rating over 2150</li>
                 </ul>
-                <p class="payment-note payment-methods-note">
+<!--                <p class="payment-note payment-methods-note">
                   <strong>Available Payment Options:</strong> Venmo or Zelle
-                </p>
+                </p>-->
               </div>
 
               <div class="payment-card">
                 <h4 class="payment-card-title">Payment instructions</h4>
                 <ul class="payment-instructions">
+                  <li>Make a payment to Zelle - <strong>510-757-3662</strong> OR Venmo @<strong>Bunny-Lee-3</strong></li>
                   <li>Include your <strong>full name</strong> as registered with BTTC with payment</li>
                   <li>Text a payment screenshot to <strong>{{ supportPhone }}</strong> for faster confirmation</li>
                   <li>Check your status on the registered players page</li>

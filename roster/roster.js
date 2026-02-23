@@ -819,7 +819,7 @@ const RosterApp = {
             <span v-if="capacity.waitlistCount > 0"> • {{ capacity.waitlistCount }} on waitlist</span>
           </span>
           <span v-if="nextUpdateText" class="next-update">
-            • {{ nextUpdateText }}
+            {{ nextUpdateText }}
           </span>
         </p>
         
