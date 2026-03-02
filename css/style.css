@@ -355,15 +355,35 @@ img {
 }
 
 
+.row {
+  display: grid;
+  column-gap: 1em;
+  clear: both;
+  border-bottom: 1px solid #ccc;
+}
+
+.fifty-fifty {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 500px) {
+.fifty-fifty {
+    grid-template-columns: 1fr;
+
+    >*:first-child {
+      border-bottom: 1px solid #ccc;
+    }
+  }
+}
+
+
 body { background-color: #EBE9E4; font-family: helvetica, arial, sans-serif; }
 a { color: #627263; }
 p { margin-bottom: 1em; max-width: 52em; }
-h1 { font-family: "PT Sans Narrow", sans-serif; font-size: 285%; margin-bottom: 10px; }
-h2 { font-family: "Lobster", cursive; font-size: 170%; margin-bottom: 10px; }
+h1 { font-family: "PT Sans Narrow", sans-serif; font-size: 266%; margin-bottom: 10px; }
+h2 { font-family: "PT Sans Narrow", sans-serif; font-size: 170%; margin-bottom: 10px; margin-top: 0.85em; }
 h1, h2, h3, h4, h5, h6 { line-height: 1.2; }
 table { width: 100%; }
-.tel, .time, .currency { font-weight: bold; }
-.currency { color: #009933; }
 .inactive { display: none; }
 
 /* .border { background: transparent url(../images/shadow-body-5px.png) repeat-y scroll center top; margin: 0 auto; width: 1000px; } */
@@ -417,7 +437,7 @@ table { width: 100%; }
     }
   }
 
-#announcements { background-color: rgb(255, 200, 200); border-radius: 10px; font-weight: bold; margin: 0 0 15px 0;
+#announcements { background-color: rgb(255, 200, 200); border-radius: 10px; margin: 0 0 15px 0;
   padding: 20px 5vw; text-align: center; }
 
 #announcements p {
@@ -429,17 +449,20 @@ table { width: 100%; }
   border-bottom: 1px solid;
 }
 
+#announcements p:last-child {
+  padding-bottom: 0;
+}
+
 .notice-red {
   color: #A90A08;
 }
 
-#closures { background-color: rgb(150, 200, 255); border-radius: 10px; margin: 0 0 15px 0; padding: 10px; }
+#closures { background-color: rgb(150, 200, 255); border-radius: 10px; margin: 0 0 15px 0; padding: 10px; margin-top: 1em; }
 
-table { margin-bottom: 10px; }
-table .who { width: 320px; }
-table .how { width: 640px; }
-th { background-color: #F2EEEC; text-align: left; }
-th, td { border-bottom: 1px solid #DEDBD9; padding: 5px; }
+
+a.button { display: inline-block; background-color: #0d6efd; color: white; border-radius: 5px; padding: 4px 8px; text-decoration: none; }
+a.button:hover,
+a.button:focus { background-color: #0b5ed7; outline: none; }
 
 .results table {
   max-width: 600px;
