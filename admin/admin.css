@@ -16,6 +16,82 @@
 }
 
 /* ========================================
+   ADMIN SHELL & TAB NAVIGATION
+   ======================================== */
+
+.admin-shell {
+  margin: 2rem auto 4rem;
+  max-width: 1200px;
+  width: 90%;
+}
+
+.admin-shell-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  border-radius: 12px 12px 0 0;
+  border: 1px solid #e9ecef;
+  border-bottom: 2px solid #e9ecef;
+  padding: 0.875rem 1.5rem;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 0.375rem;
+}
+
+.admin-tab {
+  padding: 0.5rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #666;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-tab:hover:not(.active) {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.admin-tab.active {
+  background-color: #0d6efd;
+  color: #fff;
+  border-color: #0d6efd;
+}
+
+.admin-shell .admin-container {
+  margin: 0;
+  border-radius: 0 0 12px 12px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .admin-shell {
+    margin: 1rem auto 2rem;
+    width: 95%;
+  }
+
+  .admin-shell-header {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .admin-tab {
+    font-size: 0.875rem;
+    padding: 0.4rem 0.875rem;
+  }
+}
+
+/* ========================================
    ADMIN CONTAINER & LAYOUT
    ======================================== */
 
@@ -257,10 +333,6 @@
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
-.logout-container {
-  text-align: right;
-  margin-bottom: 1rem;
-}
 
 .logout-button {
   padding: 0.5rem 1rem;
@@ -496,23 +568,8 @@
    AUDIT PAGE
    ======================================== */
 
-#vue-audit-app {
-  min-height: calc(100vh - 200px);
-}
-
 .audit-container {
   max-width: 1200px;
-}
-
-.audit-topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.audit-topbar .back-link {
-  margin-bottom: 0;
 }
 
 .audit-subtitle {
@@ -691,12 +748,6 @@
     align-items: flex-start;
   }
 
-  .audit-topbar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-
   .audit-cell-email,
   .audit-cell-notes {
     max-width: 120px;
@@ -726,7 +777,7 @@
   }
   
   .back-link,
-  .logout-container,
+  .admin-shell-header,
   .action-buttons {
     display: none;
   }
