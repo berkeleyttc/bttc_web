@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Admin - Registration Approvals - BTTC</title>
+  <title>Admin - BTTC</title>
 
-  <meta name="description" content="Admin panel for managing round robin registrations at Berkeley Table Tennis Club.">
+  <meta name="description" content="Admin panel for Berkeley Table Tennis Club.">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <meta name="robots" content="noindex, nofollow">
 
@@ -31,16 +31,18 @@
     </div>
   </div>
 
-  <!-- Vue.js App Container -->
-  <div id="vue-admin-app">
-    <admin-app></admin-app>
-  </div>
+  <div id="vue-admin-app"></div>
 
   <!-- Load Vue.js from CDN -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="../env.js"></script>
   <script src="../js/bttc-utils.js"></script>
+  <!-- Tool components must load before shell.js -->
   <script src="/admin/admin.js"></script>
+  <script src="/admin/audit.js"></script>
+  <!-- Shell mounts the app -->
+  <script src="/admin/shell.js"></script>
+
   <div id="footer">
     <ul>
       <li><a href="../about.html">About</a></li>
