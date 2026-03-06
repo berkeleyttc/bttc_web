@@ -493,6 +493,228 @@
 }
 
 /* ========================================
+   AUDIT PAGE
+   ======================================== */
+
+#vue-audit-app {
+  min-height: calc(100vh - 200px);
+}
+
+.audit-container {
+  max-width: 1200px;
+}
+
+.audit-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.audit-topbar .back-link {
+  margin-bottom: 0;
+}
+
+.audit-subtitle {
+  text-align: center;
+  color: #666;
+  font-size: 1rem;
+  margin: 0.25rem auto 1.5rem auto;
+  max-width: none;
+  width: 100%;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+}
+
+/* Controls row */
+.audit-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Filter tabs */
+.audit-filter-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.filter-tab {
+  padding: 0.45rem 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  background-color: #f8f9fa;
+  color: #555;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-tab:hover:not(.active) {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.filter-tab.active {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: #fff;
+}
+
+/* Right-side actions */
+.audit-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.limit-select {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  color: #555;
+  font-size: 0.9rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  cursor: pointer;
+}
+
+.limit-select:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+.refresh-button {
+  padding: 0.45rem 1rem;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  color: #555;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.refresh-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Audit table overrides */
+.audit-table th {
+  cursor: default;
+  padding-right: 0.75rem;
+}
+
+.audit-table th::after {
+  display: none;
+}
+
+.audit-cell-time {
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.audit-cell-email {
+  font-size: 0.875rem;
+  word-break: break-word;
+  max-width: 180px;
+}
+
+.audit-cell-phone {
+  white-space: nowrap;
+}
+
+.audit-cell-notes {
+  font-size: 0.875rem;
+  color: #777;
+  max-width: 200px;
+}
+
+/* Event type badges */
+.event-badge {
+  display: inline-block;
+  padding: 0.25rem 0.65rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.event-badge-register {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.event-badge-unregister {
+  background-color: #fde8d8;
+  color: #7d3209;
+  border: 1px solid #f8c9a8;
+}
+
+/* Status badges for audit */
+.status-success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-failed {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.status-unknown {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+}
+
+/* Mobile: audit controls stack */
+@media (max-width: 768px) {
+  .audit-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .audit-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .audit-cell-email,
+  .audit-cell-notes {
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .audit-filter-tabs {
+    flex-wrap: wrap;
+  }
+
+  .filter-tab {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.75rem;
+  }
+}
+
+/* ========================================
    PRINT STYLES
    ======================================== */
 
