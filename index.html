@@ -62,7 +62,11 @@
 					</div>
 					<div>
 						<h2>Group training and open play</h2>
-						<p><b>Saturdays</b> 7:00 PM - 9:00 PM</p>
+						<p>
+							<b>Saturdays</b> 7:00 PM - 9:00 PM <br />
+							Drop-ins welcome for open play. <br />
+							Group training: see the <a href="/coaching.html">coaching</a> page.
+						</p>
 					</div>
 				</div>
 
@@ -79,8 +83,8 @@
 						<ul>
 							<li><b>Adults</b> (17+): <b>$8</b></li>
 							<li><b>Juniors</b> (16 and under) and <b>Seniors</b> (60+): <b>$5</b></li>
-							<li><b>Free</b> for players with BTTC or USATT rating over 2150.</li>
-							<li><b>Coaching</b> see the <a href="/coaching.html">coaching</a> page for individual or group training prices.</li>
+							<li><b>Free</b> for players with BTTC or USATT rating over 2150 &mdash; RR only.</li>
+							<li><b>Coaching:</b> see the <a href="/coaching.html">coaching</a> page for individual or group training prices.</li>
 						</ul>
 					</div>
 				</div>
@@ -93,14 +97,14 @@
 					</div>
 					<div>
 						<h2>Stay up-to-date</h2>
-						<p>Join our <a href="https://chat.whatsapp.com/IJJ8wl6LnQd2O7faSq4Wyr">WhatsApp Group</a> for holiday closures and club updates.</p>
+						<p>Join our <a data-rot13 href="uggcf://pung.jungfncc.pbz/VWW8jy6YaDq2B7snFd4Jle">WhatsApp Group</a> for holiday closures and club updates.</p>
 					</div>
 				</div>
 
 
 				<div class="row">
 					<h2>Questions?</h2>
-					<p>Message us on our <a href="https://chat.whatsapp.com/K7NMkvPiQQu28Yoztp38Rz?mode=gi_t">WhatsApp Group</a> or text us at <a href="sms:+15109266913">510-926-6913</a> (Text only, no voicemail.)</p>
+					<p>Message us on our <a data-rot13 href="uggcf://pung.jungfncc.pbz/X7AZxiCvDDh28Lbmgc38Em?zbqr=tv_g">WhatsApp Group</a> or text us at <a href="sms:+45327800739"></a> (Text only, no voicemail.)</p>
 				</div>
 
 
@@ -119,6 +123,40 @@
 			<li><a href="rating_system.html">Rating System</a></li>
 		</ul>
 	</div>
+
+	<script>
+		// the emails are simply "encoded" with rot13 so bots don't scrape the emails from the source code
+		// got to here to encode an email with rot13 https://rot13.com/
+		// the functions below decode the hrefs in the email links
+		function rot13(s) {
+			return s.replace(/[a-zA-Z]/g, c => String.fromCharCode((c <= 'Z' ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26));
+		}
+
+		function emailDecode(event) {
+			event.preventDefault();
+			const mailToLink = rot13(event.target.href);
+			window.location.href = mailToLink;
+		}
+
+		document.body.querySelectorAll('[data-rot13][href]').forEach(emailLink => {
+			emailLink.addEventListener('click', emailDecode);
+		});
+
+		function formatToPhone(digits) {
+			const areaCode = digits.substring(0, 3);
+			const prefix = digits.substring(3, 6);
+			const suffix = digits.substring(6, 10);
+			return `${areaCode}-${prefix}-${suffix}`;
+		};
+
+		// take phone numbers and multiply them by 3 to obfuscate them from bots
+		// divide them by 3 to decode them
+		document.body.querySelectorAll('a[href^="sms:"], a[href^="tel:"]').forEach(phoneLink => {
+			const number = phoneLink.href.replace(/\d+/g, match => parseInt(match) / 3);
+			phoneLink.href = number;
+			phoneLink.textContent = formatToPhone(number.toString().slice(6));
+		});
+	</script>
 
 	<script>
 		var _gaq = [
