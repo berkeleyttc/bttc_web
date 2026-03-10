@@ -103,7 +103,7 @@
               <td class="currency">$100</td>
             </tr>
             <tr>
-              <td>Drop-in - (Please contact Bunny at <a href="tel:+15107573662">510-757-3662</a> to reserve a spot)</td>
+              <td>Drop-in - (Please contact Bunny at <a href="tel:+45322720986"></a> to reserve a spot)</td>
               <td class="currency">$35</td>
             </tr>
           </table>
@@ -154,6 +154,22 @@
   </ul>
 </div>
 
+  <script>
+    function formatToPhone(digits) {
+      const areaCode = digits.substring(0, 3);
+      const prefix = digits.substring(3, 6);
+      const suffix = digits.substring(6, 10);
+      return `${areaCode}-${prefix}-${suffix}`;
+    };
+
+    // take phone numbers and multiply them by 3 to obfuscate them from bots
+    // divide them by 3 to decode them
+    document.body.querySelectorAll('a[href^="sms:"], a[href^="tel:"]').forEach(phoneLink => {
+      const number = phoneLink.href.replace(/\d+/g, match => parseInt(match) / 3);
+      phoneLink.href = number;
+      phoneLink.textContent = formatToPhone(number.toString().slice(6));
+    });
+  </script>
 
   <script>
     var _gaq = [
