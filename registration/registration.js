@@ -929,7 +929,7 @@ const RegistrationApp = {
     
     // Opening configuration (default: Wednesday at 00:00)
     const openingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_DAY : 3;  // Wednesday = 3
-    const openingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_HOUR : 0;  // 00:00 (midnight)
+    const openingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_HOUR : 10;  // 10:00 (10 AM)
     const openingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_MINUTE : 0;
     
     // Closing configuration (default: Friday at 18:45)
@@ -1043,9 +1043,9 @@ const RegistrationApp = {
       const hours = pstNow.getHours();
       const minutes = pstNow.getMinutes();
       
-      // Wednesday (day 3): show if at or after midnight (00:00)
+      // Wednesday (day 3): show if at or after opening time
       if (dayOfWeek === 3) {
-        return hours >= 0 && minutes >= 0;
+        return hours > openingHour || (hours === openingHour && minutes >= openingMinute);
       }
       
       // Thursday (day 4): always show
