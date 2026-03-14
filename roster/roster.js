@@ -111,6 +111,16 @@ const RosterApp = {
     const registrationClosed = typeof ENV !== 'undefined' ? (ENV.REGISTRATION_CLOSED ?? false) : false;
     const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
 
+    // Opening configuration (default: Wednesday at 10:00)
+    const openingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_DAY : 3;    // Wednesday = 3
+    const openingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_HOUR : 10; // 10:00 (10 AM)
+    const openingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_MINUTE : 0;
+
+    // Closing configuration (default: Friday at 18:00)
+    const closingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_DAY : 5;    // Friday = 5
+    const closingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_HOUR : 18; // 18:00 (6 PM)
+    const closingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_MINUTE : 0;
+
     // API endpoint for fetching roster
     const API_URL = `${apiUrl}/rr/roster`;
 
@@ -698,7 +708,7 @@ const RosterApp = {
 
     /**
      * Computed: Determine if we should show the closed message instead of roster
-     * Roster is ONLY open from Wednesday 00:00 to Saturday 00:00
+     * Roster is ONLY open from opening day at opening time through closing day end of day
      * AND if REGISTRATION_CLOSED = false
      * DEV_OVERRIDE = true unlocks the roster (bypasses all constraints)
      * Priority order: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule
@@ -711,35 +721,28 @@ const RosterApp = {
       // If REGISTRATION_CLOSED is true, show closed message
       if (registrationClosed) return true;
 
-      // Normal schedule check: Wednesday 00:00 to Saturday 00:00
       const now = new Date();
       const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
       const dayOfWeek = pstNow.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
       const hours = pstNow.getHours();
       const minutes = pstNow.getMinutes();
 
-      // Wednesday (day 3): show roster if at or after midnight (00:00)
-      if (dayOfWeek === 3) {
-        return !(hours >= 0 && minutes >= 0); // Show closed message if before 00:00
+      // Opening day: show roster only at or after opening time
+      if (dayOfWeek === openingDay) {
+        const pastOpeningTime = hours > openingHour || (hours === openingHour && minutes >= openingMinute);
+        return !pastOpeningTime;
       }
 
-      // Thursday (day 4): always show roster
-      if (dayOfWeek === 4) {
-        return false; // Don't show closed message
+      // Days strictly between opening day and closing day (inclusive): show roster
+      if (openingDay < closingDay) {
+        if (dayOfWeek > openingDay && dayOfWeek <= closingDay) return false;
+      } else {
+        // Handles week wrap-around (e.g., Friday to Wednesday)
+        if (dayOfWeek > openingDay || dayOfWeek <= closingDay) return false;
       }
 
-      // Friday (day 5): always show roster
-      if (dayOfWeek === 5) {
-        return false; // Don't show closed message
-      }
-
-      // Saturday (day 6): hide roster at midnight (00:00) or later
-      if (dayOfWeek === 6) {
-        return true; // Show closed message starting at Saturday 00:00
-      }
-
-      // All other days (Sunday, Monday, Tuesday): hide roster
-      return true; // Show closed message
+      // All other days (before opening or after closing): show closed message
+      return true;
     });
 
     /**
