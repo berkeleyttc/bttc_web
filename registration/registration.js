@@ -927,7 +927,7 @@ const RegistrationApp = {
     console.log('DEV_OVERRIDE mode:', devOverride ? 'ENABLED' : 'DISABLED');
     console.log('REGISTRATION_CLOSED mode:', registrationClosed ? 'ENABLED' : 'DISABLED');
     
-    // Opening configuration (default: Wednesday at 00:00)
+    // Opening configuration (default: Wednesday at 10:00)
     const openingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_DAY : 3;  // Wednesday = 3
     const openingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_HOUR : 10;  // 10:00 (10 AM)
     const openingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_MINUTE : 0;
@@ -1043,27 +1043,20 @@ const RegistrationApp = {
       const hours = pstNow.getHours();
       const minutes = pstNow.getMinutes();
       
-      // Wednesday (day 3): show if at or after opening time
-      if (dayOfWeek === 3) {
+      // Opening day: show only at or after opening time
+      if (dayOfWeek === openingDay) {
         return hours > openingHour || (hours === openingHour && minutes >= openingMinute);
       }
       
-      // Thursday (day 4): always show
-      if (dayOfWeek === 4) {
-        return true;
+      // Days strictly between opening day and closing day (inclusive): always show
+      if (openingDay < closingDay) {
+        if (dayOfWeek > openingDay && dayOfWeek <= closingDay) return true;
+      } else {
+        // Handles week wrap-around (e.g., Friday to Wednesday)
+        if (dayOfWeek > openingDay || dayOfWeek <= closingDay) return true;
       }
       
-      // Friday (day 5): always show
-      if (dayOfWeek === 5) {
-        return true;
-      }
-      
-      // Saturday (day 6): hide at midnight (00:00) or later
-      if (dayOfWeek === 6) {
-        return false; // Hide starting at Saturday 00:00
-      }
-      
-      // All other days (Sunday, Monday, Tuesday): hide
+      // All other days (before opening or after closing): hide
       return false;
     });
     
