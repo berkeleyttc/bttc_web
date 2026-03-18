@@ -1098,31 +1098,26 @@ const RegistrationApp = {
       const dayOfWeek = pstNow.getDay();
       const hours = pstNow.getHours();
       const minutes = pstNow.getMinutes();
-      
-      // Calculate the base next opening date (without checking for closed events)
-      let daysUntilOpeningDay;
-      
-      // Check if we're currently on the opening day and past opening time
-      const isPastOpeningTimeToday = (dayOfWeek === openingDay && 
-        (hours > openingHour || (hours === openingHour && minutes >= openingMinute)));
-      
-      if (isPastOpeningTimeToday || dayOfWeek === openingDay) {
-        // If it's the opening day (or past opening time on opening day), next opening is next week
-        daysUntilOpeningDay = 7;
+
+      const isOpeningDay = dayOfWeek === openingDay;
+      const isPastOpeningTime = hours > openingHour || (hours === openingHour && minutes >= openingMinute);
+
+      let daysUntil;
+      if (isOpeningDay && !isPastOpeningTime) {
+        daysUntil = 0; // Opens later today
+      } else if (isOpeningDay && isPastOpeningTime) {
+        daysUntil = 7; // Already opened today, next is next week
       } else if (dayOfWeek < openingDay) {
-        // Before opening day in the week
-        daysUntilOpeningDay = openingDay - dayOfWeek;
+        daysUntil = openingDay - dayOfWeek; // Earlier in the week
       } else {
-        // After opening day but before next opening day
-        daysUntilOpeningDay = 7 - (dayOfWeek - openingDay);
+        daysUntil = 7 - (dayOfWeek - openingDay); // Later in the week, wrap to next
       }
 
-      // Calculate the next opening date
       const nextOpeningDate = new Date(pstNow);
-      nextOpeningDate.setDate(nextOpeningDate.getDate() + daysUntilOpeningDay);
+      nextOpeningDate.setDate(nextOpeningDate.getDate() + daysUntil);
       nextOpeningDate.setHours(openingHour, openingMinute, 0, 0);
-      
-      const formattedDate = nextOpeningDate.toLocaleString("en-US", {
+
+      nextOpening.value = nextOpeningDate.toLocaleString("en-US", {
         timeZone: timezone,
         weekday: 'long',
         year: 'numeric',
@@ -1131,7 +1126,6 @@ const RegistrationApp = {
         hour: 'numeric',
         minute: '2-digit'
       });
-      nextOpening.value = formattedDate;
     };
 
     // Methods
