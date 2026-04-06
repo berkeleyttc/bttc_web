@@ -97,14 +97,14 @@
 					</div>
 					<div>
 						<h2>Stay up-to-date</h2>
-						<p>Join our <a data-rot13 href="uggcf://pung.jungfncc.pbz/UhVuFs0RoSy5MjoYPldstz">WhatsApp Group</a> for holiday closures and club updates.</p>
+						<p>Join our <a data-rot13 data-rot13-text="JungfNcc Tebhc" href="uggcf://pung.jungfncc.pbz/QGH1DLQfEwSQ77SdCth7Bh"></a> for holiday closures and club updates.</p>
 					</div>
 				</div>
 
 
 				<div class="row">
 					<h2>Questions?</h2>
-					<p>Message us on our <a data-rot13 href="uggcf://pung.jungfncc.pbz/S7K8QFFIK2LSrfUeHuZbY7?zbqr=tv_g">WhatsApp Group</a> or text us at <a href="sms:+45327800739"></a> (Text only, no voicemail.)</p>
+					<p>Message us on our <a data-rot13 data-rot13-text="JungfNcc Tebhc" href="uggcf://pung.jungfncc.pbz/QGH1DLQfEwSQ77SdCth7Bh"></a> or text us at <a href="sms:+45327800739"></a> (Text only, no voicemail.)</p>
 				</div>
 
 
@@ -140,6 +140,10 @@
 
 		document.body.querySelectorAll('[data-rot13][href]').forEach(emailLink => {
 			emailLink.addEventListener('click', emailDecode);
+		});
+
+		document.body.querySelectorAll('[data-rot13-text]').forEach(el => {
+			el.textContent = rot13(el.getAttribute('data-rot13-text'));
 		});
 
 		function formatToPhone(digits) {
