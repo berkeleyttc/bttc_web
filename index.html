@@ -97,14 +97,14 @@
 					</div>
 					<div>
 						<h2>Stay up-to-date</h2>
-						<p>Join our <a data-rot13 data-rot13-text="JungfNcc Tebhc" href="uggcf://pung.jungfncc.pbz/QGH1DLQfEwSQ77SdCth7Bh"></a> for holiday closures and club updates.</p>
+						<p>Join our <a data-rot13 href="uggcf://pung.jungfncc.pbz/UnuuemQ4kFk8NCKYMgQd9c"><img src="images/wa-icon.svg" height=30px width=30px style="vertical-align:middle" alt="WA"></a> for holiday closures and club updates.</p>
 					</div>
 				</div>
 
 
 				<div class="row">
 					<h2>Questions?</h2>
-					<p>Message us on our <a data-rot13 data-rot13-text="JungfNcc Tebhc" href="uggcf://pung.jungfncc.pbz/QGH1DLQfEwSQ77SdCth7Bh"></a> or text us at <a href="sms:+45327800739"></a> (Text only, no voicemail.)</p>
+					<p>Message us on our <a data-rot13 href="uggcf://pung.jungfncc.pbz/UnuuemQ4kFk8NCKYMgQd9c"><img src="images/wa-icon.svg" height=30px width=30px style="vertical-align:middle" alt="WA"></a> or text us at <a href="sms:+45327800739"></a> (Text only, no voicemail.)</p>
 				</div>
 
 
@@ -134,8 +134,8 @@
 
 		function emailDecode(event) {
 			event.preventDefault();
-			const mailToLink = rot13(event.target.href);
-			window.location.href = mailToLink;
+			const mailToLink = rot13(event.currentTarget.href);
+			window.open(mailToLink, '_blank');
 		}
 
 		document.body.querySelectorAll('[data-rot13][href]').forEach(emailLink => {
