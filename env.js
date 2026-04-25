@@ -39,7 +39,7 @@ const ENV = {
   PHONE_COUNTRY_CODE: 1,
   
   // Development
-  DEV_OVERRIDE: false,
+  DEV_OVERRIDE: true,
   
   // Registration Control
   // If true, registration is closed regardless of schedule (priority: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule)
