@@ -1,7 +1,7 @@
 // BTTC Round Robin Registration
 // Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateToken, formatPhoneNumber
 
-const { createApp, ref, computed, onMounted, watch } = Vue;
+const { createApp, ref, computed, onMounted, onUnmounted, watch } = Vue;
 
 
 const RegistrationStatus = {
@@ -109,10 +109,25 @@ const CapacityBanner = {
 
 const PHONE_HISTORY_KEY = 'bttc_phone_history';
 const MAX_HISTORY_ITEMS = 10;
-const EVENT_METADATA_CACHE_KEY = 'bttc_event_metadata';
-const EVENT_METADATA_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (event date never changes)
 const ROSTER_CACHE_KEY = 'bttc_roster_cache'; // Same cache key as roster-vue.js
 const PHONE_COOKIE_KEY = 'bttc_signed_in_phone'; // Cookie key for storing signed-in phone number
+const EVENT_READINESS_RETRY_MS = 30 * 1000;
+
+const getDateKeyInTimezone = (date, timezone) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const dateParts = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+};
+
+const isCapacityCurrent = (capacityData, today, devOverride = false) => {
+  if (devOverride) return true;
+  return !!capacityData?.event_date && capacityData.event_date >= today;
+};
 
 const getPhoneHistory = () => {
   try {
@@ -121,41 +136,6 @@ const getPhoneHistory = () => {
   } catch (err) {
     // localStorage unavailable or corrupted JSON, return empty array
     return [];
-  }
-};
-
-// Cache for event metadata (event_date, event_type)
-const getEventMetadataCache = () => {
-  try {
-    const cached = sessionStorage.getItem(EVENT_METADATA_CACHE_KEY);
-    if (!cached) return null;
-    
-    const { data, timestamp } = JSON.parse(cached);
-    const now = Date.now();
-    const age = now - timestamp;
-    
-    // Check if cache is still valid (24 hours TTL)
-    if (age < EVENT_METADATA_CACHE_TTL) {
-      return data;
-    }
-    
-    // Cache expired, remove it
-    sessionStorage.removeItem(EVENT_METADATA_CACHE_KEY);
-    return null;
-  } catch (err) {
-    return null;
-  }
-};
-
-const setEventMetadataCache = (eventDate, eventType) => {
-  try {
-    const cacheEntry = {
-      data: { eventDate, eventType },
-      timestamp: Date.now()
-    };
-    sessionStorage.setItem(EVENT_METADATA_CACHE_KEY, JSON.stringify(cacheEntry));
-  } catch (err) {
-    // sessionStorage unavailable, silently fail
   }
 };
 
@@ -257,7 +237,7 @@ const PlayerLookup = {
         const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
         const url = `${apiUrl}/rr/search?phone=${encodeURIComponent(phone)}`;
         
-        const fetchOptions = getFetchOptions();
+        const fetchOptions = getFetchOptions({ cache: 'no-store' });
         const response = await fetch(url, fetchOptions);
         const data = await handleApiResponse(response);
         
@@ -325,7 +305,7 @@ const PlayerLookup = {
               const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
               const url = `${apiUrl}/rr/search?phone=${encodeURIComponent(cleanedInput)}`;
               
-              const fetchOptions = getFetchOptions();
+              const fetchOptions = getFetchOptions({ cache: 'no-store' });
               const response = await fetch(url, fetchOptions);
               const data = await handleApiResponse(response);
               
@@ -947,6 +927,8 @@ const RegistrationApp = {
     // Application state
     const players = ref([]);                    // Players found by phone number
     const registrationOpen = ref(false);        // Whether registration is currently open
+    const eventCurrent = ref(false);             // Whether the backend has advanced past the previous event
+    const eventReadinessMessage = ref('Checking this week\'s event...');
     const capacity = ref({
       isAtCapacity: false,                       // Whether event is at capacity
       confirmedCount: 0,                        // Number of confirmed registrations
@@ -967,6 +949,7 @@ const RegistrationApp = {
     const unregistrationSuccessMessage = ref(''); // Success message for unregistration dialog
     const unregistrationErrorMessage = ref('');   // Error message for unregistration dialog
     const error = ref('');                      // Error message to display
+    let eventReadinessRetryId = null;
 
     // Computed properties
     
@@ -1189,12 +1172,28 @@ const RegistrationApp = {
     // NOTE: Capacity is now included in all API responses (search, register, unregister)
     // No need for separate /rr/capacity calls anymore
 
+    const clearEventReadinessRetry = () => {
+      if (eventReadinessRetryId) {
+        clearTimeout(eventReadinessRetryId);
+        eventReadinessRetryId = null;
+      }
+    };
+
+    const scheduleEventReadinessRetry = () => {
+      if (eventReadinessRetryId || !registrationOpen.value) return;
+
+      eventReadinessRetryId = setTimeout(() => {
+        eventReadinessRetryId = null;
+        fetchEventMetadata();
+      }, EVENT_READINESS_RETRY_MS);
+    };
+
     /**
-     * Helper function to update capacity state from API response
-     * Also caches event metadata (event_date, event_type) for future use
+     * Helper function to update capacity state from an API response.
+     * Registration stays unavailable while the backend still returns a past event.
      */
     const updateCapacityFromResponse = (capacityData) => {
-      if (!capacityData) return;
+      if (!capacityData) return false;
       
       const updatedCapacity = {
         isAtCapacity: !!capacityData.roster_full,
@@ -1209,33 +1208,37 @@ const RegistrationApp = {
       
       capacity.value = updatedCapacity;
       capacityLastUpdated.value = Date.now();
-      
-      // Cache event metadata separately (long TTL since event date never changes)
-      if (capacityData.event_date || capacityData.event_type) {
-        setEventMetadataCache(capacityData.event_date, capacityData.event_type);
+
+      const today = getDateKeyInTimezone(new Date(), timezone);
+      const isCurrent = isCapacityCurrent(capacityData, today, devOverride);
+      eventCurrent.value = isCurrent;
+
+      if (isCurrent) {
+        eventReadinessMessage.value = '';
+        clearEventReadinessRetry();
+      } else {
+        eventReadinessMessage.value = capacityData.event_date
+          ? 'The backend is still preparing this week\'s event. This page will retry automatically.'
+          : 'This week\'s event is not available yet. This page will retry automatically.';
       }
       
       // Clear any previous capacity errors on success
       if (error.value && error.value.includes('capacity')) {
         error.value = '';
       }
+
+      return isCurrent;
     };
 
     /**
-     * Fetches event metadata (event_date, event_type) from cache or API
-     * Called on mount to display event date without waiting for user action
-     * Uses the capacity endpoint for lightweight fetch (no roster data needed)
+     * Fetches fresh event metadata before enabling registration. If the backend
+     * still points at a past event, keep registration unavailable and retry.
      */
     const fetchEventMetadata = async () => {
-      // Check cache first
-      const cached = getEventMetadataCache();
-      if (cached) {
-        capacity.value.eventDate = cached.eventDate;
-        capacity.value.eventType = cached.eventType;
-        return;
-      }
-      
-      // Not cached, fetch from API (use capacity endpoint - lightweight, just event metadata)
+      if (!registrationOpen.value) return;
+
+      eventReadinessMessage.value = 'Checking this week\'s event...';
+
       try {
         const apiUrl = typeof ENV !== 'undefined' ? ENV.API_URL : 'http://0.0.0.0:8080';
         const url = `${apiUrl}/rr/capacity`;
@@ -1243,24 +1246,34 @@ const RegistrationApp = {
         const fetchOptions = getFetchOptions({
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({})
+          body: JSON.stringify({}),
+          cache: 'no-store'
         });
         const response = await fetch(url, fetchOptions);
         const data = await handleApiResponse(response);
         
-        // Capacity endpoint returns capacity data directly
-        if (data) {
-          updateCapacityFromResponse(data);
+        if (!updateCapacityFromResponse(data)) {
+          scheduleEventReadinessRetry();
         }
       } catch (err) {
-        // Silently fail - event date is nice-to-have, not critical
-        // User will see it after performing a lookup
+        eventCurrent.value = false;
+        eventReadinessMessage.value = 'Unable to confirm this week\'s event. This page will retry automatically.';
+        scheduleEventReadinessRetry();
       }
     };
 
     const handlePlayerFound = (data) => {
       // New API response structure: { players: [], capacity: {} }
       const playerList = Array.isArray(data) ? data : (data.players || []);
+
+      // Never render player registration state for a stale or unexpected event.
+      if (!data.capacity || !updateCapacityFromResponse(data.capacity)) {
+        eventCurrent.value = false;
+        players.value = [];
+        error.value = '';
+        scheduleEventReadinessRetry();
+        return;
+      }
       
       if (data.result === "None" || playerList.length === 0) {
         error.value = 'No player found for this phone number.';
@@ -1277,13 +1290,6 @@ const RegistrationApp = {
         unregisterError: ''
       }));
       
-      // Extract capacity from search response (new API always includes capacity)
-      if (data.capacity) {
-        updateCapacityFromResponse(data.capacity);
-      } else {
-        // If capacity not included (should not happen with new API), show error
-        error.value = 'Capacity information is missing from the response. Please refresh and try again.';
-      }
     };
 
     const handleLookupError = (errorMessage) => {
@@ -1344,7 +1350,7 @@ const RegistrationApp = {
         registrationErrorMessage.value = 'Error: No player data found. Please close this dialog and try looking up your player again.';
         return;
       }
-      
+
       const { player, index } = currentRegistrationData.value;
       
       // Clear any previous messages
@@ -1429,7 +1435,7 @@ const RegistrationApp = {
         unregistrationErrorMessage.value = 'Error: No player data found. Please close this dialog and try looking up your player again.';
         return;
       }
-      
+
       const { player, index } = currentUnregistrationData.value;
       
       // Clear any previous messages
@@ -1492,10 +1498,14 @@ const RegistrationApp = {
       checkRegistrationStatus();
       // Calculate next opening (checks ENV to skip closed weeks)
       calculateNextOpening();
-      // Only fetch event metadata if registration is open
+
       if (registrationOpen.value) {
-        fetchEventMetadata(); // Fetch event date from cache or API
+        fetchEventMetadata();
       }
+    });
+
+    onUnmounted(() => {
+      clearEventReadinessRetry();
     });
 
     // Watch for registration status changes and recalculate next opening if needed
@@ -1510,6 +1520,8 @@ const RegistrationApp = {
     return {
       players,
       registrationOpen,
+      eventCurrent,
+      eventReadinessMessage,
       capacity,
       capacityLastUpdated,
       showRegistrationDialog,
@@ -1549,7 +1561,7 @@ const RegistrationApp = {
 
       <div class="page-header">
         <h2>Round Robin Registration</h2>
-        <p v-if="formattedEventDate" class="event-date">for {{ eventDayOfWeek }}, {{ formattedEventDate }}</p>
+        <p v-if="eventCurrent && formattedEventDate" class="event-date">for {{ eventDayOfWeek }}, {{ formattedEventDate }}</p>
       </div>
 
       <registration-status 
@@ -1561,14 +1573,19 @@ const RegistrationApp = {
         :registration-closed="registrationClosed"
       />
 
+      <div v-if="registrationOpen && !eventCurrent" class="status-banner status-pending">
+        <div>🟡 Registration is preparing this week's event</div>
+        <div class="status-details">{{ eventReadinessMessage }}</div>
+      </div>
+
       <player-lookup 
-        v-if="registrationOpen"
+        v-if="registrationOpen && eventCurrent"
         :registration-open="registrationOpen"
         @player-found="handlePlayerFound"
         @lookup-error="handleLookupError"
       />
 
-      <div v-if="registrationOpen && error" class="error-section">
+      <div v-if="registrationOpen && eventCurrent && error" class="error-section">
         <div class="error-content">
           <h3 class="error-title">Player Not Found</h3>
           <p class="error-subtitle">
@@ -1598,7 +1615,7 @@ const RegistrationApp = {
       </div>
 
       <player-list 
-        v-if="registrationOpen && (!error || !error.includes('capacity'))"
+        v-if="registrationOpen && eventCurrent && (!error || !error.includes('capacity'))"
         :players="players"
         :capacity="capacity"
         :capacity-last-updated="capacityLastUpdated"
@@ -1607,7 +1624,7 @@ const RegistrationApp = {
         @unregister-player="handleUnregisterPlayer"
       />
 
-      <div v-if="registrationOpen && players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
+      <div v-if="registrationOpen && eventCurrent && players.length > 0 && (!error || !error.includes('capacity'))" class="signup-section">
         <a href="../signup/" class="signup-button">
           <span class="signup-button-text">Activate Another Player</span>
           <span class="signup-button-subtext">Activate another player online account</span>
