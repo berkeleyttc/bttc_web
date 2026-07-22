@@ -864,6 +864,12 @@
     border: 1px solid #f5c6cb;
   }
 
+  .status-pending {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+  }
+
   .status-details {
     font-size: 0.85rem;
     margin-top: 0.5rem;
@@ -1438,6 +1444,5 @@
     }
   }
 }
-
 
 
