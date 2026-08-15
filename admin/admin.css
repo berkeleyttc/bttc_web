@@ -766,6 +766,114 @@
 }
 
 /* ========================================
+   EVENTS PANEL
+   ======================================== */
+
+.event-form {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 2rem;
+  background-color: #fbfbfc;
+}
+
+.event-form-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.event-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0 1rem;
+}
+
+.event-form-grid .form-group {
+  margin-bottom: 1rem;
+}
+
+/* Match .form-group input so selects and textareas sit flush with text inputs */
+.event-select,
+.event-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  box-sizing: border-box;
+  background-color: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.event-textarea {
+  resize: vertical;
+}
+
+.event-select:focus,
+.event-textarea:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+.optional-hint {
+  font-weight: 400;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.close-button,
+.cancel-button {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.close-button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+}
+
+.close-button:hover:not(:disabled) {
+  background-color: #bb2d3b;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.cancel-button {
+  background-color: #f8f9fa;
+  color: #555;
+  border: 1px solid #dee2e6;
+}
+
+.cancel-button:hover:not(:disabled) {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.close-button:disabled,
+.cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Mobile: event form collapses to a single column */
+@media (max-width: 768px) {
+  .event-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========================================
    PRINT STYLES
    ======================================== */
 

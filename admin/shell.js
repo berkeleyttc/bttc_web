@@ -1,7 +1,7 @@
 // BTTC Admin Shell
 // Handles authentication and top-level tool navigation.
 // Each tool is a self-contained component defined in its own file.
-// Load order in index.html: admin.js → audit.js → shell.js
+// Load order in index.html: admin.js → audit.js → events.js → shell.js
 
 const { createApp, ref, reactive, computed, onMounted } = Vue;
 
@@ -12,7 +12,8 @@ const AUTH_EXPIRES_KEY = 'bttc_admin_expires';
 const AdminShell = {
   components: {
     'approvals-panel': ApprovalsPanel,
-    'audit-panel': AuditPanel
+    'audit-panel': AuditPanel,
+    'events-panel': EventsPanel
   },
   setup() {
     const isAuthenticated = ref(false);
@@ -197,12 +198,18 @@ const AdminShell = {
             :class="{ active: activeTab === 'audit' }"
             @click="activeTab = 'audit'"
           >Audit Log</button>
+          <button
+            class="admin-tab"
+            :class="{ active: activeTab === 'events' }"
+            @click="activeTab = 'events'"
+          >Events</button>
         </nav>
         <button class="logout-button" @click="logout">Logout</button>
       </div>
 
       <approvals-panel v-if="activeTab === 'approvals'"></approvals-panel>
       <audit-panel v-if="activeTab === 'audit'"></audit-panel>
+      <events-panel v-if="activeTab === 'events'"></events-panel>
     </div>
   `
 };
