@@ -80,7 +80,10 @@ const handleApiResponse = async (response) => {
     let errorMessage = 'Server error';
     try {
       const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
+      // FastAPI returns errors as {"detail": "..."}; check it first so API messages
+      // (e.g. "An OPEN event for this type and date already exists.") reach the user
+      // instead of the generic fallback.
+      errorMessage = errorData.detail || errorData.message || errorData.error || errorMessage;
     } catch {
       errorMessage = response.statusText || `HTTP ${response.status}`;
     }
