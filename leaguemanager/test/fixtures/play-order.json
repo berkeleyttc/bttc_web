@@ -1,0 +1,566 @@
+{
+  "_source": {
+    "emitted_from": "0489ed5",
+    "note": "Names are rank-assigned synthetic labels in real name_key order (ticket 24 Q5), so lexicographic order of the labels reproduces the real ordering; member ids are real. Only the seats this session drew are listed. Regenerate with --emit-fixture. Staleness is visible, not enforced (ticket 24 Q16).",
+    "oracle": "tests/oracles/oracle_play_order.py",
+    "session": "RR_Results_2026Jul17.bttc"
+  },
+  "jul17": {
+    "group_tables": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0
+    ],
+    "labels": [
+      "1",
+      "1",
+      "2",
+      "2",
+      "3",
+      "3",
+      "4",
+      "4",
+      "5",
+      "5",
+      "6",
+      "6",
+      "7",
+      "7",
+      "8",
+      "8",
+      "9",
+      "9",
+      "10",
+      "10"
+    ],
+    "my_tables": [
+      [
+        0,
+        1
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        4,
+        5
+      ],
+      [
+        6,
+        7
+      ],
+      [
+        8,
+        9
+      ],
+      [
+        10,
+        11
+      ],
+      [
+        12,
+        13
+      ],
+      [
+        14,
+        15
+      ],
+      [
+        16,
+        17
+      ],
+      [
+        18,
+        19
+      ]
+    ]
+  },
+  "labels": {
+    "100001": [
+      "SurnameASW",
+      "GivenASW"
+    ],
+    "100023": [
+      "SurnameBQL",
+      "GivenBQL"
+    ],
+    "100031": [
+      "SurnameBGI",
+      "GivenBGI"
+    ],
+    "100032": [
+      "SurnameBMO",
+      "GivenBMO"
+    ],
+    "100038": [
+      "SurnameBRJ",
+      "GivenBRJ"
+    ],
+    "100039": [
+      "SurnameAGB",
+      "GivenAGB"
+    ],
+    "100045": [
+      "SurnameAQQ",
+      "GivenAQQ"
+    ],
+    "100056": [
+      "SurnameBDM",
+      "GivenBDM"
+    ],
+    "100067": [
+      "SurnameBEN",
+      "GivenBEN"
+    ],
+    "100095": [
+      "SurnameAUH",
+      "GivenAUH"
+    ],
+    "100098": [
+      "SurnameARP",
+      "GivenARP"
+    ],
+    "100113": [
+      "SurnameAAU",
+      "GivenAAU"
+    ],
+    "100126": [
+      "SurnameBON",
+      "GivenBON"
+    ],
+    "100179": [
+      "SurnameBJU",
+      "GivenBJU"
+    ],
+    "100186": [
+      "SurnameAUX",
+      "GivenAUX"
+    ],
+    "100199": [
+      "SurnameAAC",
+      "GivenAAC"
+    ],
+    "100213": [
+      "SurnameAFB",
+      "GivenAFB"
+    ],
+    "100232": [
+      "SurnameAGV",
+      "GivenAGV"
+    ],
+    "100256": [
+      "SurnameAGT",
+      "GivenAGT"
+    ],
+    "100260": [
+      "SurnameBEL",
+      "GivenBEL"
+    ],
+    "100333": [
+      "SurnameBMM",
+      "GivenBMM"
+    ],
+    "100367": [
+      "SurnameBOV",
+      "GivenBOV"
+    ],
+    "100368": [
+      "SurnameBLP",
+      "GivenBLP"
+    ],
+    "100387": [
+      "SurnameBCQ",
+      "GivenBCQ"
+    ],
+    "100420": [
+      "SurnameAWH",
+      "GivenAWH"
+    ],
+    "100472": [
+      "SurnameATA",
+      "GivenATA"
+    ],
+    "100479": [
+      "SurnameAHH",
+      "GivenAHH"
+    ],
+    "100504": [
+      "SurnameAEE",
+      "GivenAEE"
+    ],
+    "100559": [
+      "SurnameBBM",
+      "GivenBBM"
+    ],
+    "100622": [
+      "SurnameAPK",
+      "GivenAPK"
+    ],
+    "100790": [
+      "SurnameAGF",
+      "GivenAGF"
+    ],
+    "100802": [
+      "SurnameAVN",
+      "GivenAVN"
+    ],
+    "100814": [
+      "SurnameAMQ",
+      "GivenAMQ"
+    ],
+    "100820": [
+      "SurnameADZ",
+      "GivenADZ"
+    ],
+    "100865": [
+      "SurnameAKU",
+      "GivenAKU"
+    ],
+    "100867": [
+      "SurnameAVH",
+      "GivenAVH"
+    ],
+    "100908": [
+      "SurnameBKZ",
+      "GivenBKZ"
+    ],
+    "100915": [
+      "SurnameBOW",
+      "GivenBOW"
+    ],
+    "100919": [
+      "SurnameAAH",
+      "GivenAAH"
+    ],
+    "100931": [
+      "SurnameALS",
+      "GivenALS"
+    ],
+    "100936": [
+      "SurnameAZC",
+      "GivenAZC"
+    ],
+    "100943": [
+      "SurnameBOB",
+      "GivenBOB"
+    ],
+    "100945": [
+      "SurnameAFN",
+      "GivenAFN"
+    ],
+    "100963": [
+      "SurnameBHZ",
+      "GivenBHZ"
+    ],
+    "100989": [
+      "SurnameAXF",
+      "GivenAXF"
+    ],
+    "101035": [
+      "SurnameAAN",
+      "GivenAAN"
+    ],
+    "101049": [
+      "SurnameAGE",
+      "GivenAGE"
+    ],
+    "101056": [
+      "SurnameABY",
+      "GivenABY"
+    ],
+    "101065": [
+      "SurnameBLF",
+      "GivenBLF"
+    ],
+    "101070": [
+      "SurnameADV",
+      "GivenADV"
+    ],
+    "101086": [
+      "SurnameAKC",
+      "GivenAKC"
+    ],
+    "101089": [
+      "SurnameBAR",
+      "GivenBAR"
+    ],
+    "101102": [
+      "SurnameAFX",
+      "GivenAFX"
+    ],
+    "101103": [
+      "SurnameBMK",
+      "GivenBMK"
+    ],
+    "101107": [
+      "SurnameASA",
+      "GivenASA"
+    ],
+    "101123": [
+      "SurnameAZB",
+      "GivenAZB"
+    ],
+    "101124": [
+      "SurnameBRT",
+      "GivenBRT"
+    ],
+    "101128": [
+      "SurnameBGW",
+      "GivenBGW"
+    ],
+    "101137": [
+      "SurnameBKA",
+      "GivenBKA"
+    ],
+    "101138": [
+      "SurnameBJG",
+      "GivenBJG"
+    ],
+    "101139": [
+      "SurnameBME",
+      "GivenBME"
+    ],
+    "101140": [
+      "SurnameBLZ",
+      "GivenBLZ"
+    ],
+    "101141": [
+      "SurnameATO",
+      "GivenATO"
+    ],
+    "101142": [
+      "SurnameARI",
+      "GivenARI"
+    ],
+    "101143": [
+      "SurnameBAU",
+      "GivenBAU"
+    ]
+  },
+  "match_order": {
+    "5": [
+      0,
+      4,
+      1,
+      3,
+      0,
+      2,
+      1,
+      4,
+      2,
+      3,
+      0,
+      1,
+      2,
+      4,
+      0,
+      3,
+      1,
+      2,
+      3,
+      4
+    ],
+    "6": [
+      0,
+      5,
+      1,
+      4,
+      2,
+      3,
+      0,
+      4,
+      2,
+      5,
+      1,
+      3,
+      0,
+      2,
+      3,
+      4,
+      1,
+      5,
+      0,
+      3,
+      1,
+      2,
+      4,
+      5,
+      0,
+      1,
+      3,
+      5,
+      2,
+      4
+    ],
+    "7": [
+      0,
+      6,
+      1,
+      2,
+      4,
+      5,
+      0,
+      3,
+      2,
+      6,
+      1,
+      4,
+      3,
+      5,
+      0,
+      4,
+      1,
+      6,
+      2,
+      5,
+      3,
+      4,
+      0,
+      1,
+      5,
+      6,
+      2,
+      3,
+      4,
+      6,
+      0,
+      5,
+      1,
+      3,
+      2,
+      4,
+      3,
+      6,
+      0,
+      2,
+      1,
+      5
+    ]
+  },
+  "print_front_run": [
+    7,
+    6,
+    2,
+    3,
+    0,
+    1,
+    4,
+    5
+  ],
+  "shared_no_oracle": {
+    "group_tables": [
+      2.5,
+      2.5,
+      2,
+      2,
+      1.5,
+      1.5,
+      1.5,
+      1.5,
+      1.5,
+      1.5
+    ],
+    "labels": [
+      "1",
+      "1",
+      "1/2",
+      "2",
+      "2",
+      "3",
+      "3",
+      "4",
+      "4",
+      "5",
+      "5/6",
+      "6",
+      "7",
+      "7/8",
+      "8",
+      "9",
+      "9/10",
+      "10",
+      "open",
+      "open"
+    ],
+    "my_tables": [
+      [
+        0,
+        1,
+        2
+      ],
+      [
+        2,
+        3,
+        4
+      ],
+      [
+        5,
+        6
+      ],
+      [
+        7,
+        8
+      ],
+      [
+        9,
+        10
+      ],
+      [
+        10,
+        11
+      ],
+      [
+        12,
+        13
+      ],
+      [
+        13,
+        14
+      ],
+      [
+        15,
+        16
+      ],
+      [
+        16,
+        17
+      ]
+    ]
+  },
+  "web_mapping_983": [
+    [
+      17,
+      18,
+      19
+    ],
+    [
+      5,
+      4,
+      1,
+      0,
+      2,
+      3,
+      6,
+      7
+    ],
+    [
+      16,
+      15,
+      14,
+      13,
+      12,
+      11,
+      10,
+      9,
+      8
+    ]
+  ]
+}

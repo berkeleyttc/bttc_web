@@ -1,0 +1,528 @@
+{
+  "_source": {
+    "emitted_from": "0489ed5",
+    "note": "Names are rank-assigned synthetic labels in real name_key order (ticket 24 Q5), so lexicographic order of the labels reproduces the real ordering; member ids are real. Only the seats this session drew are listed. Regenerate with --emit-fixture. Staleness is visible, not enforced (ticket 24 Q16).",
+    "oracle": "tests/oracles/oracle_partition.py",
+    "session": "RR_Results_2026Jul17.bttc"
+  },
+  "actual": [
+    [
+      100945,
+      100001,
+      100032,
+      100031,
+      100038,
+      100790
+    ],
+    [
+      100056,
+      100067,
+      100039,
+      100095,
+      101142,
+      100113
+    ],
+    [
+      100098,
+      100126,
+      100023,
+      100199,
+      100908,
+      100186
+    ],
+    [
+      100260,
+      100045,
+      101128,
+      100333,
+      101124,
+      100179
+    ],
+    [
+      101137,
+      100232,
+      100472,
+      100213,
+      100865,
+      100963
+    ],
+    [
+      101139,
+      100479,
+      100256,
+      100943,
+      100989,
+      100919,
+      100931
+    ],
+    [
+      100367,
+      100504,
+      101065,
+      101123,
+      100368,
+      100814,
+      100936
+    ],
+    [
+      101138,
+      101086,
+      101140,
+      100387,
+      100559,
+      101102,
+      100915
+    ],
+    [
+      101103,
+      100820,
+      100802,
+      100867,
+      100420,
+      101070,
+      101141
+    ],
+    [
+      101035,
+      100622,
+      101107,
+      101089,
+      101143,
+      101056,
+      101049
+    ]
+  ],
+  "labels": {
+    "100001": [
+      "SurnameASW",
+      "GivenASW"
+    ],
+    "100023": [
+      "SurnameBQL",
+      "GivenBQL"
+    ],
+    "100031": [
+      "SurnameBGI",
+      "GivenBGI"
+    ],
+    "100032": [
+      "SurnameBMO",
+      "GivenBMO"
+    ],
+    "100038": [
+      "SurnameBRJ",
+      "GivenBRJ"
+    ],
+    "100039": [
+      "SurnameAGB",
+      "GivenAGB"
+    ],
+    "100045": [
+      "SurnameAQQ",
+      "GivenAQQ"
+    ],
+    "100056": [
+      "SurnameBDM",
+      "GivenBDM"
+    ],
+    "100067": [
+      "SurnameBEN",
+      "GivenBEN"
+    ],
+    "100095": [
+      "SurnameAUH",
+      "GivenAUH"
+    ],
+    "100098": [
+      "SurnameARP",
+      "GivenARP"
+    ],
+    "100113": [
+      "SurnameAAU",
+      "GivenAAU"
+    ],
+    "100126": [
+      "SurnameBON",
+      "GivenBON"
+    ],
+    "100179": [
+      "SurnameBJU",
+      "GivenBJU"
+    ],
+    "100186": [
+      "SurnameAUX",
+      "GivenAUX"
+    ],
+    "100199": [
+      "SurnameAAC",
+      "GivenAAC"
+    ],
+    "100213": [
+      "SurnameAFB",
+      "GivenAFB"
+    ],
+    "100232": [
+      "SurnameAGV",
+      "GivenAGV"
+    ],
+    "100256": [
+      "SurnameAGT",
+      "GivenAGT"
+    ],
+    "100260": [
+      "SurnameBEL",
+      "GivenBEL"
+    ],
+    "100333": [
+      "SurnameBMM",
+      "GivenBMM"
+    ],
+    "100367": [
+      "SurnameBOV",
+      "GivenBOV"
+    ],
+    "100368": [
+      "SurnameBLP",
+      "GivenBLP"
+    ],
+    "100387": [
+      "SurnameBCQ",
+      "GivenBCQ"
+    ],
+    "100420": [
+      "SurnameAWH",
+      "GivenAWH"
+    ],
+    "100472": [
+      "SurnameATA",
+      "GivenATA"
+    ],
+    "100479": [
+      "SurnameAHH",
+      "GivenAHH"
+    ],
+    "100504": [
+      "SurnameAEE",
+      "GivenAEE"
+    ],
+    "100559": [
+      "SurnameBBM",
+      "GivenBBM"
+    ],
+    "100622": [
+      "SurnameAPK",
+      "GivenAPK"
+    ],
+    "100790": [
+      "SurnameAGF",
+      "GivenAGF"
+    ],
+    "100802": [
+      "SurnameAVN",
+      "GivenAVN"
+    ],
+    "100814": [
+      "SurnameAMQ",
+      "GivenAMQ"
+    ],
+    "100820": [
+      "SurnameADZ",
+      "GivenADZ"
+    ],
+    "100865": [
+      "SurnameAKU",
+      "GivenAKU"
+    ],
+    "100867": [
+      "SurnameAVH",
+      "GivenAVH"
+    ],
+    "100908": [
+      "SurnameBKZ",
+      "GivenBKZ"
+    ],
+    "100915": [
+      "SurnameBOW",
+      "GivenBOW"
+    ],
+    "100919": [
+      "SurnameAAH",
+      "GivenAAH"
+    ],
+    "100931": [
+      "SurnameALS",
+      "GivenALS"
+    ],
+    "100936": [
+      "SurnameAZC",
+      "GivenAZC"
+    ],
+    "100943": [
+      "SurnameBOB",
+      "GivenBOB"
+    ],
+    "100945": [
+      "SurnameAFN",
+      "GivenAFN"
+    ],
+    "100963": [
+      "SurnameBHZ",
+      "GivenBHZ"
+    ],
+    "100989": [
+      "SurnameAXF",
+      "GivenAXF"
+    ],
+    "101035": [
+      "SurnameAAN",
+      "GivenAAN"
+    ],
+    "101049": [
+      "SurnameAGE",
+      "GivenAGE"
+    ],
+    "101056": [
+      "SurnameABY",
+      "GivenABY"
+    ],
+    "101065": [
+      "SurnameBLF",
+      "GivenBLF"
+    ],
+    "101070": [
+      "SurnameADV",
+      "GivenADV"
+    ],
+    "101086": [
+      "SurnameAKC",
+      "GivenAKC"
+    ],
+    "101089": [
+      "SurnameBAR",
+      "GivenBAR"
+    ],
+    "101102": [
+      "SurnameAFX",
+      "GivenAFX"
+    ],
+    "101103": [
+      "SurnameBMK",
+      "GivenBMK"
+    ],
+    "101107": [
+      "SurnameASA",
+      "GivenASA"
+    ],
+    "101123": [
+      "SurnameAZB",
+      "GivenAZB"
+    ],
+    "101124": [
+      "SurnameBRT",
+      "GivenBRT"
+    ],
+    "101128": [
+      "SurnameBGW",
+      "GivenBGW"
+    ],
+    "101137": [
+      "SurnameBKA",
+      "GivenBKA"
+    ],
+    "101138": [
+      "SurnameBJG",
+      "GivenBJG"
+    ],
+    "101139": [
+      "SurnameBME",
+      "GivenBME"
+    ],
+    "101140": [
+      "SurnameBLZ",
+      "GivenBLZ"
+    ],
+    "101141": [
+      "SurnameATO",
+      "GivenATO"
+    ],
+    "101142": [
+      "SurnameARI",
+      "GivenARI"
+    ],
+    "101143": [
+      "SurnameBAU",
+      "GivenBAU"
+    ]
+  },
+  "pre_promotion": [
+    [
+      100945,
+      100001,
+      100032,
+      100031,
+      100038,
+      100056
+    ],
+    [
+      100790,
+      100067,
+      100039,
+      100095,
+      101142,
+      100113
+    ],
+    [
+      100098,
+      100126,
+      100023,
+      100199,
+      100908,
+      100186
+    ],
+    [
+      100260,
+      100045,
+      101128,
+      100333,
+      101124,
+      100179
+    ],
+    [
+      101137,
+      100232,
+      100472,
+      100213,
+      100865,
+      100963
+    ],
+    [
+      101139,
+      100479,
+      100256,
+      100943,
+      100989,
+      100919,
+      100931
+    ],
+    [
+      100367,
+      100504,
+      101065,
+      101123,
+      100368,
+      100814,
+      100936
+    ],
+    [
+      101138,
+      101086,
+      101140,
+      100387,
+      100559,
+      101102,
+      101103
+    ],
+    [
+      100820,
+      100802,
+      100867,
+      100420,
+      101070,
+      101141,
+      100915
+    ],
+    [
+      101035,
+      100622,
+      101107,
+      101089,
+      101143,
+      101056,
+      101049
+    ]
+  ],
+  "promoted": [
+    100790,
+    100915
+  ],
+  "promotion_gap": 150,
+  "seed_order": [
+    100945,
+    100001,
+    100032,
+    100031,
+    100038,
+    100056,
+    100790,
+    100067,
+    100039,
+    100095,
+    101142,
+    100113,
+    100098,
+    100126,
+    100023,
+    100199,
+    100908,
+    100186,
+    100260,
+    100045,
+    101128,
+    100333,
+    101124,
+    100179,
+    101137,
+    100232,
+    100472,
+    100213,
+    100865,
+    100963,
+    101139,
+    100479,
+    100256,
+    100943,
+    100989,
+    100919,
+    100931,
+    100367,
+    100504,
+    101065,
+    101123,
+    100368,
+    100814,
+    100936,
+    101138,
+    101086,
+    101140,
+    100387,
+    100559,
+    101102,
+    101103,
+    100820,
+    100802,
+    100867,
+    100420,
+    101070,
+    101141,
+    100915,
+    101035,
+    100622,
+    101107,
+    101089,
+    101143,
+    101056,
+    101049
+  ],
+  "sizes": [
+    6,
+    6,
+    6,
+    6,
+    6,
+    7,
+    7,
+    7,
+    7,
+    7
+  ]
+}
