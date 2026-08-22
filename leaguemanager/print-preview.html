@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>League Manager — printed surface preview</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!--
+  SCAFFOLDING, not the app.
+
+  Ticket 23 Q11 puts printing on the live app's Printing tab: a print region hidden on
+  screen, revealed by `@media print`, and a button that calls `window.print()`. That tab
+  does not exist yet — `app.js`, `store.js` and `tabs/` are a later session's work.
+
+  This page is what `print.css` and `print.js` are verified through in the meantime, and
+  it is where `tabs/printing.js` lifts its markup from when it is written. It mounts the
+  same `#lm-app` root, loads the same stylesheet, and imports the same module, so what
+  prints from here is what will print from the app.
+
+  The sample seats are **synthetic** — `Given A` / `Surname A`, the same rank-assigned
+  shape `tests/oracles/anonymize.py` emits. This repo is public, has an upstream and is
+  served by Netlify, and the Jul 31 sheet's real seats are club members. What is
+  transcribed from the photograph is the *geometry* and the 21 play-order lines, which
+  is all the artifact needs to be checked against.
+
+  Two things it deliberately does NOT do:
+
+    - it carries **no <style> block of its own**. Ticket 23 Q10 bans bare `html`, `body`,
+      `*` and `#id` rules anywhere under `leaguemanager/`, and `test/css.test.js` reads
+      <style> blocks in .html as well as .css files. All geometry lives in print.css.
+
+    - it does not fetch anything. The sample session below is the Jul 31 2026 Group #6
+      sheet transcribed from `printed-scoresheet-2026Jul31-group6.jpeg`, and the Aug 7
+      floor map from `table-map-08-18-2026.jpeg`. Print page 1 and lay it on the
+      photograph; that physical check is ticket 18 Q10's, folded into the cutover gate.
+
+  PRINTING IT.  Chrome, and its three dialog defaults each damage a sheet:
+  Margins **None**, Scale **100**, headers and footers **off**. Chrome remembers them
+  per-site. Headless equivalent, which is what the verification run uses:
+
+      chrome --headless --no-pdf-header-footer --print-to-pdf=out.pdf print-preview.html
+
+  Expect one page per sheet at MediaBox 612 x 792 pt.
+
+  Local dev: this is an ES module, so `file://` will not load it. Use `netlify dev`.
+-->
+<link rel="stylesheet" href="./print.css" />
+</head>
+
+<body>
+
+<div id="lm-app" class="lm-print-preview">
+	<div class="lm-screen-only">
+		<button type="button" id="lm-print-button">Print</button>
+		<span>Page 1 is a 7-player group in the Jul 31 2026 Group #6 shape. Pages 2 and 3
+		are a 6-player group and a 5-player group at 1.5 tables, so the shared (½) table arm
+		is exercised. The last page is the full floor map. All seats are synthetic labels —
+		this repo is public.</span>
+	</div>
+
+	<div class="lm-print" id="lm-print-region"></div>
+</div>
+
+<script type="module">
+import {
+  captionFor, floorMapColumns, floorMapHeader, miniMapForGroup, padRating,
+  playOrderLines, staircaseCells, tableText,
+} from './print.js';
+
+/* Ten groups of two whole tables is the shape every one of the 37 published sessions
+   ran, and it is what AssignTableLabels walks: group 1 takes ordinals 0 and 1, group 2
+   takes 2 and 3, and so on, so group 6 owns tables 11 and 12 (1-based). Under the
+   thumbnail's 90-degree rotation those land 6th and 7th of nine in the back run —
+   exactly where the Jul 31 photograph's two adjacent black rectangles sit. The table
+   numbers are derived, not chosen. */
+const WHOLE_TABLES = [2, 2, 2, 2, 2, 2, 2, 2, 2, 2];
+
+/* Groups 1 and 2 share a table, so both the 0.5 arm and the dominant/subordinate split
+   are on the page. NO_ORACLE: 0 shared tables in 37 published sessions. */
+const SHARED_TABLES = [2.5, 2.5, 2, 2, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5];
+
+const SHEETS = [
+  {
+    groupIndex: 5, date: 'Friday, Jul 31, 2026', groupTables: WHOLE_TABLES,
+    players: [
+      { rating: 853, first: 'Given A', last: 'Surname A' },
+      { rating: 795, first: 'Given B', last: 'Surname B' },
+      { rating: 792, first: 'Given C', last: 'Surname C' },
+      { rating: 766, first: 'Given D', last: 'Surname D' },
+      { rating: 739, first: 'Given E', last: 'Surname E' },
+      { rating: 716, first: 'Given F', last: 'Surname F' },
+      { rating: 696, first: 'Given G', last: 'Surname G' },
+    ],
+  },
+  {
+    groupIndex: 2, date: 'Friday, Jul 31, 2026', groupTables: WHOLE_TABLES,
+    players: [
+      { rating: 1204, first: 'Given H', last: 'Surname H' },
+      { rating: 1187, first: 'Given J', last: 'Surname J' },
+      { rating: 1102, first: 'Given K', last: 'Surname K' },
+      { rating: 1044, first: 'Given L', last: 'Surname L' },
+      { rating: 998, first: 'Given M', last: 'Surname M' },
+      { rating: 961, first: 'Given N', last: 'Surname N' },
+    ],
+  },
+  {
+    groupIndex: 4, date: 'Friday, Jul 31, 2026', groupTables: SHARED_TABLES,
+    players: [
+      { rating: 612, first: 'Given P', last: 'Surname P' },
+      { rating: 588, first: 'Given Q', last: 'Surname Q' },
+      { rating: 540, first: 'Given R', last: 'Surname R' },
+      { rating: 511, first: 'Given S', last: 'Surname S' },
+      { rating: 487, first: 'Given T', last: 'Surname T' },
+    ],
+  },
+];
+
+const el = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
+};
+
+function buildSheet({ groupIndex, date, players, groupTables }) {
+  const tables = groupTables[groupIndex];
+  const page = el('div', 'lm-sheet');
+  const col = el('div', 'lm-sheet-column');
+
+  const hdr = el('div', 'lm-sheet-headerline');
+  hdr.appendChild(el('div', null, 'Berkeley Table Tennis Club'));
+  hdr.appendChild(el('div', 'lm-sheet-date', `Date: ${date}`));
+  col.appendChild(hdr);
+  col.appendChild(el('div', null, 'Round Robin Draw Sheet'));
+
+  const grid = el('div', 'lm-sheet-grid');
+  for (const row of staircaseCells(players.length)) {
+    const r = el('div', 'lm-sheet-row');
+    for (const [i, j] of row) {
+      const cell = el('div', 'lm-sheet-cell');
+      cell.appendChild(el('div', 'lm-sheet-cell-label', `${i} vs ${j}`));
+      const boxes = el('div', 'lm-sheet-cell-boxes');
+      boxes.appendChild(el('span'));
+      boxes.appendChild(el('span'));
+      cell.appendChild(boxes);
+      r.appendChild(cell);
+    }
+    grid.appendChild(r);
+  }
+  col.appendChild(grid);
+
+  col.appendChild(el('div', 'lm-sheet-groupline',
+    `Group #${groupIndex + 1} : ${players.length} Players, ${tableText(tables)}`));
+
+  const roster = el('div', 'lm-sheet-roster');
+  players.forEach((p, i) => {
+    roster.appendChild(el('div', null,
+      `${i + 1}.  (${padRating(p.rating)})  ${p.first} ${p.last}`));
+  });
+  col.appendChild(roster);
+
+  const footer = el('div', 'lm-sheet-footer');
+  footer.appendChild(el('div', null, '  »    If you are the last pair(s) of players at the end,'));
+  footer.appendChild(el('div', null, '  »    please fold up your table when done.'));
+  col.appendChild(footer);
+  page.appendChild(col);
+
+  const po = el('div', 'lm-sheet-playorder');
+  po.appendChild(el('div', 'lm-sheet-heading', 'Play Order'));
+  for (const { lhs, vs, rhs } of playOrderLines(players)) {
+    const row = el('div', 'lm-sheet-match');
+    row.appendChild(el('div', 'lm-sheet-lhs', lhs));
+    row.appendChild(el('div', 'lm-sheet-vs', vs));
+    row.appendChild(el('div', 'lm-sheet-rhs', rhs));
+    po.appendChild(row);
+  }
+  page.appendChild(po);
+
+  const banner = el('div', 'lm-sheet-banner');
+  banner.appendChild(el('span', 'lm-sheet-banner-label', 'Group #'));
+  banner.appendChild(el('span', 'lm-sheet-banner-num', String(groupIndex + 1)));
+  page.appendChild(banner);
+
+  const map = el('div', 'lm-minimap');
+  map.appendChild(el('div', 'lm-minimap-caption', captionFor(tables)));
+  map.appendChild(el('div', 'lm-desk', 'Desk'));
+  for (const run of miniMapForGroup(groupIndex, groupTables)) {
+    const r = el('div', 'lm-minimap-run');
+    r.dataset.run = run.name;
+    for (const t of run.tables) {
+      const box = el('div', `lm-t${t.mine ? ' lm-mine' : ''}${t.shared ? ' lm-shared' : ''}`);
+      box.title = `table ${t.index + 1}`;
+      r.appendChild(box);
+    }
+    map.appendChild(r);
+  }
+  page.appendChild(map);
+  return page;
+}
+
+function buildFloorMap(groupTables, header) {
+  const page = el('div', 'lm-map');
+  page.appendChild(el('div', 'lm-map-header', floorMapHeader(header).join('\n')));
+  for (const run of floorMapColumns(groupTables)) {
+    const c = el('div', 'lm-map-column');
+    c.dataset.run = run.name;
+    for (const t of run.tables) {
+      const box = el('div',
+        `lm-map-table${t.shared ? ' lm-map-shared' : ''}${t.long ? ' lm-map-long' : ''}`);
+      box.dataset.content = t.label;
+      c.appendChild(box);
+    }
+    page.appendChild(c);
+  }
+  page.appendChild(el('div', 'lm-map-desk', '[DESK]'));
+  page.appendChild(el('div', 'lm-map-youarehere', 'X «-you are here'));
+  return page;
+}
+
+const out = document.getElementById('lm-print-region');
+SHEETS.forEach((s) => out.appendChild(buildSheet(s)));
+out.appendChild(buildFloorMap(WHOLE_TABLES, {
+  dateStr: 'Friday, Aug 7, 2026',
+  groups: 10,
+  players: 64,
+  tablesUsed: 20,
+  clubTables: 20,
+  solution: '6² 6² 6² 6² 6² 6² 7² 7² 7² 7²',
+}));
+
+document.getElementById('lm-print-button')
+  .addEventListener('click', () => window.print());
+</script>
+
+</body>
+</html>

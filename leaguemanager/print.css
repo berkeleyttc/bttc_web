@@ -1,0 +1,523 @@
+/*
+ * print.css -- the two printed artifacts, and nothing else.
+ *
+ * Ticket 18 cut the print run to two: the **score sheet** and the **floor map**. Ticket 09
+ * decided the sheet is drawn in HTML/CSS rather than blitted from `RREntryTable*.JPG`, and
+ * that dissolved three suspected bugs outright -- `#36` (a misspelled font name GDI+
+ * silently substitutes), `#61` (`new String('\n', 22)` positioning the roster by counting
+ * blank lines) and `#37` (an image filename whose case is fatal on a case-sensitive host).
+ * There is no font to misspell, no clearance to hand-tune and no file to load.
+ *
+ * Ticket 23 Q11 kills the design's `Blob` + `window.open`: this is a print region on the
+ * live app, hidden on screen and revealed by `@media print`, and the button is
+ * `window.print()`.
+ *
+ * ---------------------------------------------------------------------------------------
+ * THREE SCOPING RULES -- ticket 23 Q10, and they are not hygiene.
+ *
+ *   1. `_ds` tokens keep their names and sit on `#lm-app`, never on `:root`.
+ *   2. The two grid token sets are prefixed apart: `--lm-grid-*` for ticket 20's screen
+ *      entry grid, `--lm-sheet-*` for this printed sheet.
+ *   3. Every rule is written under the app root. No bare `html`, `body`, `*` or `#id`
+ *      rule ships.
+ *
+ * Rule 2 exists because the collision is already real: tickets 09 and 20 both define
+ * `--cell-w`, `--cell-half`, `--label-band`, `--box-band`, `--row-gap` and `--rule` -- six
+ * names, all six shared, all six at **different units** (`0.95833in` against `84px`). Both
+ * also declare `* { box-sizing }`, `html`, `body`, `#controls`, `.cell`, `.banner` and
+ * more, where `.banner` is an error strip in one file and an absolutely-positioned printed
+ * group header in the other. Loading both into one document without this rule silently
+ * rescales one of the two grids, and whichever stylesheet loads last wins.
+ *
+ * `leaguemanager/test/css.test.js` enforces rules 1-3 as `node --test` cases (ticket 24
+ * Q19). They are greppable, which is the entire reason they are cheap enough to have.
+ *
+ * ---------------------------------------------------------------------------------------
+ * TWO REQUIRED PROPERTIES, both from ticket 18 via ticket 23 Q11.
+ *
+ *   `@page { size: letter; margin: 0 }`  -- ticket 09's coordinates are measured from the
+ *   PAPER corner, because the C# never sets `OriginAtMargins`. A non-zero page margin
+ *   shifts every one of them. US Letter is **hardcoded**; A4 was built, verified at
+ *   595x842pt, and dropped (ticket 09 Q4).
+ *
+ *   `print-color-adjust: exact` -- Chrome drops background colours in print by default,
+ *   which silently erased the black and grey table fills, the only thing on the mini map
+ *   telling a player which tables are theirs. The C# overlaid *images* and never had this
+ *   failure mode, so nothing in `docs/` warns about it. Scoped tightly, as ticket 09
+ *   scopes it, rather than document-wide.
+ *
+ * The UA gives `body` an 8px margin, which under `@page { margin: 0 }` would shift every
+ * paper-corner coordinate. Rule 3 forbids a bare `body` rule, so the app root escapes it
+ * instead: an absolutely-positioned box whose ancestors are all unpositioned resolves
+ * against the initial containing block -- in paged media, the page box -- and `body`'s
+ * margin drops out. See `#lm-app` under `@media print` below.
+ *
+ * ---------------------------------------------------------------------------------------
+ * OPERATING IT.  Chrome is the supported browser and its three dialog defaults each
+ * damage a sheet: Margins **None**, Scale **100**, headers and footers **off**. Chrome
+ * remembers them per-site. That one-time setup is a line in `OPERATING.md` (ticket 32).
+ */
+
+/* ===================================================================== tokens */
+#lm-app {
+	/* ---- score-grid closed forms, docs/10 2.2, px@96dpi converted to inches ---- */
+	--lm-sheet-cell-w:        0.95833in;  /*  92px */
+	--lm-sheet-cell-half:     0.47917in;  /*  46px -- the divider sits at exactly half */
+	--lm-sheet-label-band:    0.21875in;  /*  21px */
+	--lm-sheet-box-band:      0.48958in;  /*  47px */
+	--lm-sheet-row-pitch:     0.82292in;  /*  79px */
+	--lm-sheet-row-gap:       0.11458in;  /*  11px = pitch - (label + box) */
+	--lm-sheet-rule:          0.01042in;  /*   1px */
+
+	/* ---- page geometry, docs/10 2 ---- */
+	--lm-sheet-paper-w:       8.5in;      /* US Letter, hardcoded (ticket 09 Q4) */
+	--lm-sheet-paper-h:       11in;
+	--lm-sheet-margin:        0.35in;     /* PrintMargin = 35 hundredths, PrintHandler.cs:19 */
+	--lm-sheet-grid-y:        1.11in;     /* (int)(3 * lineheight14 + PrintMargin) */
+	--lm-sheet-po-x:          5.90in;     /* startX = 590, PrintHandler3.cs:185 */
+	--lm-sheet-po-y:          2.30in;     /* startY = 230, PrintHandler3.cs:186 */
+	--lm-sheet-po-advance:    0.254in;    /* lineheight14, calibrated docs/10 2.0 */
+	--lm-sheet-text-advance:  0.22in;     /* text-block advance, calibrated docs/10 2.0 */
+	--lm-sheet-banner-x:      1.20in;     /* bannerposx = 120, PrintHandler2.cs:143 */
+	--lm-sheet-map-w:         2.75in;     /* 1100 * 0.25, MINI_SCALE PrintHandler2.cs:68 */
+	--lm-sheet-map-h:         2.12in;     /*  850 * 0.25 */
+
+	/* ---- full-page floor map, docs/04 5.3 ----
+	   The spacing arithmetic uses the table images' PIXEL counts (108 x 58) because the
+	   C# reads Image.Width/.Height, while DrawImage(Image, Point) draws at PHYSICAL size
+	   -- 150 x 81 page units at 72 dpi. Every rectangle is therefore about 39% larger in
+	   each axis than the spacing assumes. `table-map-08-18-2026.jpeg` measured it and
+	   closed docs/10 4.1's "inferred, not measured"; docs/figures/table_map_150x81.svg is
+	   the visual target and table_map_108x58.svg is the rejected alternative. */
+	--lm-map-table-w:         1.50in;     /* 108px / 72dpi */
+	--lm-map-table-h:         0.81in;     /*  58px / 72dpi */
+	--lm-map-front-x:         3.26in;     /* margin + 2.7 * 108 */
+	--lm-map-front-y:         0.73in;     /* margin + manual_adj, manual = (int)(58*2/3) */
+	--lm-map-front-pitch:     1.20in;     /* 58 + spare, spare = (1100 - 8*58 - 70) / 9 */
+	--lm-map-back-x:          5.42in;     /* front_x + 2 * 108 */
+	--lm-map-back-y:          0.60in;     /* margin + spare2 / 2 */
+	--lm-map-back-pitch:      1.08in;     /* 58 + spare2, spare2 = (1100 - 9*58 - 70) / 10 */
+	--lm-map-well-x:          1.08in;     /* front_x / 3 */
+	--lm-map-well-y:          3.13in;     /* margin + manual_adj + 2 * front_pitch */
+	--lm-map-well-pitch:      1.20in;
+	--lm-map-label-x:         1.03125in;  /* 11/16 W, TableMapping.cs:577 */
+	--lm-map-label-y:         0.6075in;   /*  3/4 H, TableMapping.cs:578 */
+
+	--lm-sheet-ink:           #000;
+	--lm-sheet-grey:          #808080;
+}
+
+/* ===================================================================== the page box */
+/* Not scoped to the app root because it cannot be: `@page` is a page context, not an
+   element selector, and there is no other way to say "US Letter, no margin". */
+@page {
+	size: letter;
+	margin: 0;
+}
+
+#lm-app * ,
+#lm-app *::before,
+#lm-app *::after {
+	box-sizing: border-box;
+}
+
+/* The print region is not on screen. The Printing tab shows a preview by opting in with
+   `.lm-print-preview` on the app root; everywhere else it is revealed only by
+   `@media print`. */
+#lm-app .lm-print {
+	display: none;
+}
+
+#lm-app.lm-print-preview .lm-print {
+	display: block;
+	background: var(--lm-sheet-grey);
+	padding: 1.5rem 0;
+}
+
+/* The preview harness's own chrome. Never printed -- see @media print at the foot. */
+#lm-app .lm-screen-only {
+	padding: 0.75rem 1rem;
+	font: 13px/1.5 ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ===================================================================== one sheet */
+#lm-app .lm-sheet {
+	position: relative;
+	width: var(--lm-sheet-paper-w);
+	height: var(--lm-sheet-paper-h);
+	background: #fff;
+	color: var(--lm-sheet-ink);
+	font-family: Arial, Helvetica, "Liberation Sans", sans-serif;
+	overflow: hidden;
+	break-after: page;
+	page-break-after: always;
+}
+
+#lm-app .lm-sheet:last-child {
+	break-after: auto;
+	page-break-after: auto;
+}
+
+#lm-app.lm-print-preview .lm-sheet {
+	margin: 0 auto 1.5rem;
+	box-shadow: 0 3px 14px rgba(0, 0, 0, .5);
+}
+
+/* ---- the left column: header, grid, roster, footer -- ALL IN FLOW ----
+   The surviving constraint from `#36`/`#61`: never position the roster by counting blank
+   lines. Everything below the grid derives from the grid's real bottom edge, so the
+   hand-tuned 0.064in clearance stops existing rather than being re-tuned. */
+#lm-app .lm-sheet-column {
+	position: absolute;
+	left: var(--lm-sheet-margin);
+	top: var(--lm-sheet-margin);
+	width: calc(var(--lm-sheet-paper-w) - 2 * var(--lm-sheet-margin));
+	font-size: 14pt;
+	line-height: var(--lm-sheet-text-advance);
+}
+
+/* docs/10 2.1 is a literal run of 54 spaces in a proportional font. On the Jul 31 sheet
+   `Date:` lands 4.05in across the text block; a real column puts it there
+   deterministically instead of by luck. */
+#lm-app .lm-sheet-headerline {
+	position: relative;
+	white-space: nowrap;
+}
+
+#lm-app .lm-sheet-headerline .lm-sheet-date {
+	position: absolute;
+	left: 4.05in;
+	top: 0;
+}
+
+/* ---- score grid ---- */
+#lm-app .lm-sheet-grid {
+	margin-top: calc(var(--lm-sheet-grid-y) - var(--lm-sheet-margin)
+	                 - 2 * var(--lm-sheet-text-advance));
+}
+
+#lm-app .lm-sheet-row {
+	display: flex;
+	height: calc(var(--lm-sheet-label-band) + var(--lm-sheet-box-band));
+	margin-bottom: var(--lm-sheet-row-gap);
+}
+
+#lm-app .lm-sheet-row:last-child {
+	margin-bottom: 0;
+}
+
+/* Names in row headers were built and DECLINED (ticket 09 Q3b): the column cost 0.85in of
+   flow width the 7-player page does not have, and paying for it shrank the handwriting
+   boxes from 0.48in to 0.35in. Cells stay at the documented 0.958in. */
+#lm-app .lm-sheet-cell {
+	width: var(--lm-sheet-cell-w);
+	flex: 0 0 var(--lm-sheet-cell-w);
+	border: var(--lm-sheet-rule) solid var(--lm-sheet-ink);
+	margin-right: calc(-1 * var(--lm-sheet-rule));   /* rules shared, as in the JPEG */
+}
+
+#lm-app .lm-sheet-cell-label {
+	height: var(--lm-sheet-label-band);
+	border-bottom: var(--lm-sheet-rule) solid var(--lm-sheet-ink);
+	font-size: 8pt;
+	font-weight: bold;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	white-space: nowrap;
+}
+
+#lm-app .lm-sheet-cell-boxes {
+	height: calc(var(--lm-sheet-box-band) - var(--lm-sheet-rule));
+	display: flex;
+}
+
+#lm-app .lm-sheet-cell-boxes span {
+	flex: 0 0 var(--lm-sheet-cell-half);
+}
+
+#lm-app .lm-sheet-cell-boxes span:first-child {
+	border-right: var(--lm-sheet-rule) solid var(--lm-sheet-ink);
+}
+
+/* ---- roster + footer, positioned by flow from the grid's real bottom ---- */
+#lm-app .lm-sheet-groupline,
+#lm-app .lm-sheet-roster,
+#lm-app .lm-sheet-footer {
+	margin-top: var(--lm-sheet-text-advance);
+}
+
+#lm-app .lm-sheet-roster div,
+#lm-app .lm-sheet-footer div {
+	white-space: pre;
+}
+
+/* ---- play-order column, absolute ----
+   docs/10 2.4. The heading is drawn left-aligned at startX = 590 and
+   `center_location = startX + width("Play Order") / 2`, so the spine is the HEADING'S OWN
+   CENTRE, not a fixed coordinate. Sizing the column to `max-content` makes 50% exactly
+   that centre, and the pairings hang off either side as far as the names need -- which is
+   what the photograph shows. */
+#lm-app .lm-sheet-playorder {
+	position: absolute;
+	left: var(--lm-sheet-po-x);
+	top: var(--lm-sheet-po-y);
+	width: max-content;
+	font-size: 14pt;
+	line-height: var(--lm-sheet-po-advance);
+	white-space: nowrap;
+}
+
+#lm-app .lm-sheet-playorder .lm-sheet-heading {
+	text-decoration: underline;
+}
+
+/* No first-up bolding here. It was offered for the sheet and DECLINED (ticket 18 Q8),
+   precisely to keep the printed surface at zero declared divergences --
+   `PrintMatchPlayOrder3()` draws every pairing in the same weight. The published bracket
+   page does bold; print and web stay deliberately different. */
+#lm-app .lm-sheet-match {
+	position: relative;
+	height: var(--lm-sheet-po-advance);
+}
+
+#lm-app .lm-sheet-match > * {
+	position: absolute;
+	top: 0;
+}
+
+#lm-app .lm-sheet-match .lm-sheet-lhs {
+	right: 50%;
+	margin-right: 1.1ch;
+	text-align: right;
+}
+
+#lm-app .lm-sheet-match .lm-sheet-vs {
+	left: 50%;
+	transform: translateX(-50%);
+}
+
+#lm-app .lm-sheet-match .lm-sheet-rhs {
+	left: 50%;
+	margin-left: 1.1ch;
+}
+
+/* ---- group banner, bottom-left ---- */
+#lm-app .lm-sheet-banner {
+	position: absolute;
+	left: var(--lm-sheet-banner-x);
+	bottom: 0.62in;   /* bannerposy = paper_h - margin - h("Group #"@30pt) - 10 */
+	display: flex;
+	align-items: baseline;
+	gap: 0.12in;
+}
+
+#lm-app .lm-sheet-banner .lm-sheet-banner-label {
+	font-size: 30pt;
+}
+
+#lm-app .lm-sheet-banner .lm-sheet-banner-num {
+	font-size: 55pt;
+	font-weight: bold;
+}
+
+/* ---- mini floor map, bottom-right ---- */
+#lm-app .lm-minimap {
+	position: absolute;
+	right: calc(var(--lm-sheet-margin) + 0.10in);
+	bottom: calc(var(--lm-sheet-margin) + 0.10in);
+	width: var(--lm-sheet-map-w);
+	height: var(--lm-sheet-map-h);
+}
+
+#lm-app .lm-minimap .lm-minimap-caption {
+	position: absolute;
+	bottom: 100%;
+	left: 0.15in;
+	font-size: 9pt;
+	font-style: italic;
+	text-decoration: underline;
+	white-space: pre-line;   /* the \n of the shared-table arm -- `#39` is a non-issue here */
+}
+
+#lm-app .lm-minimap .lm-minimap-run {
+	position: absolute;
+	left: 0;
+	right: 0;
+	display: flex;
+	justify-content: center;
+	gap: 0.065in;
+}
+
+#lm-app .lm-minimap .lm-minimap-run[data-run="well"]  { top: 0.10in; }
+#lm-app .lm-minimap .lm-minimap-run[data-run="front"] { top: 0.82in; }
+#lm-app .lm-minimap .lm-minimap-run[data-run="back"]  { top: 1.54in; }
+
+#lm-app .lm-minimap .lm-t {
+	width: 0.155in;
+	height: 0.30in;
+	border: 1.2px solid var(--lm-sheet-ink);
+}
+
+#lm-app .lm-minimap .lm-t.lm-mine {
+	background: var(--lm-sheet-ink);
+}
+
+#lm-app .lm-minimap .lm-t.lm-shared {
+	background: var(--lm-sheet-grey);
+	border-color: var(--lm-sheet-grey);
+}
+
+#lm-app .lm-minimap .lm-desk {
+	position: absolute;
+	left: 0.02in;
+	top: 0.02in;
+	writing-mode: vertical-rl;
+	font-size: 7pt;
+	background: var(--lm-sheet-grey);
+	color: #fff;
+	padding: 0.02in 0.01in;
+}
+
+/* REQUIRED. Chrome drops background colours in print by default, which erases the black
+   and grey fills -- the only thing on the mini map telling a player which tables are
+   theirs. Scoped to the fills that carry meaning, not applied document-wide. */
+#lm-app .lm-minimap .lm-t,
+#lm-app .lm-minimap .lm-desk,
+#lm-app .lm-map .lm-map-table.lm-map-shared,
+#lm-app .lm-map .lm-map-desk {
+	-webkit-print-color-adjust: exact;
+	print-color-adjust: exact;
+}
+
+/* ================================================= the full-page floor map */
+/* docs/10 4. A spatial floor plan, not a list: three columns of 3 / 8 / 9 boxes, every
+   box a rectangle and every label a GROUP number. There are no DrawLine, DrawRectangle or
+   FillRectangle calls anywhere in the map path -- every box is the `tablerectwht.jpg`
+   image -- so no column headers, no grid, no borders beyond the rectangles themselves. */
+#lm-app .lm-map {
+	position: relative;
+	width: var(--lm-sheet-paper-w);
+	height: var(--lm-sheet-paper-h);
+	background: #fff;
+	color: var(--lm-sheet-ink);
+	font-family: Arial, Helvetica, "Liberation Sans", sans-serif;
+}
+
+#lm-app .lm-map .lm-map-header {
+	position: absolute;
+	left: var(--lm-sheet-margin);
+	top: var(--lm-sheet-margin);
+	font-size: 15pt;          /* TableMapping.cs:388 */
+	line-height: 1.4;
+	white-space: pre-line;
+}
+
+#lm-app .lm-map .lm-map-column {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+}
+
+#lm-app .lm-map .lm-map-column[data-run="front"] {
+	left: var(--lm-map-front-x);
+	top: var(--lm-map-front-y);
+	gap: calc(var(--lm-map-front-pitch) - var(--lm-map-table-h));
+}
+
+#lm-app .lm-map .lm-map-column[data-run="back"] {
+	left: var(--lm-map-back-x);
+	top: var(--lm-map-back-y);
+	gap: calc(var(--lm-map-back-pitch) - var(--lm-map-table-h));
+}
+
+#lm-app .lm-map .lm-map-column[data-run="well"] {
+	left: var(--lm-map-well-x);
+	top: var(--lm-map-well-y);
+	gap: calc(var(--lm-map-well-pitch) - var(--lm-map-table-h));
+}
+
+#lm-app .lm-map .lm-map-table {
+	position: relative;
+	width: var(--lm-map-table-w);
+	height: var(--lm-map-table-h);
+	border: 1px solid var(--lm-sheet-ink);
+	flex: 0 0 var(--lm-map-table-h);
+}
+
+/* TableMapping.cs:566-567 -- the label drops from 28pt to 23pt once the string exceeds
+   four characters, which is exactly why that branch exists: a share reads "10/11". */
+#lm-app .lm-map .lm-map-table::before {
+	content: attr(data-content);
+	position: absolute;
+	left: var(--lm-map-label-x);
+	top: var(--lm-map-label-y);
+	transform: translate(-50%, -50%);
+	font-size: 28pt;
+	white-space: nowrap;
+}
+
+#lm-app .lm-map .lm-map-table.lm-map-long::before {
+	font-size: 23pt;
+}
+
+/* docs/10 4.2: a share prints as an ordinary white rectangle labelled "g1/g2" -- no
+   shading, no split line. Only the score sheet's mini map distinguishes it, in grey. The
+   selector exists so `print-color-adjust` above has something to name if that ever
+   changes; it sets no fill today. */
+#lm-app .lm-map .lm-map-table.lm-map-shared {
+	background: transparent;
+}
+
+#lm-app .lm-map .lm-map-desk {
+	position: absolute;
+	left: calc(3 * var(--lm-sheet-margin));      /* TableMapping.cs:425 */
+	top: calc(var(--lm-sheet-paper-h) - 7 * var(--lm-sheet-margin));
+	font-size: 25pt;                              /* TableMapping.cs:429 */
+}
+
+#lm-app .lm-map .lm-map-youarehere {
+	position: absolute;
+	left: calc(2.5 * var(--lm-sheet-margin));    /* TableMapping.cs:450-451 */
+	top: calc(var(--lm-sheet-paper-h) - 8.3 * var(--lm-sheet-margin));
+	font-size: 15pt;
+	font-style: italic;
+}
+
+/* ===================================================================== print */
+@media print {
+	/* The app root escapes `body`'s 8px UA margin by leaving the flow entirely. With no
+	   positioned ancestor this resolves against the initial containing block -- the page
+	   box -- so every paper-corner coordinate above lands where docs/10 2 says it does,
+	   without a bare `body` rule that ticket 23 Q10 forbids. */
+	#lm-app {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: var(--lm-sheet-paper-w);
+	}
+
+	/* Written at the preview's own specificity, not below it. `.lm-print-preview` is an
+	   id + two classes; a plain `#lm-app .lm-print` reset loses to it and its 1.5rem of
+	   padding survives onto the paper, pushing every artifact a fraction past 11in and
+	   costing a blank page each. Measured: 6 pages for 4 artifacts. */
+	#lm-app .lm-print,
+	#lm-app.lm-print-preview .lm-print {
+		display: block;
+		background: transparent;
+		padding: 0;
+	}
+
+	#lm-app .lm-sheet,
+	#lm-app .lm-map,
+	#lm-app.lm-print-preview .lm-sheet,
+	#lm-app.lm-print-preview .lm-map {
+		margin: 0;
+		box-shadow: none;
+	}
+
+	/* Everything that is not the print region stays off the paper. */
+	#lm-app .lm-screen-only {
+		display: none;
+	}
+}

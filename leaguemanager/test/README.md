@@ -1,6 +1,7 @@
 # `leaguemanager/test/`
 
-Conformance tests for the two pure domain modules, `draw.js` and `play-order.js`.
+Conformance tests for the pure domain modules — `draw.js`, `play-order.js` and
+`print.js` — and for the printed surface's stylesheet.
 
 ```sh
 node --test 'leaguemanager/test/*.test.js'
@@ -71,14 +72,39 @@ thing to a check lives on the private side, in
 compares these files against what the oracles produce today whenever both repos are
 checked out side by side.
 
+## `css.test.js` — the printed surface's scoping rules
+
+Ticket 24 Q19's two greppable cases, now that `print.css` exists. They enforce ticket 23
+Q10 from the public side, where a developer editing the CSS will actually run them:
+
+1. **No bare `html`, `body`, `*` or `#id` rule** anywhere under `leaguemanager/` —
+   `.css` files and `<style>` blocks in `.html` alike. `#lm-app` itself is the one
+   permitted top-level selector, because ticket 23 Q9 puts the `_ds` tokens on it
+   precisely so they cannot reach the other four apps.
+2. **The two grid token sets are prefixed apart** — `--lm-grid-*` for ticket 20's screen
+   entry grid, `--lm-sheet-*` for the printed sheet — and no custom property is defined
+   at two different values.
+
+The failure they prevent is **measured**: tickets 09 and 20 both define `--cell-w`,
+`--cell-half`, `--label-band`, `--box-band`, `--row-gap` and `--rule` at different units
+(`0.95833in` against `84px`), and unprefixed, whichever stylesheet loads last silently
+rescales the other grid.
+
+A third case came out of building it, and it is the sharpest of the three. The preview
+harness's rules are written `#lm-app.lm-print-preview …` — an id plus two classes — so a
+plain `#lm-app …` reset inside `@media print` **loses** to them. The preview's 1.5rem of
+padding survived onto the paper and pushed every artifact a fraction past 11in: Chrome
+printed **6 pages for 4 artifacts**, one blank after each, at a MediaBox that was correct
+either way. So `css.test.js` requires every `.lm-print-preview` selector to be reset at
+its own specificity inside `@media print`.
+
+The same properties are asserted from the private side too, in
+`bttc_api/tests/test_print_surface.py`, which is what registers `print/score_sheet` and
+`print/table_map` in the divergence register.
+
 ## Not here yet
 
-- **The CSS cases** (ticket 24 Q19) — the ban on bare `html`, `body`, `*` and `#id`
-  selectors under `leaguemanager/`, and the `--lm-grid-*` / `--lm-sheet-*` prefix
-  split. There is no `leaguemanager/` CSS yet. The failure they prevent is measured,
-  not hypothetical: tickets 09 and 20 define six identically-named tokens at different
-  units (`0.95833in` against `84px`).
 - **The draft round-trip** (ticket 23 Q17) — serialise the uncommitted draw to
   `bttc_lm_draw_v1_<event_id>`, restore it, re-verify. There is no `store.js` yet.
 
-Both belong to the session that writes them.
+It belongs to the session that writes it.
