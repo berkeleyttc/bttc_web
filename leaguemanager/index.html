@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>League Manager - BTTC</title>
+
+  <meta name="description" content="Friday-night round robin operator console for Berkeley Table Tennis Club.">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+
+  <!--
+    Archivo, weights 400/600/800. Ticket 23 Q9 adopts `_ds` verbatim, and `_ds`'s own
+    `styles.css:2` fetches the font with an `@import`. It becomes a <link> here: same
+    dependency, same weights, and the same idiom `admin/index.html:11` already uses for
+    PT Sans Narrow -- but an @import at the top of a stylesheet serialises the font
+    request behind the CSS request, and a <link> does not. Self-hosting was offered and
+    declined with the rest of the runtime network dependencies (Q4, F22).
+  -->
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css?v=1">
+  <link rel="stylesheet" href="/leaguemanager/ds.css">
+  <link rel="stylesheet" href="/leaguemanager/app.css">
+  <link rel="stylesheet" href="/leaguemanager/print.css">
+</head>
+
+<body>
+  <!--
+    Site chrome, inline, as every other page on this site has it. `bttc_web/CLAUDE.md`:
+    "Do not refactor navigation into shared includes -- duplication is intentional."
+  -->
+  <div id="header">
+    <div class="container_12 clearfix">
+      <div id="logo" class="grid_6">
+        <a href="/"><img src="../images/logo.gif" height="60" alt="BTTC Logo"></a>
+      </div>
+    </div>
+    <div>
+      <ul id="nav" class="container_12">
+        <li><a href="/registration/">Register</a></li>
+        <li><a href="/draw-brackets/">Brackets</a></li>
+        <li><a href="/results.html">Results</a></li>
+        <li><a href="/coaching.html">Coaching</a></li>
+        <li><a href="/about.html">About</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!--
+    THE ROOT ID IS FIXED BY LANDED CODE. `print.css:62` defines the printed surface's
+    tokens on `#lm-app` and `print-preview.html:51` already mounts a div with this id.
+    Pick a different one and the printed sheet silently loses every token -- the paper
+    still renders, at the wrong size, with no rules. `admin/` mounts `#vue-admin-app`;
+    that is not this app's.
+
+    `css.test.js` also treats `#lm-app` as the ONE permitted top-level selector, so the
+    id is load-bearing in both directions.
+  -->
+  <div id="lm-app" v-cloak></div>
+
+  <!--
+    Vue first, as a classic script. `vue.global.prod.js` is an IIFE that attaches
+    `window.Vue`, which a module reads without ceremony; ordering holds automatically
+    because module scripts are deferred, so every classic <script> on the page has
+    already run by the time `app.js` evaluates.
+
+    UNPINNED AND WITHOUT SRI, matching all four existing apps (ticket 23 Q4). Vendoring
+    the file and pinning-plus-SRI were both offered and DECLINED, and prototype 20
+    reproduced the defect deliberately so this decision would be taken once for all
+    seven tabs. The exposure, recorded rather than fixed (F22): `vue@3` is a semver
+    range unpkg resolves at request time, so a Vue minor can land under the operator
+    mid-evening with no commit in this repository, and an unpkg outage at 7pm on a
+    Friday ends the evening rather than degrading it.
+
+    `env.js` and `js/bttc-utils.js` are DELIBERATELY NOT LOADED. Nothing is added to
+    `env.js` (Q13) -- every setting this app needs comes from `GET /rr/session`, and
+    declaring them a second time in a hand-edited file checked into git is exactly the
+    drift `verify_play_order.py` exists to catch, with nothing here to catch it. And
+    `bttc-utils.js` is neither used nor extended (Q14): its `getErrorMessage()` appends
+    "contact BTTC support at 510-926-6913 (TEXT ONLY)" to every branch, which is right
+    for a player on a registration form and wrong for the operator, who IS the person
+    you would be calling. `api.js` carries the operator vocabulary instead.
+
+    NATIVE ES MODULES -- the first in this repository. They are not a build step, so
+    `CLAUDE.md`'s no-bundler rule holds. The cost is that `file://` no longer serves
+    this app: use `netlify dev`.
+  -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script type="module" src="/leaguemanager/app.js"></script>
+
+  <div id="footer">
+    <ul>
+      <li><a href="../about.html">About</a></li>
+      <li><a href="../club_policy.html">Club Policy</a></li>
+      <li><a href="../rating_system.html">Rating System</a></li>
+    </ul>
+  </div>
+</body>
+</html>
