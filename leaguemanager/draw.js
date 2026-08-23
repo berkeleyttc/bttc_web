@@ -341,3 +341,235 @@ export function draw(players, numTables = NUM_TABLES, solutionIndex = 0) {
   const sizes = pairs.map((p) => p[0]);
   return { spec, sizes, tables: pairs.map((p) => p[1]), groups: sliceInto(roster, sizes) };
 }
+
+/* ══════════════════════════════════════════════════════════ promotion and seeding ══
+ *
+ * `docs/03` sections 5.2, 5.3 and 7.3. Session 6 wrote these; the file shipped in
+ * session 3 with the PRE-promotion draw only, and `test/draw.test.js` characterised the
+ * gap ("differs from the recorded groups only by promotion") rather than closing it --
+ * which was correct while nothing called the algorithm and wrong once `POST /rr/draw`
+ * needed a `promoted` flag per player.
+ *
+ * Promotion is **strictly one-in-one-out**, so it can never change a group's size. That
+ * is worth stating up front because it is the invariant every branch below preserves,
+ * and it is what `test/draw.test.js` asserts against the recorded session.
+ *
+ * Nothing here depends on `ENV`, `bttc-utils.js`, `window` or `fetch`, exactly as the
+ * rest of the file does not.
+ */
+
+/** `Form1.cs:57`, read from the file at `FileIO.cs:599`, used at `Group.cs:262` alone. */
+export const REJECT_PROMOTION_MAX_GAP = 150;
+
+/**
+ * `DrawListCode.cs:325`. The cap exists because more candidates would "wreak havoc with
+ * the sorting conditions" (`Group.cs:209-227`).
+ *
+ * **Players beyond the cap stay put.** `FindPlayersToPromote` counts every flagged
+ * player (`++numpromoted`) but only adds the first three to the list, so a fourth is
+ * neither promoted nor demoted -- it simply never leaves its group.
+ */
+export const MAX_PROMOTION_CANDIDATES = 3;
+
+/**
+ * `ReSortPlayersInDraw`, `Group.cs:117-122`: rating descending, then the name key.
+ *
+ * The C# sorts by `LNFFullName` under `CurrentCulture`; ticket 21 Q2 replaced that with
+ * the one collation rule -- ordinal, case-insensitive, `(last, first, users.id)` --
+ * and **verified it leaves the Jul 17 slice byte-identical**, which is what keeps ticket
+ * 07's zero declared divergences true. Everything `ReSortPlayersInDraw` once did for
+ * "delayed status" players has been short-circuited (see `appendix-b-dead-code.md`).
+ */
+function resortGroup(ids, byId) {
+  ids.sort((x, y) => {
+    const p = byId[x];
+    const q = byId[y];
+    if (p.rating !== q.rating) return q.rating - p.rating;
+    return compareNameKeys(nameKey(p.lastName, p.firstName, p.userId),
+                           nameKey(q.lastName, q.firstName, q.userId));
+  });
+  return ids;
+}
+
+/**
+ * `AdjustLowestRankings(ignorepromotedplayers: true)`, `Group.cs:169-207`.
+ *
+ * Returns the group's lowest and second-lowest **eligible** members, skipping anyone
+ * still flagged for promotion.
+ *
+ * Two things are load-bearing and neither is obvious:
+ *
+ * 1. **The comparison is a strict `<`** (`:195`), so on a rating tie **the earlier index
+ *    keeps the "lowest" slot**. Because the list is sorted rating-descending with names
+ *    ascending, the earlier index is the alphabetically earlier name -- so of two
+ *    equally-rated players at the bottom of a group, the one whose `(last, first)` sorts
+ *    first is the one a promotion ejects.
+ * 2. **`secondLowest` can hold the SAME rating as `lowest`**, in which case the gap test
+ *    in `promoteInto` measures against that equal value.
+ *
+ * The C# is written confusingly -- its first loop sets `lowestindex` to the *first
+ * eligible* player, which in a descending list is the *highest*-rated eligible one, and
+ * the second loop then cascades both down to their true values. The result is correct;
+ * the intermediate state is misleading. This reproduces the cascade rather than a
+ * tidier two-minimum scan, because the tidier version disagrees on ties.
+ */
+export function adjustLowestRankings(ids, byId) {
+  const eligible = (id) => !byId[id].toBePromoted;
+
+  let lowest = -1;
+  for (let i = 0; i < ids.length; i += 1) {
+    if (!eligible(ids[i])) continue;
+    lowest = i;
+    break;
+  }
+  let second = -1;
+  if (lowest !== -1) {
+    for (let i = lowest + 1; i < ids.length; i += 1) {
+      if (!eligible(ids[i])) continue;
+      if (byId[ids[i]].rating < byId[ids[lowest]].rating) {
+        second = lowest;
+        lowest = i;
+      } else if (second === -1 || byId[ids[i]].rating < byId[ids[second]].rating) {
+        second = i;
+      }
+    }
+  }
+  return {
+    lowest: lowest === -1 ? null : ids[lowest],
+    secondLowest: second === -1 ? null : ids[second],
+  };
+}
+
+/**
+ * `FindPlayersToPromote(max)`, `Group.cs:227-243`. **Removes** the candidates from the
+ * group it is called on and returns them, in list order.
+ */
+function findPlayersToPromote(ids, byId, max = MAX_PROMOTION_CANDIDATES) {
+  const out = [];
+  let counted = 0;
+  for (const id of ids) {
+    if (!byId[id].toBePromoted) continue;
+    counted += 1;
+    if (counted <= max) out.push(id);        // a fourth is counted and left in place
+  }
+  for (const id of out) ids.splice(ids.indexOf(id), 1);
+  return out;
+}
+
+/**
+ * `PromotePlayers(promolist)`, `Group.cs:245-311`, running on the **receiving** (higher)
+ * group. Returns the list to be merged back down into the group below.
+ *
+ * **The gap is measured against the SECOND-lowest, not the lowest** (`:262`), because
+ * the lowest is the one about to be ejected. So the test is *"would this player be more
+ * than `RejectPromotionMaxGap` below the group as it will be AFTER the swap"*. Getting
+ * that wrong by one rank is the single easiest mistake here and it would look entirely
+ * plausible in every group.
+ *
+ * The `AddPlayer` failure arm and its *"Player promotion glitch"* message are
+ * transcribed but unreachable: `AddPlayer` refuses only when the group is at
+ * `MaxPlayers`, and a slot was just freed by the eject. It is kept because the trailing
+ * drain below depends on the `break` existing.
+ */
+function promoteInto(receiving, candidates, byId, gap, promoted, maxPlayers) {
+  const demoted = [];
+  const queue = candidates.slice();
+
+  while (queue.length) {
+    const cand = queue[0];
+    const { lowest, secondLowest } = adjustLowestRankings(receiving, byId);
+
+    if (secondLowest != null
+        && byId[cand].rating < byId[secondLowest].rating - gap) {
+      byId[cand].note = 'gap/not promoted';
+      demoted.push(cand);
+      queue.shift();
+      continue;
+    }
+
+    if (lowest == null) break;                    // EjectLowestPlayer returned null
+    receiving.splice(receiving.indexOf(lowest), 1);
+
+    if (maxPlayers > 0 && receiving.length >= maxPlayers) {
+      // AddPlayer refused. Roll the eject back and demote the candidate instead.
+      receiving.push(lowest);
+      resortGroup(receiving, byId);
+      demoted.push(cand);
+      queue.shift();
+      continue;
+    }
+
+    receiving.push(cand);
+    byId[cand].toBePromoted = false;              // NowPromoted is a subset of ToBePromoted
+    byId[cand].nowPromoted = true;
+    resortGroup(receiving, byId);
+    promoted.push(cand);
+    demoted.push(lowest);
+    queue.shift();
+  }
+
+  // "if anything went wrong" (:305-309): whatever is left in the queue goes down.
+  while (queue.length) demoted.push(queue.shift());
+  return demoted;
+}
+
+/**
+ * `PromotePlayersAllGroups()`, `DrawListCode.cs:317-332`.
+ *
+ *     previous := null
+ *     FOR EACH group g IN groups (index order, strongest first):
+ *         IF previous ≠ null:
+ *             candidates := g.find_players_to_promote(max = 3)   # REMOVES them from g
+ *             demoted    := previous.promote_players(candidates)
+ *             g.merge(demoted)
+ *         previous := g
+ *
+ * **Group 0 promotes nobody** -- it has no group above it.
+ *
+ * `players` carry `{userId, lastName, firstName, rating, toBePromoted}`. `groups` are
+ * arrays of `userId`, rating-sorted, as `draw()` returns them. Neither input is
+ * mutated; the returned `promoted` list is in promotion order.
+ */
+export function promoteAllGroups(groups, players, gap = REJECT_PROMOTION_MAX_GAP) {
+  const byId = {};
+  for (const p of players) {
+    byId[p.userId] = {
+      userId: p.userId, lastName: p.lastName, firstName: p.firstName,
+      rating: p.rating, toBePromoted: !!p.toBePromoted, nowPromoted: false, note: '',
+    };
+  }
+
+  const out = groups.map((g) => g.slice());
+  const promoted = [];
+
+  for (let i = 1; i < out.length; i += 1) {
+    const receiving = out[i - 1];
+    const source = out[i];
+    const maxPlayers = groups[i - 1].length;      // the solution fixes each group's size
+
+    const candidates = findPlayersToPromote(source, byId);
+    if (!candidates.length) continue;
+
+    const demoted = promoteInto(receiving, candidates, byId, gap, promoted, maxPlayers);
+    // MergePlayersList -> AddPlayer for each, which re-sorts.
+    for (const id of demoted) source.push(id);
+    resortGroup(source, byId);
+  }
+
+  return { groups: out, promoted, notes: byId };
+}
+
+/**
+ * `UpdatePlayersGroupOrdinal()`, `DrawListCode.cs:342-372` -- the seeds.
+ *
+ * The ordinal is simply the player's index in the already-rating-sorted group. The
+ * `switch` on group size that follows it in the C# sets `PlaysFirst`, which is play
+ * order's business (`play-order.js`) and not the seed's.
+ *
+ * **1-based**, because `POST /rr/draw` validates that a group's seeds are exactly
+ * `1..n` and every ordinal in the port's UI, on paper and in the DB is 1-based. The
+ * 0-based convention of the `.bttc` file never reaches the port.
+ */
+export function assignSeeds(group) {
+  return group.map((userId, i) => ({ userId, seed: i + 1 }));
+}
