@@ -44,7 +44,7 @@
  *
  * Legacy stored a shadow of every name -- `GenerateTrimmedAlias`, `AliasString.cs:60-67`
  * -- stripping spaces, apostrophes, hyphens, periods and digits. It is what lets `R.J.`
- * be found by typing `rj`, `O'brien` by `obrien` and `Van Oss` by `vanoss`. The client
+ * be found by typing `rj`, `O'marden` by `omarden` and `Van Dreel` by `vandreel`. The client
  * already holds every name, so the capability is kept and the storage is not: **a
  * constraint on ticket 11, no new column.** Legacy did not persist it either
  * (`TrimmedAlias` is absent from every `.bttc` write) -- it recomputed it on every load
@@ -60,9 +60,9 @@ export const bare = (s) => String(s ?? '').replace(/[^\p{L}]/gu, '').toLowerCase
  * One field against one term.
  *
  * **An empty term matches everything**, reproducing `AliasString.Matches`'s first line
- * (`:83-84`). That is not a quirk to tidy away: it is what makes `"Jones,"` mean *every
- * Jones* rather than *no one*, and the operator types exactly that on the way to
- * `"Jones, Bob"`.
+ * (`:83-84`). That is not a quirk to tidy away: it is what makes `"Marsh,"` mean *every
+ * Marsh* rather than *no one*, and the operator types exactly that on the way to
+ * `"Marsh, Bob"`.
  *
  * The bare arm is skipped when the query has no letters in it. Without that guard an
  * all-digit query would compute `bare(q) === ''`, and `String.includes('')` is true for
@@ -76,7 +76,7 @@ export function matchField(value, term) {
   return bq !== '' && bare(v).includes(bq);
 }
 
-/** Split on the first separator only, so `"Bob Van Oss"` is `["Bob", "Van Oss"]`. */
+/** Split on the first separator only, so `"Bob Van Dreel"` is `["Bob", "Van Dreel"]`. */
 function splitOnce(text, sep) {
   const i = text.indexOf(sep);
   return [text.slice(0, i).trim(), text.slice(i + sep.length).trim()];
@@ -89,9 +89,9 @@ function splitOnce(text, sep) {
  * separator it found**, and does not try both orders:
  *
  * - a **comma** sets `j = 1`, so `names[1]` is the first name and `names[0]` the last
- *   -- `"Jones, Bob"` is *last, first*;
+ *   -- `"Marsh, Bob"` is *last, first*;
  * - a **space** with no comma leaves `j = 0`, so `names[0]` is the first name --
- *   `"Bob Jones"` is *first last*.
+ *   `"Bob Marsh"` is *first last*.
  *
  * Both AND across the two fields. Operator muscle memory, and nearly free.
  *

@@ -424,7 +424,10 @@
 	cursor: pointer;
 }
 
-/* 1. FILL -- completeness. White / yellow / green, `docs/05` section 3's meaning. */
+/* 1. FILL -- completeness. Unfilled / yellow / green, `docs/05` section 3's meaning.
+   (The first state is spelled "unfilled" rather than by its colour: that colour word
+   is also a member surname, and bttc_api's test_no_real_member_name_reaches_the_public_repo
+   matches on word boundaries, not on intent.) */
 #lm-app .lm-pill.lm-partial {
 	background: var(--lm-status-group-partial);
 	color: var(--color-bg);
