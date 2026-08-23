@@ -9,7 +9,17 @@
  * are recorded as the reason to trust it. The same split the `fixtures/` directory
  * already makes.
  *
- * The names below are invented. Each one exists to pin a specific rule.
+ * The names below are invented. Each one exists to pin a specific rule, and the
+ * shapes are what matter: a two-word surname for the `vandreel` collapse, an
+ * apostrophe for `omarden`, an apostrophe-hyphen-suffix string for `bare`, and a
+ * pair differing only by a trailing period for the duplicate warning.
+ *
+ * **Corrected in the seventh session.** Three of these rows were NOT invented --
+ * they were real members, carried over from the file while the surrounding prose
+ * said otherwise, and `bttc_api`'s `test_oracles.py::test_no_real_member_name_reaches_the_public_repo`
+ * had been failing on them since this file landed. That test scans this public tree
+ * against the real roster, and it was right. Replaced in shape, not in meaning:
+ * every assertion below pins exactly the rule it pinned before.
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -24,16 +34,16 @@ const M = (first, last, extra = {}) => ({
 });
 
 const PEOPLE = [
-  M('Bob', 'Jones', { bttc_id: '104822', phone_number: '5105551212' }),
-  M('Roberta', 'Jonesbury'),
+  M('Bob', 'Marsh', { bttc_id: '104822', phone_number: '5105551212' }),
+  M('Roberta', 'Marshbury'),
   M('R.J.', 'Ng'),
-  M('Anna', 'Van Oss'),
-  M('Sean', "O'Brien"),
+  M('Ilse', 'Van Dreel'),
+  M('Ivo', "O'Marden"),
   M('mary', 'mcdonald'),          // ticket 21 Q1: stored casing is arbitrary now
   M('MARY', 'MACDONALD'),
   M('Kit', 'Andersen', { phone_number: '4155559911' }),
-  M('Femi Jr', 'Ajimatanrareje'),
-  M('Femi Jr.', 'Ajimatanrareje'),  // the file's one real duplicate, in shape
+  M('Dax Jr', 'Quillanverde'),
+  M('Dax Jr.', 'Quillanverde'),     // the file's one real duplicate shape, invented
 ];
 
 describe('one search box, no modes — ticket 21 Q3', () => {
@@ -41,8 +51,9 @@ describe('one search box, no modes — ticket 21 Q3', () => {
     // Player.Matches -> AliasString.Matches is Contains, not StartsWith. The PDL above
     // ApplyNewListFilter claims a capital letter switches to a prefix match; Char.IsUpper
     // appears only in the status-label string. ADR 0003.
-    const hits = filterMembers(PEOPLE, 'one').rows;
-    assert.deepEqual(hits.map((m) => m.last_name), ['Jones', 'Jonesbury']);
+    // 'arsh' is deliberately NOT a prefix of either name -- that is the whole point.
+    const hits = filterMembers(PEOPLE, 'arsh').rows;
+    assert.deepEqual(hits.map((m) => m.last_name), ['Marsh', 'Marshbury']);
   });
 
   it('is case-insensitive in both directions, because stored casing is arbitrary', () => {
@@ -64,14 +75,14 @@ describe('one search box, no modes — ticket 21 Q3', () => {
 });
 
 describe('punctuation-insensitive, computed not stored — ticket 21 Q6', () => {
-  it('finds R.J. from rj and Van Oss from vanoss', () => {
+  it('finds R.J. from rj and Van Dreel from vandreel', () => {
     assert.equal(filterMembers(PEOPLE, 'rj').rows[0].last_name, 'Ng');
-    assert.equal(filterMembers(PEOPLE, 'vanoss').rows[0].first_name, 'Anna');
-    assert.equal(filterMembers(PEOPLE, 'obrien').rows[0].first_name, 'Sean');
+    assert.equal(filterMembers(PEOPLE, 'vandreel').rows[0].first_name, 'Ilse');
+    assert.equal(filterMembers(PEOPLE, 'omarden').rows[0].first_name, 'Ivo');
   });
 
   it('strips by Unicode letter category, matching Char.IsLetter', () => {
-    assert.equal(bare("O'Brien-Smith Jr."), 'obriensmithjr');
+    assert.equal(bare("O'Marden-Vale Jr."), 'omardenvalejr');
     assert.equal(bare('R.J.'), 'rj');
     assert.equal(bare('104822'), '');
   });
@@ -81,36 +92,36 @@ describe('punctuation-insensitive, computed not stored — ticket 21 Q6', () => 
     // string, so an unguarded bare arm would return all 1,143 for a phone number.
     const r = filterMembers(PEOPLE, '5105551212');
     assert.equal(r.total, 1);
-    assert.equal(r.rows[0].last_name, 'Jones');
+    assert.equal(r.rows[0].last_name, 'Marsh');
   });
 });
 
 describe('the comma/space two-term split — RRPrepCode.cs:180-236', () => {
   it('reads a comma as "last, first"', () => {
     // A comma sets j = 1, so names[1] is the FIRST name.
-    assert.equal(filterMembers(PEOPLE, 'Jones, Bob').total, 1);
-    assert.equal(filterMembers(PEOPLE, 'Bob, Jones').total, 0);
+    assert.equal(filterMembers(PEOPLE, 'Marsh, Bob').total, 1);
+    assert.equal(filterMembers(PEOPLE, 'Bob, Marsh').total, 0);
   });
 
   it('reads a space as "first last"', () => {
     // No comma leaves j = 0, so names[0] is the FIRST name.
-    assert.equal(filterMembers(PEOPLE, 'Bob Jones').total, 1);
-    assert.equal(filterMembers(PEOPLE, 'Jones Bob').total, 0);
+    assert.equal(filterMembers(PEOPLE, 'Bob Marsh').total, 1);
+    assert.equal(filterMembers(PEOPLE, 'Marsh Bob').total, 0);
   });
 
   it('splits on the FIRST separator only, so a two-word surname survives', () => {
-    assert.deepEqual(parseQuery('Anna Van Oss'), { kind: 'pair', first: 'Anna', last: 'Van Oss' });
-    assert.equal(filterMembers(PEOPLE, 'Anna Van Oss').total, 1);
+    assert.deepEqual(parseQuery('Ilse Van Dreel'), { kind: 'pair', first: 'Ilse', last: 'Van Dreel' });
+    assert.equal(filterMembers(PEOPLE, 'Ilse Van Dreel').total, 1);
   });
 
-  it('treats a trailing comma as "every Jones", not as no one', () => {
+  it('treats a trailing comma as "every Marsh", not as no one', () => {
     // AliasString.Matches:83-84 -- an empty match string matches everything. The
-    // operator types exactly this on the way to "Jones, Bob".
-    assert.equal(filterMembers(PEOPLE, 'Jones,').total, 2);
+    // operator types exactly this on the way to "Marsh, Bob".
+    assert.equal(filterMembers(PEOPLE, 'Marsh,').total, 2);
   });
 
   it('ANDs the two terms across the two fields', () => {
-    assert.equal(filterMembers(PEOPLE, 'Roberta Jones').total, 1);
+    assert.equal(filterMembers(PEOPLE, 'Roberta Marsh').total, 1);
     assert.equal(filterMembers(PEOPLE, 'Roberta Andersen').total, 0);
   });
 });
@@ -146,7 +157,7 @@ describe('the cap and the count — this session’s call on ticket 21 Q5', () =
   });
 
   it('does not claim to be capped when it is not', () => {
-    const r = filterMembers(PEOPLE, 'Jones,');
+    const r = filterMembers(PEOPLE, 'Marsh,');
     assert.equal(r.capped, false);
     assert.equal(r.rows.length, r.total);
   });
@@ -160,21 +171,22 @@ describe('the duplicate warning — ticket 21 Q7', () => {
   it('stays silent until BOTH fields are non-empty — Form1.cs:2226', () => {
     // The guard that stops the empty-query-matches-everything trap from listing all
     // 1,143 in a panel meant to show two or three candidates.
-    assert.deepEqual(possibleDuplicates(PEOPLE, 'Femi Jr', ''), []);
-    assert.deepEqual(possibleDuplicates(PEOPLE, '', 'Ajimatanrareje'), []);
+    assert.deepEqual(possibleDuplicates(PEOPLE, 'Dax Jr', ''), []);
+    assert.deepEqual(possibleDuplicates(PEOPLE, '', 'Quillanverde'), []);
     assert.deepEqual(possibleDuplicates(PEOPLE, '  ', '  '), []);
   });
 
   it('finds the file’s real duplicate shape once both are filled', () => {
-    // "Femi Jr" / "Femi Jr." Ajimatanrareje, both rated -- F5's first concrete instance.
-    const hits = possibleDuplicates(PEOPLE, 'Femi Jr', 'Ajimatanrareje');
+    // "Dax Jr" / "Dax Jr." Quillanverde -- the shape of F5's first concrete
+    // instance: one human, two rated rows, distinguished only by a trailing period.
+    const hits = possibleDuplicates(PEOPLE, 'Dax Jr', 'Quillanverde');
     assert.equal(hits.length, 2);
   });
 
   it('is advisory only — it returns candidates and decides nothing', () => {
     // GenerateNewPlayer never consulted the panel either, and POST /rr/member never
     // 409s on a name. Same-name walk-ins are real: a father and a son.
-    assert.equal(typeof possibleDuplicates(PEOPLE, 'Bob', 'Jones'), 'object');
+    assert.equal(typeof possibleDuplicates(PEOPLE, 'Bob', 'Marsh'), 'object');
   });
 });
 
