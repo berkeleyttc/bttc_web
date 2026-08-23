@@ -23,6 +23,8 @@ import {
   DISTRIBUTIONS, MAX_SOLUTIONS_LISTED, QUICK_SOLUTIONS, compareNameKeys, drawRoster,
   enumerateSolutions, hasQuickSolutionOption, nameKey, parseSpec, quickTablesUsed,
   sliceInto, draw,
+  promoteAllGroups, adjustLowestRankings, assignSeeds,
+  REJECT_PROMOTION_MAX_GAP, MAX_PROMOTION_CANDIDATES,
 } from '../draw.js';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
@@ -114,19 +116,58 @@ describe('partition -- seeding, the slice, and promotion', () => {
     assert.deepEqual(sliceInto(roster, partition.sizes), partition.pre_promotion);
   });
 
-  it('differs from the recorded groups only by promotion', () => {
+  /**
+   * Session 6 turned this from a CHARACTERISATION into a CONFORMANCE test.
+   *
+   * It used to assert only that `actual` differed from `pre_promotion` by four moved
+   * seats -- true of the recorded data whether or not any code existed, and it stayed
+   * true for three sessions while `draw.js` had no promotion algorithm at all. Now
+   * `promoteAllGroups` is run and its output is compared with the oracle's.
+   *
+   * **The ratings here are synthetic and that is sound, with one stated limit.** The
+   * fixture carries `seed_order` (the real rating-descending order), `labels`, the two
+   * `promoted` ids and the resulting `actual` -- but no ratings, because the anonymiser
+   * emits only what it can prove faithful. A strictly descending sequence over
+   * `seed_order` reproduces every ORDERING decision the real ratings make, because
+   * groups are contiguous slices of that order: the lowest-rated member of a group is
+   * its last seed under both. What it cannot exercise is the GAP ARITHMETIC, since no
+   * two synthetic ratings are 150 apart. That branch never fired in the real session
+   * either -- both flagged players were promoted, which is why `promoted` has exactly
+   * two entries and four seats moved -- so it has **no oracle**, and it is covered by
+   * the synthetic cases below instead.
+   */
+  it('reproduces the oracle’s promotion exactly, not just its shape', () => {
+    const players = partition.seed_order.map((id, i) => {
+      const [last, first] = partition.labels[String(id)];
+      return {
+        userId: id, lastName: last, firstName: first,
+        rating: 2400 - i,                        // strictly descending; see above
+        toBePromoted: partition.promoted.includes(id),
+      };
+    });
+
+    const result = promoteAllGroups(partition.pre_promotion, players,
+      partition.promotion_gap);
+
+    assert.deepEqual(result.groups, partition.actual,
+      'the promoted groups must equal the session the club actually played');
+    assert.deepEqual(result.promoted.slice().sort(), partition.promoted.slice().sort());
+  });
+
+  it('never changes a group size — promotion is strictly one-in-one-out', () => {
     const pre = partition.pre_promotion;
     const actual = partition.actual;
-    assert.equal(pre.length, actual.length);
+    assert.equal(pre.flat().length, actual.flat().length);
+    assert.deepEqual(pre.map((g) => g.length), actual.map((g) => g.length));
+  });
+
+  it('moves four seats in the reference session: two up and two down', () => {
     const moved = [];
-    actual.forEach((g, gi) => {
-      const before = new Set(pre[gi]);
+    partition.actual.forEach((g, gi) => {
+      const before = new Set(partition.pre_promotion[gi]);
       for (const id of g) if (!before.has(id)) moved.push([id, gi]);
     });
-    assert.equal(moved.length, 4, '2 promotions and 2 demotions');
-    assert.equal(pre.flat().length, actual.flat().length);
-    assert.deepEqual(pre.map((g) => g.length), actual.map((g) => g.length),
-      'promotion never changes a group size');
+    assert.equal(moved.length, 4);
   });
 
   it('orders the seed list by rating then the one collation rule', () => {
@@ -184,5 +225,123 @@ describe('draw() end to end', () => {
     const result = draw(roster, 19);
     assert.notEqual(result, null, '65 players is solvable at 19 tables');
     assert.equal(result.sizes.reduce((a, b) => a + b, 0), 65);
+  });
+});
+
+/**
+ * The promotion branches the reference session never exercised.
+ *
+ * `verify_edge_cases.py`'s disclaimer applies: no real session has produced these, so
+ * there is **no oracle** and the expectations below are read off the C# rather than off
+ * a recorded outcome. They are here because the alternative -- testing only the path the
+ * club happened to walk -- is what let `draw.js` ship for three sessions with no
+ * promotion algorithm and a green suite.
+ */
+describe('promotion, the branches with no oracle', () => {
+  // Rating-descending within each group, as `draw()` returns them.
+  const person = (id, rating, flag = false) => ({
+    userId: id, lastName: 'S' + id, firstName: 'G' + id, rating, toBePromoted: flag,
+  });
+
+  it('promotes nobody out of group 1 — it has no group above it', () => {
+    const players = [person(1, 2000, true), person(2, 1900), person(3, 1800), person(4, 1700)];
+    const { groups, promoted } = promoteAllGroups([[1, 2], [3, 4]], players);
+    assert.deepEqual(promoted, []);
+    assert.deepEqual(groups, [[1, 2], [3, 4]]);
+  });
+
+  it('measures the gap against the SECOND-lowest, because the lowest is about to leave', () => {
+    // Group.cs:262. The receiving group is 2000 / 1900; the candidate is 1780.
+    // Against the LOWEST (1900) the gap is 120 and the promotion would stand.
+    // Against the SECOND-lowest (2000) it is 220 and the promotion is refused.
+    // Getting this wrong by one rank looks entirely plausible in every group.
+    const players = [person(1, 2000), person(2, 1900), person(3, 1780, true), person(4, 1700)];
+    const { groups, promoted } = promoteAllGroups([[1, 2], [3, 4]], players, 150);
+    assert.deepEqual(promoted, [], 'refused: 1780 < 2000 - 150');
+    assert.deepEqual(groups, [[1, 2], [3, 4]], 'a refused candidate goes straight back down');
+  });
+
+  it('promotes when the gap allows it, ejecting the lowest', () => {
+    const players = [person(1, 2000), person(2, 1900), person(3, 1880, true), person(4, 1700)];
+    const { groups, promoted } = promoteAllGroups([[1, 2], [3, 4]], players, 150);
+    assert.deepEqual(promoted, [3]);
+    assert.deepEqual(groups, [[1, 3], [2, 4]], 'one in, one out, sizes unchanged');
+  });
+
+  it('caps candidates at three, and a fourth simply stays put', () => {
+    // DrawListCode.cs:325. FindPlayersToPromote counts every flagged player but adds
+    // only the first three to the list, so the fourth is neither promoted nor demoted.
+    const players = [
+      person(1, 2000), person(2, 1990), person(3, 1980), person(4, 1970),
+      person(5, 1960, true), person(6, 1950, true), person(7, 1940, true), person(8, 1930, true),
+    ];
+    const { groups, promoted } = promoteAllGroups([[1, 2, 3, 4], [5, 6, 7, 8]], players, 150);
+    assert.equal(promoted.length, MAX_PROMOTION_CANDIDATES);
+    assert.ok(!promoted.includes(8), 'the fourth flagged player is never offered');
+    assert.deepEqual(groups.map((g) => g.length), [4, 4]);
+  });
+
+  it('leaves the eight untouched when nobody is flagged', () => {
+    const players = [person(1, 2000), person(2, 1900), person(3, 1800), person(4, 1700)];
+    const { groups, promoted } = promoteAllGroups([[1, 2], [3, 4]], players);
+    assert.deepEqual(promoted, []);
+    assert.deepEqual(groups, [[1, 2], [3, 4]]);
+  });
+
+  it('uses the constant the file says the file uses', () => {
+    assert.equal(REJECT_PROMOTION_MAX_GAP, 150);   // Form1.cs:57, read at FileIO.cs:599
+  });
+});
+
+describe('adjustLowestRankings — Group.cs:169-207', () => {
+  const person = (id, rating, last, flag = false) => ({
+    userId: id, lastName: last, firstName: 'G', rating, toBePromoted: flag,
+  });
+  const index = (list) => Object.fromEntries(list.map((p) => [p.userId, { ...p }]));
+
+  it('on a rating tie the EARLIER index keeps the lowest slot', () => {
+    // The comparison at :195 is a strict `<`. The list is rating-descending with names
+    // ascending, so the earlier index is the alphabetically earlier name -- and of two
+    // equally-rated players at the bottom, that is the one a promotion ejects.
+    const byId = index([person(1, 2000, 'A'), person(2, 1500, 'B'), person(3, 1500, 'C')]);
+    const { lowest, secondLowest } = adjustLowestRankings([1, 2, 3], byId);
+    assert.equal(lowest, 2, 'the earlier of the two 1500s');
+    assert.equal(secondLowest, 3);
+  });
+
+  it('lets secondLowest hold the SAME rating as lowest', () => {
+    // Which means the gap test measures against that equal value -- docs/03 7.3.
+    const byId = index([person(1, 2000, 'A'), person(2, 1500, 'B'), person(3, 1500, 'C')]);
+    const { lowest, secondLowest } = adjustLowestRankings([1, 2, 3], byId);
+    assert.equal(byId[lowest].rating, byId[secondLowest].rating);
+  });
+
+  it('skips anyone still flagged for promotion', () => {
+    const byId = index([person(1, 2000, 'A'), person(2, 1600, 'B'), person(3, 1200, 'C', true)]);
+    const { lowest } = adjustLowestRankings([1, 2, 3], byId);
+    assert.equal(lowest, 2, 'the flagged 1200 is not ejectable');
+  });
+
+  it('returns nulls when nothing is eligible', () => {
+    const byId = index([person(1, 2000, 'A', true)]);
+    assert.deepEqual(adjustLowestRankings([1], byId), { lowest: null, secondLowest: null });
+  });
+
+  it('returns a null secondLowest for a single eligible player', () => {
+    const byId = index([person(1, 2000, 'A')]);
+    assert.deepEqual(adjustLowestRankings([1], byId), { lowest: 1, secondLowest: null });
+  });
+});
+
+describe('assignSeeds — DrawListCode.cs:342-372', () => {
+  it('is the 1-based index in the already rating-sorted group', () => {
+    assert.deepEqual(assignSeeds([90, 42, 7]), [
+      { userId: 90, seed: 1 }, { userId: 42, seed: 2 }, { userId: 7, seed: 3 },
+    ]);
+  });
+
+  it('produces exactly 1..n, which is what POST /rr/draw validates', () => {
+    const seeds = assignSeeds(partition.actual[0]).map((s) => s.seed);
+    assert.deepEqual(seeds, partition.actual[0].map((_, i) => i + 1));
   });
 });
