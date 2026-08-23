@@ -1,6 +1,48 @@
 // BTTC Shared Utilities
 // Common functions used across Vue.js applications
 
+/**
+ * The player-facing half of `bttc_api/helpers/errors.py`'s registry.
+ *
+ * Ticket 28 Q2 converted `POST /rr/register`, `POST /rr/unregister` and
+ * `POST /player/signup` from `{"success": false}`-in-a-200 to a status code plus a
+ * machine-readable `code`. These are the six codes those three endpoints can raise.
+ *
+ * **Why this is not a copy of `leaguemanager/api.js`'s WIRE_CODES.** That table is
+ * operator-voiced -- *"Use the desk controls on the Roster tab"* -- and
+ * `leaguemanager/test/api.test.js` actively FORBIDS the support phone number in it,
+ * because the operator is the person you would be calling. These pages are the opposite
+ * case: the reader is a player on a registration form, the phone number is exactly the
+ * right remedy, and `getErrorMessage()` already appends it. So the mapping is small and
+ * the fallback is the shared one.
+ *
+ * `api.js` is an ES module and this is a classic script loaded by `<script src>`, so it
+ * could not import that table even if the wording suited.
+ *
+ * **A code with no entry here is not an error.** It falls through to
+ * `getErrorMessage()`, which is what handles INTERNAL, DB_BUSY, a proxy `NOT_FOUND` or
+ * `PROXY_ERROR`, and anything a later ticket coins before this map hears about it.
+ */
+const WIRE_MESSAGES = Object.freeze({
+  ALREADY_REGISTERED: 'You are already registered for this event.',
+  EVENT_CLOSED:       'Registration for this event is closed.',
+  NOT_REGISTERED:     'You are not registered for this event.',
+  INVALID_PIN:        'That PIN does not match.',
+  PLAYER_NOT_FOUND:   'We could not find that player in the system.',
+  ALREADY_SIGNED_UP:  'That player has already completed their signup.',
+});
+
+/**
+ * The message for a thrown error, preferring the registry code when there is one.
+ *
+ * Ticket 28 Q2. Everything without a `code` -- and every code this map does not carry --
+ * takes the `getErrorMessage()` path unchanged, support phone number and all.
+ */
+const getWireErrorMessage = (error, context = 'operation') => {
+  const mapped = error && error.code ? WIRE_MESSAGES[error.code] : null;
+  return mapped || getErrorMessage(error, context);
+};
+
 const getSupportContact = () => {
   return typeof ENV !== 'undefined' 
     ? `contact BTTC support at ${ENV.SUPPORT_PHONE} (${ENV.SUPPORT_METHOD})`
@@ -35,14 +77,17 @@ const getErrorMessage = (error, context = 'operation') => {
     if (status === 0) {
       return `Connection error: The server is unreachable. Please try again later or ${supportContact}.`;
     }
+    // 503 MUST be tested before the `>= 500` catch-all. It was written after it, so it
+    // was dead code -- and ticket 28 Q9's DB_BUSY is a 503, which is exactly the case
+    // where "try again" is true and "technical difficulties" is not.
+    if (status === 503) {
+      return `Service unavailable: The service is temporarily busy. Please try again in a moment or ${supportContact}.`;
+    }
     if (status >= 500) {
       return `Server error: The service is experiencing technical difficulties. Please try again in a few moments or ${supportContact}.`;
     }
     if (status === 404) {
       return `Service not found. Please ${supportContact}.`;
-    }
-    if (status === 503) {
-      return `Service unavailable: The service is temporarily down for maintenance. Please try again later or ${supportContact}.`;
     }
   }
   
@@ -78,18 +123,29 @@ const getFetchOptions = (options = {}) => {
 const handleApiResponse = async (response) => {
   if (!response.ok) {
     let errorMessage = 'Server error';
+    let errorCode = null;
+    let errorDetail = null;
     try {
       const errorData = await response.json();
       // FastAPI returns errors as {"detail": "..."}; check it first so API messages
       // (e.g. "An OPEN event for this type and date already exists.") reach the user
       // instead of the generic fallback.
       errorMessage = errorData.detail || errorData.message || errorData.error || errorMessage;
+      // Ticket 28 Q2: the machine-readable `code` used to be read into scope here and
+      // then dropped on the floor. `error.response` cannot carry it -- `.json()` above
+      // has already drained the stream, so `error.response.json()` rejects downstream --
+      // so the three fields are lifted onto the Error itself.
+      errorCode = typeof errorData.code === 'string' ? errorData.code : null;
+      errorDetail = typeof errorData.detail === 'string' ? errorData.detail : null;
     } catch {
       errorMessage = response.statusText || `HTTP ${response.status}`;
     }
     
     const error = new Error(errorMessage);
     error.response = response;
+    error.status = response.status;
+    error.code = errorCode;
+    error.detail = errorDetail;
     throw error;
   }
   

@@ -1,5 +1,5 @@
 // BTTC Round Robin Registration
-// Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateToken, formatPhoneNumber
+// Utilities loaded from bttc-utils.js: getErrorMessage, getWireErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateToken, formatPhoneNumber
 
 const { createApp, ref, computed, onMounted, watch } = Vue;
 
@@ -159,21 +159,10 @@ const setEventMetadataCache = (eventDate, eventType) => {
   }
 };
 
-// Cache roster data (shared with roster-vue.js)
-const setRosterCache = (rosterData, capacityData) => {
-  try {
-    const cacheEntry = {
-      data: {
-        roster: rosterData,
-        capacity: capacityData
-      },
-      timestamp: Date.now()
-    };
-    sessionStorage.setItem(ROSTER_CACHE_KEY, JSON.stringify(cacheEntry));
-  } catch (err) {
-    // sessionStorage unavailable, silently fail
-  }
-};
+// `setRosterCache` used to live here. It had ZERO call sites and it was wrong: it wrote
+// `{roster, capacity}` and omitted `waitlist`, which roster.js:302 reads back out of the
+// same key -- so the first caller to wire it up would have rendered an empty waitlist.
+// Deleted rather than fixed, since nothing wants it. Ticket 28 Q2.
 
 // Clear roster cache to force fresh fetch (called after registration/unregistration)
 const clearRosterCache = () => {
@@ -1421,7 +1410,10 @@ const RegistrationApp = {
         const response = await fetch(url, fetchOptions);
         const result = await handleApiResponse(response);
         
-        if (result.success) {
+        // Ticket 28 Q2: a 200 IS the success signal now. A refusal arrives as a status
+        // code plus a `code` and is thrown by handleApiResponse, so it lands in the
+        // catch below -- there is no `else` arm to reach.
+        {
           // Check if player was added to waitlist
           const onWaitlist = result.on_waitlist || false;
           const waitlistPosition = result.waitlist_position || null;
@@ -1468,12 +1460,11 @@ const RegistrationApp = {
           
           error.value = '';
           // Don't close the dialog - let user see success message and click Close button
-        } else {
-          registrationErrorMessage.value = result.message || 'Registration failed. Please try again.';
         }
       } catch (err) {
-        const friendlyMessage = getErrorMessage(err, 'registration');
-        registrationErrorMessage.value = friendlyMessage;
+        // ALREADY_REGISTERED / EVENT_CLOSED / PLAYER_NOT_FOUND get the player-voiced
+        // sentence; everything else keeps the support-contact wording it has today.
+        registrationErrorMessage.value = getWireErrorMessage(err, 'registration');
       }
     };
 
@@ -1508,7 +1499,8 @@ const RegistrationApp = {
 
         const result = await handleApiResponse(response);
         
-        if (result.success) {
+        // Ticket 28 Q2: see confirmRegistration -- a refusal is thrown, not returned.
+        {
           // Set success message instead of alert
           unregistrationSuccessMessage.value = result.message || 'Unregistration completed successfully!';
           
@@ -1532,12 +1524,10 @@ const RegistrationApp = {
           clearRosterCache();
           
           // Don't close the dialog - let user see success message and click Close button
-        } else {
-          unregistrationErrorMessage.value = result.message || 'Unregistration failed. Please try again.';
         }
       } catch (err) {
-        const friendlyMessage = getErrorMessage(err, 'unregistration');
-        unregistrationErrorMessage.value = friendlyMessage;
+        // NOT_REGISTERED / EVENT_CLOSED / INVALID_PIN / PLAYER_NOT_FOUND.
+        unregistrationErrorMessage.value = getWireErrorMessage(err, 'unregistration');
       }
     };
 
