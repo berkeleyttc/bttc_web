@@ -1,7 +1,8 @@
 # `leaguemanager/test/`
 
-Conformance tests for the pure domain modules — `draw.js`, `play-order.js` and
-`print.js` — and for the printed surface's stylesheet.
+Conformance tests for the pure domain modules — `draw.js`, `play-order.js`,
+`print.js`, `api.js`, `persist.js` and `search.js` — for the printed surface's
+stylesheet, and for the syntax of every module the app ships.
 
 ```sh
 node --test 'leaguemanager/test/*.test.js'
@@ -43,6 +44,25 @@ formats at once and the harness would be testing a copy.
 The line between "runs in `node --test`" and "runs only in a browser" is exactly the
 line between the pure domain files and everything else, so the seven tab modules,
 which import `window.Vue` from the CDN build, are not testable this way.
+
+**Three more files were built on the pure side of that line on purpose**, and each is
+a decision rather than an accident of layout:
+
+- **`api.js`** takes its `fetch`, its base URL and its two credential readers as
+  arguments (`createClient({...})`), touching no `window` and no `sessionStorage` at
+  load. That is what turns *"every gated mutation sends `?session_id=`"* from a claim
+  verified by reading the file into `api.test.js` — and the count had already drifted
+  from eight to seven once, in ticket 23 Q14's own list.
+- **`persist.js`** holds the `sessionStorage` codec with the storage injected, so the
+  draft round-trip below can run over a fake. `store.js` needs `window.Vue` and stays
+  on the browser side; splitting the codec out is what lets the half that has to be
+  *correct* be tested, rather than giving `store.js` a fake `reactive` to be testable.
+- **`search.js`** holds ticket 21's matching rules, which are a transcription with
+  **measured** expectations attached. Run against the real 1,143-member file it returns
+  373 for a bare `"an"` and 494 for `"o"` — the two numbers ticket 21 Q5 measured,
+  reproduced exactly. That run cannot live here (this repo is public and the file is
+  not), so `search.test.js` pins the rules on synthetic names and the real counts are
+  recorded in its header as the reason to trust them.
 
 ## `fixtures/`
 
@@ -102,9 +122,49 @@ The same properties are asserted from the private side too, in
 `bttc_api/tests/test_print_surface.py`, which is what registers `print/score_sheet` and
 `print/table_map` in the divergence register.
 
+## `modules.test.js` — every shipped module parses as ESM
+
+**This one comes out of a measured failure, not from hygiene.** The seven tab modules
+carry their markup in a template literal, and a stray backtick inside one — in an HTML
+comment quoting a filename, `` <!-- ... `print.css:520` ... --> `` — **terminates the
+string**. What follows is parsed as code, the module throws `SyntaxError` at load, and
+the app mounts nothing: a blank `#lm-app` and one line in a console nobody has open.
+
+The trap is that **`node --check somefile.js` does not catch it.** With no
+`package.json`, Node treats a bare `.js` as CommonJS and its module-syntax detection is
+lenient enough to accept the file, so the check passed on all seven while four of them
+were unloadable in a browser. `modules.test.js` copies each file to `.mjs` first, which
+forces the same parse `<script type="module">` performs, and separately asserts that no
+template literal contains a backtick — because a future *pair* of backticks would parse
+cleanly and silently swallow the markup between them.
+
+`test/README.md`'s line about the tab modules still holds: it is true of their
+**behaviour**, not of their **syntax**.
+
+## Driving the app itself
+
+The seven tabs are judged by running them, not by unit tests. Serve the site
+(`netlify dev`, or any static server plus a stub for `/.netlify/functions/api`) and
+drive it headlessly over the DevTools protocol:
+
+    chrome --headless --disable-gpu --remote-debugging-port=9333 --user-data-dir=/tmp/x
+
+**Reload with the cache bypassed** (`Page.reload {ignoreCache: true}`) before measuring
+anything about CSS. A stale `app.css` cost half an hour of chasing a print bug that had
+already been fixed.
+
+What that run is for, beyond "does it work": the properties no unit test reaches — that
+a 401 raises the overlay **without unmounting the app**, that auto-submit fires on the
+completeness edge with no click, that the four `sessionStorage` keys are the only ones
+written, and that the printed surface still lands **one page per artifact at MediaBox
+612 × 792 pt**. That last one caught a real defect: the app wraps the print region in a
+shell `print-preview.html` never had, and the tab strip pushed every sheet a fraction
+past 11in — five pages for three artifacts, the same shape as the failure `css.test.js`
+assertion 10 exists to prevent. The fix is the `@media print` block at the foot of
+`app.css`.
+
 ## Not here yet
 
-- **The draft round-trip** (ticket 23 Q17) — serialise the uncommitted draw to
-  `bttc_lm_draw_v1_<event_id>`, restore it, re-verify. There is no `store.js` yet.
-
-It belongs to the session that writes it.
+Nothing named. The draft round-trip (ticket 23 Q17) that this file used to list as
+owed — *"serialise the uncommitted draw to `bttc_lm_draw_v1_<event_id>`, restore it,
+re-verify"* — is `persist.test.js`.

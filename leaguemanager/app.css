@@ -1,0 +1,793 @@
+/**
+ * `app.css` -- the screen surface: layout, components, and the two token sets that are
+ * this session's to author.
+ *
+ * **Every rule is written under `#lm-app`** (ticket 23 Q10 rule 3). No bare `html`,
+ * `body`, `*` or `#id` rule ships, and `test/css.test.js` enrols this file into that
+ * check automatically -- assertions 2 and 3 are generated per stylesheet, so a rule
+ * added here that escapes the root is a failing test rather than four other live apps
+ * changing colour in production.
+ *
+ * **The class families are prefixed `lm-`**, matching `print.css`'s `lm-sheet-*` /
+ * `lm-map-*` / `lm-print` / `lm-screen-only`. That is not decoration: `_ds` ships
+ * `.btn`, `.card`, `.tag`, `.input`, `.field`, `.table` and `.radio .dot`, and
+ * prototype 20 ships its own `.btn`, `.banner`, `.cell` and `.pill .dot` that mean
+ * different things. Under one root the two sets would be the same selectors. The
+ * prototype's `.btn`/`.btn.primary` are **deleted here and re-pointed to `_ds`'s
+ * `.btn`/`.btn-primary`/`.btn-secondary`** at transplant, which is the same treatment
+ * its ten short token names get.
+ *
+ * The one class family kept unprefixed is the Results table's -- `.col`, `.names`,
+ * `.num`, `.rating-pre` and the rest. Those are inherited from the markup of the club's
+ * published `results/RR_Results_*.html` pages, are unstyled in `_ds`, and render
+ * unstyled in the design canvas today. They stay under `.lm-results` so the descendant
+ * scope keeps them from reaching anything else.
+ */
+
+/* ═══════════════════════════════════════════════════════ tokens this file owns ══ */
+
+#lm-app {
+	/* --- the screen entry grid, ticket 23 Q10 rule 2 --------------------------
+	   `print.css` claimed `--lm-sheet-*` and left this half unwritten; the header
+	   comment at `print.css:19` reserves the prefix and this is what claims it.
+
+	   The collision is measured, not hygienic: ticket 09's printed sheet and ticket
+	   20's screen grid BOTH define `--cell-w`, `--cell-half`, `--label-band`,
+	   `--box-band`, `--row-gap` and `--rule` on `:root` -- six names, all six shared,
+	   all six at different units (`0.95833in` against `84px`). Loaded into one
+	   document unprefixed, whichever stylesheet came last silently rescaled the other
+	   grid. `css.test.js`'s fourth and fifth assertions are what hold them apart, and
+	   the fifth is why these live here rather than in `print.css`.
+
+	   Values are prototype 20's, which are `09-score-sheet.html`'s proportions at
+	   screen scale. */
+	--lm-grid-cell-w: 84px;
+	--lm-grid-cell-half: 42px;
+	--lm-grid-label-band: 16px;
+	--lm-grid-box-band: 32px;
+	--lm-grid-row-gap: 10px;
+	--lm-grid-rule: 1px;
+
+	/* --- the status fills ------------------------------------------------------
+	   `League Manager.dc.html:742-747`'s `Component.STATUS`, which lives in JS string
+	   literals and in **neither** stylesheet -- the one genuinely duplicated source of
+	   truth between the design canvas and prototype 20, which re-declares three of
+	   them as `:root` tokens. They land here once.
+
+	   The first three carry `docs/05` section 3's meaning exactly: white nothing
+	   entered, yellow partial, green complete. Nothing legacy knew is repainted, so
+	   the strip stays readable to someone who has read it for years. */
+	--lm-status-group-done: oklch(0.6 0.14 145);
+	--lm-status-group-partial: oklch(0.75 0.15 65);
+	--lm-status-empty-score: oklch(0.94 0.13 95);
+	--lm-status-paid-row: oklch(0.93 0.05 145);
+	--lm-status-unpaid-row: oklch(0.93 0.08 95);
+	--lm-status-paid-panel: oklch(0.96 0.04 145);
+	--lm-status-unpaid-panel: oklch(0.96 0.06 95);
+
+	/* Ticket 23 Q12: desktop-only, transcribed as measured. The design has no media
+	   queries at all and every layout is a fixed-pixel grid inside this width.
+	   Responsive layouts left with F23, the tablet premise having been voided by
+	   ticket 14's single-editor lease. */
+	--lm-page-w: 1120px;
+}
+
+/* Vue owns `#lm-app` and clears it on mount; this hides the un-rendered template until
+   it does. Written as `#lm-app[v-cloak]` rather than prototype 20's bare
+   `[v-cloak]` -- a bare attribute selector escapes the app root and fails
+   `css.test.js`'s second assertion. */
+#lm-app[v-cloak] {
+	visibility: hidden;
+}
+
+#lm-app {
+	max-width: var(--lm-page-w);
+	margin: 0 auto;
+	padding: 0 0 60px;
+}
+
+/* ═════════════════════════════════════════════════════════ the two login surfaces ══ */
+
+/* Ticket 23 Q15. The COLD gate, on `admin/shell.js:149-186`'s shape. It is the only
+   place the app is not mounted; after first login the app never unmounts again. */
+#lm-app .lm-gate {
+	max-width: 380px;
+	margin: 60px auto;
+	padding: var(--space-6);
+	background: var(--color-surface);
+	border: 2px solid var(--color-divider);
+}
+
+#lm-app .lm-gate h2 {
+	margin-bottom: var(--space-4);
+}
+
+#lm-app .lm-gate .field {
+	margin-bottom: var(--space-3);
+}
+
+/* The RE-AUTH overlay, over the still-mounted app. `admin/shell.js` cannot do this:
+   `isAuthenticated` false swaps the whole app for the login form, destroying
+   everything mounted. Here the draw and the score draft are client-side and
+   uncommitted, so a full remount would discard exactly what ticket 13's requirement
+   protects. */
+#lm-app .lm-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 40;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: color-mix(in srgb, var(--color-text) 55%, transparent);
+}
+
+#lm-app .lm-overlay-panel {
+	width: 380px;
+	padding: var(--space-6);
+	background: var(--color-bg);
+	border: 3px solid var(--color-text);
+}
+
+#lm-app .lm-error {
+	color: var(--color-accent-700);
+	font-size: 13px;
+	margin-bottom: var(--space-3);
+}
+
+/* ══════════════════════════════════════════ the app-level banners and the tab strip ══ */
+
+/* Ticket 19 Q15: `results_stale` and "the draw is out of date" are APP-level, above
+   the tab switcher -- not view-level. The forgetting they guard against happens
+   BETWEEN screens, so an explanation that vanishes on tab switch is missing from the
+   one place the stale state does damage. Ticket 28 Q10 declined a third. */
+#lm-app .lm-banners {
+	margin: var(--space-3) 0;
+}
+
+#lm-app .lm-banner {
+	display: flex;
+	gap: var(--space-3);
+	align-items: center;
+	padding: 10px 12px;
+	margin-bottom: 8px;
+	font-size: 13px;
+	border: 2px solid var(--color-accent);
+	background: var(--color-accent-100);
+	color: var(--color-accent-700);
+}
+
+/* The lease banner is informational, not an error: another operator running the
+   session is the system working. Ink rather than accent. */
+#lm-app .lm-banner.lm-banner-lease {
+	border-color: var(--color-text);
+	background: var(--color-surface);
+	color: var(--color-text);
+}
+
+#lm-app .lm-banner .lm-who {
+	flex: 1;
+}
+
+#lm-app .lm-tabs {
+	display: flex;
+	gap: 2px;
+	flex-wrap: wrap;
+	border-bottom: 2px solid var(--color-divider);
+	margin-bottom: var(--space-4);
+}
+
+/* `tabStyle`, `League Manager.dc.html:1266-1270`: active is accent-on-bg inverted. */
+#lm-app .lm-tab {
+	font: var(--font-heading-weight) 14px var(--font-heading);
+	padding: 10px 18px;
+	border: 0;
+	background: transparent;
+	color: var(--color-text);
+	cursor: pointer;
+}
+
+#lm-app .lm-tab[aria-selected='true'] {
+	background: var(--color-accent);
+	color: var(--color-bg);
+}
+
+/* The design's three-cell status bar. The brand bar (`:80-83`) is dropped as redundant
+   with the site header, and the menu bar (`:87-124`) does not ship at all -- its four
+   menus ARE the ~22 legacy settings still in the fog, so shipping the bar would mean
+   shipping four empty menus (ticket 23 Q8). */
+#lm-app .lm-statusbar {
+	display: flex;
+	gap: var(--space-6);
+	align-items: center;
+	padding: 8px 0;
+	margin-top: var(--space-6);
+	border-top: 2px solid var(--color-divider);
+	font-size: 12px;
+	color: var(--color-neutral-700);
+}
+
+#lm-app .lm-statusbar .lm-sp {
+	flex: 1;
+}
+
+#lm-app .lm-empty {
+	padding: var(--space-8);
+	text-align: center;
+	color: var(--color-neutral-700);
+}
+
+/* ══════════════════════════════════════════════════════════════════ the Roster tab ══ */
+
+/* The one tab with the left-rail / centre / right-rail shape. The other six each have
+   their own root layout, so there is no shared rail component to build (ticket 23 Q12). */
+#lm-app .lm-roster {
+	display: grid;
+	grid-template-columns: 300px 1fr 340px;
+	gap: var(--space-6);
+	align-items: start;
+}
+
+#lm-app .lm-rail {
+	border: 2px solid var(--color-divider);
+	background: var(--color-surface);
+	max-height: 70vh;
+	overflow: auto;
+}
+
+#lm-app .lm-rail-head {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	padding: var(--space-3);
+	background: var(--color-surface);
+	border-bottom: 2px solid var(--color-divider);
+}
+
+#lm-app .lm-rail-row {
+	display: flex;
+	gap: 8px;
+	align-items: baseline;
+	width: 100%;
+	padding: 6px var(--space-3);
+	border: 0;
+	border-bottom: 1px solid var(--color-neutral-300);
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+#lm-app .lm-rail-row:hover {
+	background: var(--color-neutral-100);
+}
+
+#lm-app .lm-rail-row[aria-current='true'] {
+	background: var(--color-accent-100);
+}
+
+#lm-app .lm-rail-row .lm-grow {
+	flex: 1;
+}
+
+#lm-app .lm-num {
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+	color: var(--color-neutral-700);
+}
+
+/* Ticket 21 Q5's measured constraint: a bare "an" matches 373 of 1,143 and "o" matches
+   494. The count renders on every keystroke and the list is capped -- see
+   `tabs/roster.js`. Rendering 373 rows into a list view at the door is the failure
+   mode; a minimum query length is not the answer, because "Ng" and "Yu" are real
+   surnames and F3 makes name search the PRIMARY door lookup for ~1,000 members with
+   no phone number on file. */
+#lm-app .lm-count {
+	font-size: 11px;
+	color: var(--color-neutral-700);
+	padding: 6px var(--space-3);
+}
+
+/* The waitlist segment (ticket 30 Q11): a SEGMENT, not a mode. Hidden entirely when
+   empty, which is what `LoadRosterFile`'s `ActivateWaitlist()` did on reload and what
+   the public `roster/` app already ships at `roster.js:871-890`. */
+#lm-app .lm-waitlist-head {
+	padding: var(--space-3);
+	margin-top: var(--space-4);
+	border-top: 2px solid var(--color-text);
+	border-bottom: 2px solid var(--color-divider);
+	font: var(--font-heading-weight) 12px var(--font-heading);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+}
+
+#lm-app .lm-pos {
+	color: var(--color-neutral-500);
+	font-variant-numeric: tabular-nums;
+}
+
+/* The centre pane tints on payment state, `League Manager.dc.html:1341-1342`. */
+#lm-app .lm-centre {
+	padding: var(--space-6);
+	border: 2px solid var(--color-divider);
+}
+
+#lm-app .lm-centre.lm-paid {
+	background: var(--lm-status-paid-panel);
+}
+
+#lm-app .lm-centre.lm-unpaid {
+	background: var(--lm-status-unpaid-panel);
+}
+
+#lm-app .lm-row2 {
+	display: flex;
+	gap: var(--space-3);
+}
+
+#lm-app .lm-row2 > .field {
+	flex: 1;
+}
+
+/* The duplicate warning (ticket 21 Q7): advisory, pre-commit, and the create button is
+   NEVER disabled -- `GenerateNewPlayer` never consulted the panel either. */
+#lm-app .lm-dupes {
+	margin: var(--space-3) 0;
+	padding: var(--space-3);
+	border: 1px solid var(--color-accent);
+	background: var(--color-accent-100);
+	font-size: 12px;
+	color: var(--color-accent-700);
+}
+
+/* The roster counter, `58 / [ 60 ]`. Editable because promotion and walk-in both
+   refuse at capacity, and the refusal has to be actionable where it happens. */
+#lm-app .lm-cap {
+	display: flex;
+	gap: 6px;
+	align-items: baseline;
+	font-variant-numeric: tabular-nums;
+}
+
+#lm-app .lm-cap .input {
+	width: 64px;
+	min-height: 28px;
+	padding: 2px 6px;
+	text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════ the Draw List tab ══ */
+
+#lm-app .lm-draw {
+	display: grid;
+	grid-template-columns: 380px 1fr;
+	gap: var(--space-6);
+	align-items: start;
+}
+
+/* The solution summary block, `League Manager.dc.html:335`: monospace, pre-wrapped and
+   scrolling, because the enumerator lists up to 35 (`MAX_SOLUTIONS_LISTED`). */
+#lm-app .lm-solutions {
+	max-height: 220px;
+	overflow: auto;
+	padding: var(--space-3);
+	border: 2px solid var(--color-divider);
+	background: var(--color-neutral-100);
+	font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+	white-space: pre-wrap;
+}
+
+/* The inverted group header row, `:360`. */
+#lm-app .lm-drawlist tr.lm-grouphead td {
+	background: var(--color-text);
+	color: var(--color-bg);
+	font-weight: 700;
+}
+
+#lm-app .lm-unassigned {
+	padding: var(--space-4);
+	border-bottom: 2px solid var(--color-divider);
+}
+
+#lm-app .lm-move {
+	font-size: 12px;
+	min-height: 28px;
+	padding: 2px 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════ the Scores tab ══ */
+
+#lm-app .lm-scores {
+	display: grid;
+	grid-template-columns: 260px 1fr;
+	gap: var(--space-6);
+	align-items: start;
+}
+
+#lm-app .lm-strip {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	align-items: center;
+	margin-bottom: var(--space-4);
+}
+
+/* THE PILL'S FOUR ORTHOGONAL CHANNELS, and they must stay orthogonal.
+   Any shared utility layer added later has to leave `outline` unclaimed. */
+#lm-app .lm-pill {
+	position: relative;
+	font: 700 14px var(--font-heading);
+	padding: 8px 16px;
+	border: 2px solid var(--color-divider);
+	background: var(--color-bg);
+	color: var(--color-text);
+	cursor: pointer;
+}
+
+/* 1. FILL -- completeness. White / yellow / green, `docs/05` section 3's meaning. */
+#lm-app .lm-pill.lm-partial {
+	background: var(--lm-status-group-partial);
+	color: var(--color-bg);
+}
+
+#lm-app .lm-pill.lm-done {
+	background: var(--lm-status-group-done);
+	color: var(--color-bg);
+}
+
+/* 2. BORDER -- selection. It thickens 2px to 3px inside the box, so nothing reflows. */
+#lm-app .lm-pill.lm-sel {
+	border: 3px solid var(--color-text);
+}
+
+/* 3. OUTLINE + OFFSET -- an invalid cell somewhere in this group.
+   Ticket 20 Q2: Q7's "ring" had no ring available, because the canvas already spends
+   a 3px ink border on SELECTED. So invalid is a halo drawn OUTSIDE the border. The two
+   are geometrically orthogonal and a pill can wear both at once -- which is the case
+   that matters, since the invalid group is usually the one you are looking at.
+   Rejected: an accent bar under the pill (reads as the tab-active treatment, so it
+   would mean two things) and a red `!` glyph (weaker contrast on green and orange). */
+#lm-app .lm-pill.lm-invalid {
+	outline: 2px solid var(--color-accent);
+	outline-offset: 3px;
+}
+
+/* 4. CORNER DOT -- this group differs from what the server holds.
+   Q6 lets a partial group sit unsent all evening, so yellow alone cannot say whether
+   it is saved. The 1.5px background ring is what makes it read against the white, the
+   yellow AND the green fill. `border-radius: 50%` is a deliberate exception to the
+   system's `--radius-*: 0px`. */
+#lm-app .lm-pill .lm-dot {
+	position: absolute;
+	top: -4px;
+	right: -4px;
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	background: var(--color-text);
+	border: 1.5px solid var(--color-bg);
+}
+
+/* --- the panel: seed / name / draw rating while typing, W GW GL Place delta after --- */
+#lm-app .lm-panel {
+	border-collapse: collapse;
+	width: 100%;
+	background: var(--color-surface);
+}
+
+#lm-app .lm-panel th {
+	font: 600 10px/1 var(--font-heading);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	text-align: left;
+	padding: 8px 6px;
+	color: var(--color-neutral-700);
+	border-bottom: 2px solid var(--color-divider);
+}
+
+#lm-app .lm-panel td {
+	padding: 6px;
+	border-bottom: 1px solid var(--color-neutral-300);
+	font-size: 13px;
+}
+
+#lm-app .lm-panel td.lm-n {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+#lm-app .lm-panel tr.lm-placed1 td {
+	font-weight: 700;
+}
+
+#lm-app .lm-delta-up {
+	color: var(--lm-status-group-done);
+	font-weight: 700;
+}
+
+#lm-app .lm-delta-dn {
+	color: var(--color-accent-700);
+	font-weight: 700;
+}
+
+#lm-app .lm-note {
+	font-size: 11px;
+	color: var(--color-neutral-500);
+	margin-top: 8px;
+}
+
+/* --- the staircase, `09-score-sheet.html:134-156` at screen scale ---
+   Row k against opponents k+1..N, labels `1 v 3`. Identical in shape and order to the
+   printed sheet, because that sheet is the paper being transcribed FROM. */
+#lm-app .lm-grid-row {
+	display: flex;
+	margin-bottom: var(--lm-grid-row-gap);
+}
+
+#lm-app .lm-grid-row:last-child {
+	margin-bottom: 0;
+}
+
+#lm-app .lm-cell {
+	width: var(--lm-grid-cell-w);
+	flex: 0 0 var(--lm-grid-cell-w);
+	border: var(--lm-grid-rule) solid var(--color-text);
+	margin-right: calc(-1 * var(--lm-grid-rule));
+	background: #fff;
+}
+
+/* `3`/`3` is the ONLY invalid pair. `2/1`, `1/2`, `2/2`, `D/1`, `D/0` and `0/0` are all
+   accepted silently -- the narrow-validation trap the design canvas falls into. */
+#lm-app .lm-cell.lm-bad {
+	position: relative;
+	z-index: 2;
+	outline: 2px solid var(--color-accent);
+	outline-offset: -1px;
+}
+
+#lm-app .lm-cell-label {
+	height: var(--lm-grid-label-band);
+	border-bottom: var(--lm-grid-rule) solid var(--color-text);
+	font: 600 9px/1 var(--font-heading);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--color-neutral-700);
+}
+
+#lm-app .lm-cell-boxes {
+	height: var(--lm-grid-box-band);
+	display: flex;
+}
+
+/* The inputs are `readonly` and every value is written by the keydown handler. That is
+   what makes ticket 19 Q5's "no character outside the alphabet can ever exist in a
+   box" structural rather than careful -- there is no code path by which one could. */
+#lm-app .lm-cell-boxes input {
+	flex: 0 0 var(--lm-grid-cell-half);
+	width: var(--lm-grid-cell-half);
+	height: 100%;
+	border: 0;
+	background: transparent;
+	text-align: center;
+	font: 600 16px/1 var(--font-heading);
+	color: var(--color-text);
+	padding: 0;
+	caret-color: var(--color-accent);
+}
+
+#lm-app .lm-cell-boxes input:first-child {
+	border-right: var(--lm-grid-rule) solid var(--color-text);
+}
+
+#lm-app .lm-cell-boxes input:focus {
+	outline: 2px solid var(--color-text);
+	outline-offset: -2px;
+}
+
+/* `#34`: "still needed" is a pure function of the box's own emptiness. */
+#lm-app .lm-cell-boxes input.lm-empty {
+	background: var(--lm-status-empty-score);
+}
+
+/* The flash IS the beep -- `Console.Beep()`'s replacement, ~150ms (ticket 19 Q5). */
+#lm-app .lm-cell-boxes input.lm-flash {
+	background: var(--color-accent);
+	color: #fff;
+}
+
+#lm-app .lm-cell-msg {
+	font: 600 9px/1.2 var(--font-heading);
+	color: var(--color-accent-700);
+	padding: 2px 0 0 2px;
+}
+
+#lm-app .lm-actions {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	flex-wrap: wrap;
+	margin-top: var(--space-4);
+	padding-top: 14px;
+	border-top: 1px solid var(--color-neutral-300);
+}
+
+#lm-app .lm-actions .lm-sp {
+	flex: 1;
+}
+
+#lm-app .lm-reason {
+	font-size: 12px;
+	color: var(--color-accent-700);
+}
+
+#lm-app .lm-saved {
+	font-size: 12px;
+	color: var(--color-neutral-700);
+}
+
+/* ══════════════════════════════════════════════════════════ Settings, and Finalize ══ */
+
+#lm-app .lm-settings {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: var(--space-6);
+	align-items: start;
+}
+
+#lm-app .lm-kv {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 4px var(--space-4);
+	font-size: 13px;
+}
+
+#lm-app .lm-kv dd {
+	margin: 0;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+/* The publish log. Four tags, every row naming its SCOPE, and a `Failed` row carrying
+   the machine-readable `code` (ticket 26 Q3). The design ships two tags and cannot
+   express a failure at all -- its catch paths at `:963-965` and `:1062-1064` append no
+   row. `Success` is the word ticket 26 Q1 rules out. */
+#lm-app .lm-log {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+}
+
+#lm-app .lm-log td {
+	padding: 8px 6px;
+	border-bottom: 1px solid var(--color-neutral-300);
+	vertical-align: top;
+}
+
+#lm-app .lm-log .lm-links a {
+	margin-right: var(--space-3);
+}
+
+#lm-app .lm-code {
+	font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+	color: var(--color-accent-700);
+}
+
+#lm-app .lm-sha {
+	font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+	color: var(--color-neutral-700);
+}
+
+/* ═════════════════════════════════════════════════════════════════ the Results tab ══ */
+
+/* The 26-column table. These ~18 class names are inherited from the markup of the
+   club's published `results/RR_Results_*.html` pages and are unstyled in `_ds` -- they
+   render unstyled in the design canvas today. The port authors them; the descendant
+   scope under `.lm-results` is what keeps names this generic from reaching anything
+   else on the page. */
+#lm-app .lm-results {
+	overflow-x: auto;
+}
+
+#lm-app .lm-results table {
+	border-collapse: collapse;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+#lm-app .lm-results th,
+#lm-app .lm-results td {
+	padding: 4px 6px;
+	border-bottom: 1px solid var(--color-neutral-300);
+}
+
+#lm-app .lm-results th {
+	font: 600 10px/1 var(--font-heading);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	text-align: left;
+	color: var(--color-neutral-700);
+	border-bottom: 2px solid var(--color-divider);
+}
+
+#lm-app .lm-results .col,
+#lm-app .lm-results .num,
+#lm-app .lm-results .rating,
+#lm-app .lm-results .rating-pre,
+#lm-app .lm-results .rating-post,
+#lm-app .lm-results .matches-won,
+#lm-app .lm-results .games-won,
+#lm-app .lm-results .rating-change,
+#lm-app .lm-results .bonus-points,
+#lm-app .lm-results .total-change {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+#lm-app .lm-results .names,
+#lm-app .lm-results .rating-change-player {
+	text-align: left;
+}
+
+#lm-app .lm-results .games,
+#lm-app .lm-results .game {
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+
+#lm-app .lm-results .score-win {
+	font-weight: 700;
+}
+
+#lm-app .lm-results .score-loss {
+	color: var(--color-neutral-700);
+}
+
+#lm-app .lm-results .rating-change-vs {
+	color: var(--color-neutral-500);
+}
+
+#lm-app .lm-results .row:hover {
+	background: var(--color-neutral-100);
+}
+
+/* ═══════════════════════════════════════════════════════ the screen, on paper ══
+ *
+ * **Measured, not precautionary.** Printing two score sheets and the floor map from
+ * the live app produced **five pages for three artifacts** at a MediaBox that was
+ * correct either way — the same shape as the failure `test/css.test.js`'s tenth
+ * assertion was written against, where the preview harness's 1.5rem of padding
+ * survived onto paper and Chrome printed six pages for four artifacts.
+ *
+ * The cause is new, because the app is new. `print-preview.html` is a bare page: the
+ * print region and nothing else. The real app wraps that region in a shell — the tab
+ * strip, the app-level banners, the status bar — and `print.css` never had a shell to
+ * hide. Those elements are children of `#lm-app`, so they occupy flow above the print
+ * region and push each sheet a fraction past 11in.
+ *
+ * These rules live here rather than in `print.css` because they are about **this
+ * file's own classes**. `print.css` is byte-verified against the printed oracle and
+ * is not edited to hide a screen widget it has never heard of.
+ *
+ * Keep this block LAST in the file: `css.test.js`'s `@media print` extractor is
+ * greedy, and a rule after it would be swallowed.
+ */
+@media print {
+	/* The shell. Everything between the site chrome and the print region. */
+	#lm-app .lm-tabs,
+	#lm-app .lm-banners,
+	#lm-app .lm-statusbar,
+	#lm-app .lm-gate,
+	#lm-app .lm-overlay {
+		display: none;
+	}
+
+	/* `print.css:493` already absolutely positions the app root at the paper corner,
+	   because ticket 09's coordinates are measured from the PAPER and the C# never
+	   sets `OriginAtMargins`. Padding here would shift every one of them. */
+	#lm-app {
+		max-width: none;
+		margin: 0;
+		padding: 0;
+	}
+}
