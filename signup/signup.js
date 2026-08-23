@@ -1,5 +1,5 @@
 // BTTC Player Signup
-// Utilities loaded from bttc-utils.js: getErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateEmail, validateToken, formatPhoneNumber
+// Utilities loaded from bttc-utils.js: getErrorMessage, getWireErrorMessage, getFetchOptions, handleApiResponse, validatePhone, validateEmail, validateToken, formatPhoneNumber
 
 const { createApp, ref, reactive, computed, onMounted, nextTick, watch } = Vue;
 
@@ -1094,21 +1094,19 @@ const PlayerSignupApp = {
         });
 
         const response = await fetch(url, fetchOptions);
-        const data = await handleApiResponse(response);
+        // The body is not read: the 200 carries only a message this page does not
+        // use, and a refusal is thrown. The await is what throws.
+        await handleApiResponse(response);
 
-        // Check API response
-        if (data.success) {
-          // Success: Show success message inline in dialog
-          dialogSuccessMessage.value = 'Signup completed successfully!';
-          // Don't close dialog - let user see success message and click Close
-        } else {
-          // API returned error (e.g., phone number already in use)
-          dialogErrorMessage.value = data.message || 'Signup failed. Please try again.';
-        }
+        // Ticket 28 Q2: a 200 IS the success signal. ALREADY_SIGNED_UP arrives as a 409
+        // and is thrown by handleApiResponse, so it lands in the catch below.
+        // NOTE: handleDialogClose derives `wasSuccessful` from the truthiness of
+        // dialogSuccessMessage and redirects on it, so this must stay the only place
+        // that sets it.
+        dialogSuccessMessage.value = 'Signup completed successfully!';
+        // Don't close dialog - let user see success message and click Close
       } catch (err) {
-        // Network error or other exception
-        const friendlyMessage = getErrorMessage(err, 'signup');
-        dialogErrorMessage.value = friendlyMessage;
+        dialogErrorMessage.value = getWireErrorMessage(err, 'signup');
       } finally {
         // Always reset submitting state (re-enable form)
         setSubmitting(false);
@@ -1159,18 +1157,15 @@ const PlayerSignupApp = {
         });
 
         const response = await fetch(url, fetchOptions);
-        const data = await handleApiResponse(response);
+        // The body is not read: the 200 carries only a message this page does not
+        // use, and a refusal is thrown. The await is what throws.
+        await handleApiResponse(response);
 
-        if (data.success) {
-          // Success: Show success message and prompt to register
-          successMessage.value = `Account created successfully! Welcome, ${firstName}!`;
-        } else {
-          // API returned error
-          error.value = data.message || 'Account creation failed. Please try again.';
-        }
+        // Ticket 28 Q2: see handleDialogSubmit -- a refusal is thrown, not returned.
+        // Success: Show success message and prompt to register
+        successMessage.value = `Account created successfully! Welcome, ${firstName}!`;
       } catch (err) {
-        const friendlyMessage = getErrorMessage(err, 'account creation');
-        error.value = friendlyMessage;
+        error.value = getWireErrorMessage(err, 'account creation');
       } finally {
         setSubmitting(false);
       }
