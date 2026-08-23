@@ -29,6 +29,118 @@ if (USE_DEV_API) {
   console.log('🚀 Using PRODUCTION API');
 }
 
+
+// ---------------------------------------------------------------------------
+// The path allowlist.  Ticket 13 Q2.
+//
+// There was NO allowlist here before: the handler stripped the function prefix with a
+// bare String.replace and forwarded whatever was left, so every endpoint on bttc_api --
+// including the bulk user export and import -- was reachable from the public internet
+// behind nothing but a key this proxy attaches for you.
+//
+// What this closes: /users/export, /users/import, /users/bulk-update and /refresh/all.
+// What it deliberately does NOT close: PUT and DELETE /player/{id}. Ticket 13 Q2b put the
+// three-request bypass -- db/search?role=director -> PUT a known PIN -> login -- and kept
+// it, because dropping PUT removes the only route that can ever change a PIN for the nine
+// operators and every member. Recorded as F15. The login, the role check and the operator
+// token are ATTRIBUTION, NOT ACCESS CONTROL, and this list does not change that.
+//
+// Every entry below was MEASURED off the four live apps, not remembered. Missing one
+// breaks that app with a 404 from this file that looks nothing like an API problem --
+// admin/events.js was nearly missed because it builds URLs with `${getApiUrl()}` rather
+// than the `${apiUrl}` the other three use.
+//
+// `:seg` matches exactly one path segment.
+// ---------------------------------------------------------------------------
+const ALLOWED_ROUTES = [
+  // --- registration/, roster/, signup/, admin/ : measured, in use today ---------
+  ['GET',    '/rr/roster'],                 // roster/roster.js, admin/admin.js
+  ['GET',    '/rr/search'],                 // registration/registration.js
+  ['GET',    '/rr/registration-audit'],     // admin/audit.js
+  ['POST',   '/rr/capacity'],               // registration/registration.js
+  ['POST',   '/rr/register'],               // registration/registration.js
+  ['POST',   '/rr/unregister'],             // registration/registration.js
+  ['POST',   '/rr/registration/confirm'],   // admin/admin.js
+  ['GET',    '/rr/waitlist'],               // ships today; keep it reachable
+  ['POST',   '/rr/waitlist/promote'],       // unreachable in prod, zero callers, kept
+  ['GET',    '/player/search'],             // signup/signup.js
+  ['POST',   '/player/signup'],             // signup/signup.js
+  ['POST',   '/events/all'],                // admin/events.js
+  ['POST',   '/events/open'],               // admin/events.js
+  ['POST',   '/events/close'],              // admin/events.js
+  ['POST',   '/events/update'],             // ticket 30: max_capacity, edited inline
+
+  // --- the member surface, incl. the bypass ticket 13 Q2b kept on purpose --------
+  ['GET',    '/player/db/search'],
+  ['PUT',    '/player/:id'],
+  ['DELETE', '/player/:id'],
+
+  // --- League Manager (ticket 12). Built this session: --------------------------
+  ['POST',   '/rr/login'],                  // must be reachable UNAUTHENTICATED
+  ['GET',    '/rr/session'],
+  ['POST',   '/rr/draw'],
+  ['POST',   '/rr/groups/:n/scores'],
+  ['POST',   '/rr/results'],
+  ['POST',   '/rr/roster/update'],
+  // --- reserved slots. Listed now so the day one lands it is not ALSO a proxy bug:
+  ['GET',    '/rr/lock'],
+  ['POST',   '/rr/lock'],
+  ['POST',   '/rr/lock/takeover'],
+  ['POST',   '/rr/lock/release'],
+  ['POST',   '/rr/publish'],
+  ['GET',    '/rr/members'],
+  ['POST',   '/rr/member'],
+  ['POST',   '/rr/roster/add'],
+  ['POST',   '/rr/roster/remove'],
+  ['POST',   '/rr/roster/promote'],
+];
+
+// NOT on the list, and that is the point:
+//   /users/export, /users/import, /users/bulk-update, /users/bulk-update/file, /refresh/all
+
+/**
+ * Normalise BEFORE matching, and reject traversal outright.
+ *
+ * The old handler used a bare `String.replace`, so `/player/db/search/../../users/export`
+ * would have been forwarded verbatim. An allowlist that matches on an un-normalised path is
+ * not an allowlist. Returns null when the path is unacceptable at all.
+ */
+function normalisePath(raw) {
+  let path = String(raw || '').replace('/.netlify/functions/api', '');
+  if (path.indexOf('%') !== -1) {
+    try { path = decodeURIComponent(path); } catch (e) { return null; }
+  }
+  if (path.indexOf('\\') !== -1 || path.indexOf('\0') !== -1) return null;
+  if (!path || path === '') return '/';
+  if (!path.startsWith('/')) path = '/' + path;
+
+  const out = [];
+  for (const segment of path.split('/')) {
+    if (segment === '' || segment === '.') continue;
+    if (segment === '..') return null;      // never resolve upward; refuse
+    out.push(segment);
+  }
+  return '/' + out.join('/');
+}
+
+function isAllowed(method, path) {
+  const parts = path.split('/').filter(Boolean);
+  return ALLOWED_ROUTES.some(([allowedMethod, pattern]) => {
+    if (allowedMethod !== method) return false;
+    const want = pattern.split('/').filter(Boolean);
+    if (want.length !== parts.length) return false;
+    return want.every((seg, i) => seg.startsWith(':') || seg === parts[i]);
+  });
+}
+
+// Exported for leaguemanager/test/api-allowlist.test.js. A list this consequential --
+// getting it wrong takes down every app on the site -- should not be untestable.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports.ALLOWED_ROUTES = ALLOWED_ROUTES;
+  module.exports.normalisePath = normalisePath;
+  module.exports.isAllowed = isAllowed;
+}
+
 exports.handler = async (event, context) => {
   
   // Enable CORS for all origins
@@ -51,13 +163,16 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // Extract the path and query parameters from the request
-    let path = event.path.replace('/.netlify/functions/api', '');
-    // Ensure path starts with / and doesn't create double slashes
-    if (!path || path === '') {
-      path = '/';
-    } else if (!path.startsWith('/')) {
-      path = '/' + path;
+    // Normalise first, then check the allowlist. Anything not on it never reaches
+    // bttc_api at all -- it 404s here, with no hint that the backend exists.
+    const path = normalisePath(event.path);
+    if (path === null || !isAllowed(event.httpMethod, path)) {
+      console.warn('[api] refused', event.httpMethod, event.path);
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ detail: 'Not found', code: 'NOT_FOUND' }),
+      };
     }
     
     const queryString = event.queryStringParameters 
