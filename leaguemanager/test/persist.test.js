@@ -21,7 +21,7 @@ import {
   KEYS, DRAFT_VERSION, draftKey, drawKey,
   readDraft, writeDraft, clearDraftGroup,
   readDraw, writeDraw, clearDraw,
-  sessionId, readAuth, writeAuth, clearAuth,
+  sessionId, readAuth, writeAuth, clearAuth, operatorFromToken,
 } from '../persist.js';
 
 /** A `sessionStorage` stand-in. Same three methods, no browser. */
@@ -229,5 +229,50 @@ describe('the cold gate’s credentials — ticket 23 Q15', () => {
   it('reports a refused write rather than pretending it landed', () => {
     assert.equal(writeAuth(hostileStorage(), 'tok', 1), false);
     assert.equal(readAuth(hostileStorage()), null);
+  });
+});
+
+describe('who the operator is, on a WARM boot — the reload that armed the takeover nag', () => {
+  /** `base64url(JSON).signature`, unpadded — `helpers/auth_helper.py:198-223`. */
+  function mint(claims, signature = 'not-checked-here') {
+    const b64 = Buffer.from(JSON.stringify(claims)).toString('base64url');
+    return b64 + '.' + signature;
+  }
+
+  it('recovers the user_id a reload used to throw away', () => {
+    /**
+     * `lock.userId` was assigned in exactly ONE place — `POST /rr/login`'s response,
+     * inside `signIn()` — and a warm boot never calls it. So after any reload the app
+     * compared every lease holder against `null`, decided it was not the holder, and
+     * went read-only for the life of the tab *while holding the lease server-side*:
+     * the operator's own name in the lease banner, every control disabled, and a
+     * Take over button that took the lease from himself and changed nothing.
+     */
+    const claims = operatorFromToken(mint({ user_id: 812, role: 'director', exp: 1e10 }));
+    assert.equal(claims.user_id, 812);
+    assert.equal(claims.role, 'director');
+  });
+
+  it('survives base64url’s two substituted characters and its missing padding', () => {
+    // `-` and `_` for `+` and `/`, and the server rstrips `=`. A decoder that forgot
+    // either would fail on a minority of tokens only — the worst kind of intermittent.
+    for (let uid = 1; uid < 400; uid += 1) {
+      const token = mint({ user_id: uid, role: 'director', exp: 1e10 });
+      assert.equal(operatorFromToken(token).user_id, uid, token);
+    }
+  });
+
+  it('is null rather than throwing for anything that is not a token', () => {
+    for (const bad of [null, undefined, '', 'nodot', '!!!.sig', 'e30.sig']) {
+      assert.equal(operatorFromToken(bad), null, JSON.stringify(bad));
+    }
+  });
+
+  it('does NOT verify the signature, and that is the point', () => {
+    // Verification is the server's, on every request. This reads only which user the
+    // token already claims to be, to compare against a holder the server reported.
+    // Per ADR 0005 the lease is attribution, not access control.
+    const claims = operatorFromToken(mint({ user_id: 7, role: 'director', exp: 1 }, 'x'));
+    assert.equal(claims.user_id, 7, 'an expired, unsigned token still names its user');
   });
 });

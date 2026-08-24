@@ -29,9 +29,11 @@ const { createApp, ref, computed, watch, onMounted, onUnmounted } = window.Vue;
 
 import { isAuthExpired, LEASE_LOST, remedyFor, ApiError } from './api.js';
 import { api, tabSessionId } from './client.js';
-import { readAuth, writeAuth, clearAuth, readDraft, readDraw } from './persist.js';
 import {
-  session, applySession, members, lock, applyLock, drafts, ui,
+  readAuth, writeAuth, clearAuth, readDraft, readDraw, operatorFromToken,
+} from './persist.js';
+import {
+  session, applySession, members, lock, applyLock, isHolder, drafts, ui,
   isReadOnly, drawCommitted, eventId, staleBanner, redrawBanner,
 } from './store.js';
 
@@ -68,6 +70,11 @@ const TABS = [
 
 const TAB_KEYS = TABS.map((t) => t.key);
 const LOCK_POLL_MS = 5000;   // ticket 14 Q5: sees a takeover with 15 of the 20s left
+
+// The countdown ticks faster than the poll on purpose. `grant_after` is an absolute
+// deadline, so counting down to it needs no server round trip -- and a number that
+// only moved every five seconds would read as frozen.
+const TICK_MS = 1000;
 
 lock.sessionId = tabSessionId;
 
@@ -157,6 +164,7 @@ const Shell = {
      */
     async function acquireLease() {
       try {
+        lock.yielded = false;
         applyLock(await api.acquireLock(eventId.value));
       } catch (err) {
         // 409 LEASE_HELD is not a failure to report; it is the answer. The poll
@@ -181,21 +189,101 @@ const Shell = {
      * precondition field on any endpoint" stands unchanged.
      */
     async function pollLock() {
+      let body;
       try {
-        const body = await api.getLock(eventId.value);
+        body = await api.getLock(eventId.value);
         applyLock(body);
-        // LEASE_LOST is SYNTHESISED HERE and nowhere else. It is not a server code
-        // and must never enter helpers/errors.py -- no endpoint raises it. See
-        // api.js's CLIENT_CODES, which is deliberately a separate table.
-        const h = body.holder;
-        const mine = h && h.user_id === lock.userId && h.session_id === lock.sessionId;
-        lock.lost = !!(h && !mine);
       } catch (err) {
         if (isAuthExpired(err)) ui.reauth = true;
         // Any other failure is left silent on purpose: a dropped poll on gym wifi is
         // not news, and the next one is five seconds away. Ticket 19 Q10's "no silent
         // retry" is about MUTATIONS -- this is a read that repeats by construction.
+        return;
       }
+
+      // LEASE_LOST is SYNTHESISED HERE and nowhere else. It is not a server code and
+      // must never enter helpers/errors.py -- no endpoint raises it. See api.js's
+      // CLIENT_CODES, which is deliberately a separate table.
+      //
+      // `heldOnce` is what makes it mean something. It used to read `holder && !mine`,
+      // which is `isReadOnly && lock.holder` spelled differently -- so the banner hung
+      // *"-- your unsaved work is still here."* on a tab that had never held the lease
+      // and had no work to preserve.
+      const mine = isHolder(body.holder);
+      lock.lost = !!body.holder && !mine && lock.heldOnce;
+      // Somebody else now holds it, so whatever we yielded has been collected and this
+      // tab is free to compete for the lease again the next time it falls vacant.
+      if (body.holder && !mine) lock.yielded = false;
+
+      // ---- nobody holds it: just take it. -------------------------------------
+      // Ticket 14 Q8's "the operator decides before they start" is about deciding
+      // whether to take the lease FROM SOMEONE. There is nobody to decide about here,
+      // and leaving the app read-only behind a *Take the lease* button for a lease
+      // nobody holds is a click that asks a question with one answer. A race loser
+      // gets 409 LEASE_HELD, which `acquireLease` already absorbs.
+      //
+      // **`yielded` is what stops this eating the handover it just performed.** When we
+      // release early for a waiting challenger the lease is briefly unheld, and without
+      // the guard this branch would grab it back before the challenger's next poll --
+      // an unbounded loop between two tabs, each politely taking turns stealing.
+      if (!body.holder && booted.value && !takingOver.value && !lock.yielded) {
+        await acquireLease();
+        return;
+      }
+
+      const pending = body.takeover_requested_by;
+
+      // ---- we hold it, and someone is asking for it. ---------------------------
+      // **This is the half ticket 14 Q2 specified and nobody built.** `takeoverRequestedBy`
+      // had two readers in the whole frontend and both sat behind `isReadOnly`, i.e. in
+      // the CHALLENGER's tab -- the holding tab was never told, never flushed and never
+      // released early. So the twenty-second window it justified was dead time in every
+      // takeover the app has ever performed, and `operating-runbook.md:54-57` promised
+      // operators a warning that no code emitted.
+      if (mine && pending && !isHolder(pending)) {
+        if (hasDraft()) {
+          // Something is unsaved. Say so, and leave it to the operator: auto-POSTing a
+          // draw or a score grid nobody clicked Commit on is a mutation this app does
+          // not make on its own, and ticket 19 Q10 bans silent writes.
+          return;
+        }
+        // Nothing to flush, so the window is protecting nothing. Hand over now and
+        // collapse twenty seconds of standing around into one poll interval.
+        lock.yielded = true;
+        await releaseLease();
+        lock.holder = null;
+        return;
+      }
+
+      // ---- we are the challenger, and it is ours to complete. -------------------
+      // `POST /rr/lock/takeover` is idempotent and self-completing (ticket 14 Q8): the
+      // deadline is evaluated on the NEXT REQUEST, because with stateless requests and
+      // no scheduler there is nothing on the server counting. Something has to make
+      // that next request. It was a human clicking *Complete takeover* a second time,
+      // which is not a protocol -- it is a nag.
+      if (!mine && isHolder(pending)
+          && (!body.holder || deadlinePassed(body.grant_after))) {
+        await takeover();
+      }
+    }
+
+    /**
+     * Is there anything in this tab that a commit would save?
+     *
+     * Deliberately structural rather than a flag: `drafts.draw` is `null` when there is
+     * none (`persist.js`), and `drafts.scores` is keyed by group, so a group whose cells
+     * were all cleared leaves an empty object behind that is not a draft.
+     */
+    function hasDraft() {
+      const draw = drafts.draw;
+      if (draw && Array.isArray(draw.groups) && draw.groups.length) return true;
+      return Object.values(drafts.scores || {})
+        .some((g) => g && Object.keys(g).length > 0);
+    }
+
+    function deadlinePassed(grantAfter) {
+      const at = grantAfter ? Date.parse(grantAfter) : NaN;
+      return Number.isFinite(at) && Date.now() >= at;
     }
 
     /**
@@ -236,8 +324,14 @@ const Shell = {
     function releaseLease() {
       try {
         const r = api._describeRelease(eventId.value);
-        window.fetch(r.url, { method: 'POST', headers: r.headers, body: r.body, keepalive: true });
+        // Returned, not awaited here: `onPageHide` and `signOut` are both leaving and
+        // have nothing to wait for. `pollLock`'s early handover DOES await it, so the
+        // challenger's next poll cannot arrive before the release has landed.
+        return window.fetch(r.url,
+          { method: 'POST', headers: r.headers, body: r.body, keepalive: true })
+          .catch(() => { /* takeover is the recovery path */ });
       } catch (e) { /* the page is going away; takeover is the recovery path */ }
+      return Promise.resolve();
     }
 
     // ---------------------------------------------------------------- hash routing
@@ -268,6 +362,16 @@ const Shell = {
 
     async function boot() {
       try {
+        // **Recover WHO WE ARE before anything consults the lease.**
+        //
+        // `lock.userId` was written in exactly one place -- `signIn()` -- and a warm boot
+        // never calls it: `booted` latches straight off `sessionStorage`. So every reload
+        // left `userId` null, `isHolder()` compared each holder against null, and the app
+        // was read-only for the life of the tab while holding the lease server-side. The
+        // operator saw his own name in the lease banner and a Take over button that took
+        // the lease from himself and changed nothing. See `operatorFromToken`.
+        const claims = operatorFromToken((readAuth(window.sessionStorage) || {}).token);
+        if (claims) lock.userId = claims.user_id;
         const s = await guard(() => api.getSession());
         if (s) applySession(s);
 
@@ -317,23 +421,129 @@ const Shell = {
 
     onUnmounted(() => {
       if (pollTimer) window.clearInterval(pollTimer);
+      if (tickTimer) window.clearInterval(tickTimer);
       window.removeEventListener('hashchange', readHash);
       window.removeEventListener('pagehide', onPageHide);
       window.removeEventListener('pageshow', onPageShow);
     });
 
-    const holderName = computed(() => (lock.holder
-      ? (lock.holder.first_name + ' ' + lock.holder.last_name).trim() : null));
+    const holderName = computed(() => nameOf(lock.holder));
+
+    /**
+     * The status bar's name, which a reload also used to lose.
+     *
+     * `POST /rr/login` is the only thing that returns `first_name`/`last_name`, and the
+     * token carries only `{user_id, role, exp}` -- so on a warm boot there is nobody to
+     * name. Except there is: when we hold the lease, the holder the server reports **is**
+     * the operator, under the name the server itself put on it.
+     */
+    const operatorName = computed(() => {
+      if (operator.value) {
+        return ((operator.value.first_name || '') + ' '
+              + (operator.value.last_name || '')).trim();
+      }
+      return holderIsMe.value ? holderName.value : null;
+    });
+
+    function nameOf(who) {
+      return who ? ((who.first_name || '') + ' ' + (who.last_name || '')).trim() : null;
+    }
+
+    /** The holder is the signed-in operator, in one of their other tabs. */
+    const holderIsMe = computed(() => !!lock.holder && lock.holder.user_id === lock.userId);
 
     const leaseBanner = computed(() => {
       if (!isReadOnly.value) return null;
-      if (!lock.holder) return 'You do not hold the editor lease. Take it to make changes.';
-      return holderName.value + ' is running tonight’s session'
-        + (lock.lost ? ' — your unsaved work is still here.' : '.');
+      if (!lock.holder) {
+        return lock.yielded
+          ? 'You handed the session over. This tab is read-only until you take it back.'
+          : 'You do not hold the editor lease. Take it to make changes.';
+      }
+
+      // **Your own name is not a rival.** The lease is keyed `{user_id, session_id}` so a
+      // second tab is a genuine challenger -- correct, and it is what stops two tabs
+      // clobbering each other with no precondition token anywhere to catch it. But the
+      // banner rendered that as *"Mohit Galvankar is running tonight’s session"* to Mohit
+      // Galvankar, which reads as a stranger holding the desk rather than as the tab
+      // behind this one.
+      if (holderIsMe.value) {
+        return lock.lost
+          ? 'You took the session over in another tab. This tab is read-only and anything'
+            + ' unsaved here is still here.'
+          : 'You are running tonight’s session in another tab.';
+      }
+
+      // `lost` now means what it says (`store.js`): this tab HELD the lease and was
+      // evicted. That is the one case with work to reassure anybody about, and it is
+      // the case `CLIENT_CODES.LEASE_LOST` was written for -- a string that has been
+      // unreachable since it was added, because nothing in the template referenced it
+      // and `remedyFor`/`LEASE_LOST` were returned from `setup()` into a void.
+      if (lock.lost) return remedyFor(LEASE_LOST);
+      return holderName.value + ' is running tonight’s session.';
     });
 
-    const takeoverPending = computed(() => !!lock.grantAfter && !!lock.takeoverRequestedBy);
+    /**
+     * The incumbent-side notice: **the half of ticket 14 Q2 that was never built.**
+     *
+     * The grace window is justified entirely by the incumbent flushing their draft before
+     * releasing, and until now the holding tab was never told a takeover had been
+     * requested -- `takeoverRequestedBy` had two readers and both sat behind `isReadOnly`.
+     * `operating-runbook.md:54-57` promises operators *"a 20-second warning naming the
+     * person and the time"*. This is that warning.
+     *
+     * It only ever renders when there is something unsaved: with nothing to flush,
+     * `pollLock` hands the lease over immediately instead of showing anybody a countdown
+     * they have no reason to read.
+     */
+    const handoverBanner = computed(() => {
+      const who = lock.takeoverRequestedBy;
+      if (isReadOnly.value || !who || isHolder(who)) return null;
+      const secs = secondsLeft.value;
+      return nameOf(who) + ' is taking over on another device'
+        + (secs === null ? '' : (secs > 0 ? ' in ' + secs + 's' : ' now'))
+        + '. Commit anything unsaved on this tab — it does not travel with the lease.';
+    });
+
+    /**
+     * A countdown is only news to the two tabs in the handover: the incumbent watching
+     * theirs run out, and the challenger waiting on it. A tab that has already YIELDED is
+     * neither -- it left the protocol -- and leaving the clock ticking beside *"You handed
+     * the session over"* counts down to nothing it is waiting for.
+     */
+    const takeoverPending = computed(() =>
+      !!lock.grantAfter && !!lock.takeoverRequestedBy && !lock.yielded);
     const takingOver = ref(false);
+
+    // ------------------------------------------------------------------ the countdown
+    /**
+     * `grant_after` used to be interpolated **raw** -- `granted after
+     * 2026-08-24T19:51:01.541059Z`, UTC, to the microsecond, in `lm-sha`, which is the
+     * monospace **id chip** used for SHAs and session ids. A deadline rendered as a hash.
+     *
+     * It is an absolute instant, so counting down to it costs no request. The ticker runs
+     * only while something is pending; there is nothing to animate the rest of the night.
+     */
+    const nowMs = ref(Date.now());
+    let tickTimer = null;
+
+    const secondsLeft = computed(() => {
+      const at = lock.grantAfter ? Date.parse(lock.grantAfter) : NaN;
+      if (!Number.isFinite(at)) return null;
+      return Math.max(0, Math.ceil((at - nowMs.value) / 1000));
+    });
+
+    const countdown = computed(() => {
+      const secs = secondsLeft.value;
+      if (secs === null) return '';
+      return secs > 0 ? 'handing over in ' + secs + 's…' : 'taking over…';
+    });
+
+    watch(() => !!lock.grantAfter && !!lock.takeoverRequestedBy, (pending) => {
+      if (tickTimer) { window.clearInterval(tickTimer); tickTimer = null; }
+      if (!pending) return;
+      nowMs.value = Date.now();
+      tickTimer = window.setInterval(() => { nowMs.value = Date.now(); }, TICK_MS);
+    }, { immediate: true });
 
     /**
      * Nobody holds it -- so the honest verb is ACQUIRE, not takeover.
@@ -360,6 +570,7 @@ const Shell = {
       if (takingOver.value) return;
       takingOver.value = true;
       try {
+        lock.yielded = false;
         if (leaseUnheld.value) {
           await acquireLease();
           await pollLock();
@@ -369,6 +580,10 @@ const Shell = {
         if (!body) return;
         applyLock({ holder: body.holder, grant_after: body.grant_after });
         if (body.granted) { lock.lost = false; await boot(); }
+        // NOT granted: the request is stamped and the deadline is running. Nobody has to
+        // come back and click again -- `pollLock` re-POSTs once `grant_after` passes or
+        // the incumbent releases. That is what makes the endpoint's "idempotent and
+        // self-completing" true of the SYSTEM rather than only of the server.
       } finally {
         takingOver.value = false;
       }
@@ -376,8 +591,10 @@ const Shell = {
 
     return {
       TABS, booted, phone, pin, signingIn, operator, fatal,
+      operatorName,
       ui, session, lock, isReadOnly, drawCommitted, takingOver, leaseUnheld,
-      staleBanner, redrawBanner, leaseBanner, holderName, takeoverPending,
+      staleBanner, redrawBanner, leaseBanner, handoverBanner, holderName,
+      holderIsMe, takeoverPending, countdown,
       signIn, signOut, selectTab, takeover,
       remedyFor, LEASE_LOST,
     };
@@ -421,12 +638,25 @@ const Shell = {
           <span class="lm-who">{{ redrawBanner }}</span>
           <button class="btn btn-secondary" @click="selectTab('draw')">Go to Draw List</button>
         </div>
+        <!-- The INCUMBENT side, and it is a fourth banner. 'store.js' and 'app.css'
+             both record ticket 28 Q10 declining a third; this reopens that knowingly,
+             because ticket 14 Q2 justified the whole twenty-second window on the
+             incumbent being warned and no code has ever warned them. It shows only when
+             this tab has something unsaved -- with nothing to flush, 'pollLock' hands
+             the lease over at once rather than making anyone watch a clock. -->
+        <div v-if="handoverBanner" class="lm-banner lm-banner-lease">
+          <span class="lm-who">{{ handoverBanner }}</span>
+        </div>
         <div v-if="leaseBanner" class="lm-banner lm-banner-lease">
           <span class="lm-who">{{ leaseBanner }}</span>
-          <span v-if="takeoverPending" class="lm-sha">granted after {{ lock.grantAfter }}</span>
-          <button class="btn btn-secondary" @click="takeover" :disabled="takingOver">
-            {{ takeoverPending ? 'Complete takeover'
-                               : (leaseUnheld ? 'Take the lease' : 'Take over') }}
+          <!-- A COUNTDOWN, not an ISO string, and no 'lm-sha': that class is the
+               monospace id chip, so the deadline used to render as though it were a
+               hash. And no *Complete takeover* button -- the poll completes it. -->
+          <span v-if="takeoverPending" class="lm-note">{{ countdown }}</span>
+          <button v-if="!takeoverPending" class="btn btn-secondary"
+                  @click="takeover" :disabled="takingOver">
+            {{ leaseUnheld ? 'Take the lease'
+                           : (holderIsMe ? 'Continue in this tab' : 'Take over') }}
           </button>
         </div>
       </div>
@@ -453,7 +683,7 @@ const Shell = {
       <tab-settings v-if="ui.tab === 'settings'"></tab-settings>
 
       <div class="lm-statusbar">
-        <span v-if="operator">{{ operator.first_name }} {{ operator.last_name }}</span>
+        <span v-if="operatorName">{{ operatorName }}</span>
         <span v-if="session.event">{{ session.event.event_date }} · {{ session.event.status }}</span>
         <span v-if="lock.rosterCount !== null">{{ lock.rosterCount }} registered</span>
         <span class="lm-sp"></span>

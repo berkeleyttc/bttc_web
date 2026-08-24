@@ -215,3 +215,40 @@ export function clearAuth(storage) {
   remove(storage, KEYS.TOKEN);
   remove(storage, KEYS.EXPIRES);
 }
+
+/**
+ * Recover `{user_id, role, exp}` from a stored operator token. Unverified, deliberately.
+ *
+ * **The bug this exists to kill.** `lock.userId` was assigned in exactly one place --
+ * `POST /rr/login`'s response, inside `signIn()`. A warm boot never calls `signIn()`:
+ * `booted` latches straight off `sessionStorage` and goes to `boot()`. So after **any
+ * reload** `lock.userId` was `null`, `isHolder()` compared every holder against `null`
+ * and returned false, and `isReadOnly` was stuck TRUE for the life of the tab.
+ *
+ * The app then held the lease server-side while telling the operator he did not: his own
+ * name in the banner, every control disabled, and a *Take over* button that took the
+ * lease from himself, succeeded, re-ran `boot()`, and left `userId` null all over again.
+ * The lease protocol was working perfectly; the client simply could not recognise itself.
+ * Hash routing exists so *"an accidental F5 at 8pm returns the operator to the tab they
+ * were on"* -- that F5 is what armed this.
+ *
+ * **Unverified is correct here, not a shortcut.** The signature is the server's to check
+ * and it checks it on every request; this reads only *which user this token already says
+ * it is*, to compare against a holder the server itself reported. Lying to yourself about
+ * your own id gains nothing and the server would reject the next mutation anyway. Per
+ * ADR 0005 the lease is attribution, not access control.
+ *
+ * Format is `base64url(JSON).signature`, unpadded (`helpers/auth_helper.py:198-223`).
+ */
+export function operatorFromToken(token) {
+  try {
+    const payload = String(token || '').split('.')[0];
+    if (!payload) return null;
+    const b64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const claims = JSON.parse(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)));
+    if (!claims || !Number.isInteger(claims.user_id)) return null;
+    return claims;
+  } catch (e) {
+    return null;
+  }
+}
