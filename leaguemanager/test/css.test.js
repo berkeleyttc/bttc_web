@@ -331,3 +331,141 @@ describe('the two required print properties — ticket 18 via ticket 23 Q11', ()
     assert.match(root.body, /top\s*:\s*0/);
   });
 });
+
+/* ══════════════════════════════════════════════════════════════════════════════════ */
+
+describe("the club stylesheet's classes, which this app also loads", () => {
+  /**
+   * **The failure this prevents is measured, not hypothetical.** `css/style.css:358`
+   * defines a global, unscoped `.row { display: grid; column-gap: 1em }` for the club
+   * site's chrome, and `leaguemanager/index.html` loads that stylesheet so the app carries
+   * the same site nav as every other page. `tabs/draw.js` and `tabs/results.js` render
+   * their player rows as `<tr class="row">` -- carried over verbatim from the design
+   * handoff, which loaded only `_ds/styles.css` and never the club's. With no
+   * `grid-template-columns` the rule is a ONE-column grid, so every `<td>` landed on its
+   * own line and the Draw List table read as a vertical list of fields.
+   *
+   * The three rules above scope what this app WRITES. Nothing scoped what it INHERITS,
+   * and the app root cannot help: `#lm-app` is an ancestor of the collision, not a
+   * competitor to it.
+   *
+   * A collision is allowed, but only deliberately -- `app.css` must re-declare the class
+   * under `#lm-app`, which is both the fix and the record that it was noticed.
+   */
+  const SITE_CSS = here('../../css/style.css');
+
+  /** Bare top-level `.foo` rules in the club stylesheet -- the ones that reach in. */
+  function siteClasses() {
+    const out = new Set();
+    for (const { selector, nesting } of rules(readFileSync(SITE_CSS, 'utf8'))) {
+      if (nesting.length) continue;
+      for (const one of selector.split(',').map((x) => x.trim())) {
+        const m = /^\.([A-Za-z_][\w-]*)$/.exec(one);
+        if (m) out.add(m[1]);
+      }
+    }
+    return out;
+  }
+
+  /** Classes named in the app's own templates -- the `.js` tab files, not its HTML,
+   *  which is where the shared site chrome legitimately lives. */
+  function appClasses() {
+    const out = new Map();
+    const walk = (dir) => {
+      for (const name of readdirSync(dir).sort()) {
+        const path = join(dir, name);
+        if (statSync(path).isDirectory()) { walk(path); continue; }
+        if (!name.endsWith('.js') || path.includes('/test/')) continue;
+        const src = readFileSync(path, 'utf8');
+        for (const m of src.matchAll(/class="([^"]*)"/g)) {
+          for (const c of m[1].split(/\s+/).filter(Boolean)) {
+            if (/[{}$]/.test(c)) continue;            // a Vue binding, not a literal
+            if (!out.has(c)) out.set(c, path.replace(LM, ''));
+          }
+        }
+      }
+    };
+    walk(LM);
+    return out;
+  }
+
+  /**
+   * The properties that can RESTRUCTURE a layout rather than repaint it.
+   *
+   * Deliberately not "every property the site rule sets". `.row` also carries
+   * `column-gap` and `clear`, both inert the moment `display` is back to `table-row`, and
+   * demanding they be echoed would make the check noisy enough to be worked around. The
+   * one that cannot be neutralised any other way is `display`.
+   */
+  const STRUCTURAL = ['display', 'position', 'float', 'grid-template-columns',
+                      'flex-direction'];
+
+  const declares = (body, prop) =>
+    new RegExp('(^|[;{\\s])' + prop + '\\s*:').test(body);
+
+  /**
+   * `{ class -> Set(structural props) }` that `app.css` re-declares under the app root.
+   *
+   * Mentioning the class is not enough, which is the trap this check fell into first:
+   * `#lm-app .lm-results .row:hover` names `.row` and repaints its background, and a
+   * background does not undo `display: grid`. The PROPERTY has to be reclaimed, not the
+   * name.
+   */
+  function reclaimed() {
+    const out = new Map();
+    const css = readFileSync(join(LM, 'app.css'), 'utf8');
+    for (const { selector, body } of rules(css)) {
+      for (const one of selector.split(',').map((x) => x.trim())) {
+        if (!one.startsWith(APP_ROOT_ID)) continue;
+        for (const m of one.matchAll(/\.([A-Za-z_][\w-]*)/g)) {
+          const set = out.get(m[1]) || new Set();
+          for (const prop of STRUCTURAL) if (declares(body, prop)) set.add(prop);
+          out.set(m[1], set);
+        }
+      }
+    }
+    return out;
+  }
+
+  /** `{ class -> Set(structural props) }` the club stylesheet sets on it. */
+  function siteStructural() {
+    const out = new Map();
+    for (const { selector, body, nesting } of rules(readFileSync(SITE_CSS, 'utf8'))) {
+      if (nesting.length) continue;
+      for (const one of selector.split(',').map((x) => x.trim())) {
+        const m = /^\.([A-Za-z_][\w-]*)$/.exec(one);
+        if (!m) continue;
+        const set = out.get(m[1]) || new Set();
+        for (const prop of STRUCTURAL) if (declares(body, prop)) set.add(prop);
+        out.set(m[1], set);
+      }
+    }
+    return out;
+  }
+
+  it('the club stylesheet is where the check expects it', () => {
+    const site = siteClasses();
+    assert.ok(site.size > 0, `no top-level class rules found in ${SITE_CSS}`);
+    assert.ok(site.has('row'),
+      '`.row` is the collision this check was written for — if it is gone from '
+      + 'css/style.css the comment above is stale, not the check');
+  });
+
+  it('no class an app template uses inherits its LAYOUT from the club stylesheet', () => {
+    const site = siteStructural();
+    const owned = reclaimed();
+    const offenders = [];
+    for (const [cls, where] of appClasses()) {
+      for (const prop of site.get(cls) || []) {
+        if (!(owned.get(cls) || new Set()).has(prop)) {
+          offenders.push(`${where}: .${cls} inherits ${prop}`);
+        }
+      }
+    }
+    assert.deepEqual(offenders, [],
+      'css/style.css sets these on classes this app puts in its own markup, and '
+      + 'index.html loads it for the site nav. app.css does not take the property back '
+      + 'under #lm-app, so the club site silently owns the layout here — which is exactly '
+      + 'how every <td> in the Draw List ended up on its own line');
+  });
+});
