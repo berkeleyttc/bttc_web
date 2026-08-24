@@ -104,6 +104,19 @@ export const FinalizeTab = {
         const body = await api.generateResults(eventId.value);
         session.resultsApplied = !!body.results_applied;
         session.resultsStale = !!body.results_stale;
+        // **200 is not the same as applied.** The endpoint returns its own post-commit
+        // read-back in this body, and on 2026-08-24 it came back FALSE alongside 64
+        // fully computed rows -- while this banner said "Ratings applied for 64
+        // players." and the night had not been recorded at all. The server now answers
+        // 503 DB_BUSY in that case, so this branch should be unreachable; it stays
+        // because the banner must never be able to claim more than the body does.
+        if (!body.results_applied) {
+          resultsBanner.value = {
+            ok: false,
+            text: 'The ratings did not save, so nothing was applied. Run Finalize again.',
+          };
+          return;
+        }
         resultsBanner.value = {
           ok: true,
           text: 'Ratings applied for ' + (body.applied || []).length + ' players.',
