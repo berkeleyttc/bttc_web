@@ -61,10 +61,33 @@ export const SettingsTab = {
         + (isReadOnly.value ? '' : ' (this tab)');
     });
 
+    /**
+     * **A local clock time, not an ISO string.**
+     *
+     * These three fields rendered the server's UTC ISO-8601 verbatim, so the operator
+     * read `2026-08-24T19:51:01.541059Z` at ten to one in the afternoon. There is no
+     * time formatter anywhere in `leaguemanager/`; this is the first, and it stays here
+     * rather than becoming a module because the two other stamps that reach a human --
+     * the takeover deadline and the eviction time -- are a countdown, not a clock.
+     */
+    function clockTime(iso) {
+      if (!iso) return '—';
+      const at = new Date(iso);
+      if (Number.isNaN(at.getTime())) return iso;
+      return at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+
+    const heldSince = computed(() => clockTime(lock.holder && lock.holder.acquired_at));
+    const rosterChanged = computed(() => clockTime(lock.rosterUpdatedAt));
+    const takeoverLabel = computed(() => (lock.takeoverRequestedBy
+      ? lock.takeoverRequestedBy.first_name + ' — granted at ' + clockTime(lock.grantAfter)
+      : 'no'));
+
     return {
       session, lock, isReadOnly,
       minGroupSize, MAX_PLAYERS_PER_GROUP, MAX_SOLUTIONS_LISTED, NUM_TABLES,
       tableCount, promotionGap, groupTables, holderLabel,
+      heldSince, rosterChanged, takeoverLabel,
     };
   },
 
@@ -112,14 +135,13 @@ export const SettingsTab = {
            found there is no draw lock either: POST /rr/draw IS "Lock Out Changes". -->
       <dl class="lm-kv">
         <dt>Held by</dt><dd>{{ holderLabel }}</dd>
-        <dt>Since</dt><dd>{{ lock.holder ? lock.holder.acquired_at : '—' }}</dd>
+        <dt>Since</dt><dd>{{ heldSince }}</dd>
+        <!-- 'lm-sha' stays HERE and only here: this one really is an id. It was also on
+             the takeover deadline, which rendered a clock time as though it were a hash. -->
         <dt>This tab</dt><dd class="lm-sha">{{ lock.sessionId }}</dd>
-        <dt>Takeover pending</dt>
-        <dd>{{ lock.takeoverRequestedBy
-              ? (lock.takeoverRequestedBy.first_name + ' — granted after ' + lock.grantAfter)
-              : 'no' }}</dd>
+        <dt>Takeover pending</dt><dd>{{ takeoverLabel }}</dd>
         <dt>Registered (polled)</dt><dd>{{ lock.rosterCount ?? '—' }}</dd>
-        <dt>Roster last changed</dt><dd>{{ lock.rosterUpdatedAt ?? '—' }}</dd>
+        <dt>Roster last changed</dt><dd>{{ rosterChanged }}</dd>
       </dl>
 
       <div class="hr"></div>

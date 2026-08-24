@@ -145,12 +145,15 @@ export const lock = reactive({
   rosterCount: null,          // an OBSERVABLE, never sent back -- ticket 12 is not reversed
   rosterUpdatedAt: null,
   polling: false,
-  lost: false,                // set when the poll finds a holder who is not us
+  heldOnce: false,            // has THIS tab ever held the lease? see `lost`
+  lost: false,                // set only when a tab that HELD the lease was evicted
+  yielded: false,             // handed over to a waiting challenger; do not race them
 });
 
 export function applyLock(payload) {
   if (!payload) return;
   lock.holder = payload.holder ?? null;
+  if (isHolder(lock.holder)) lock.heldOnce = true;
   lock.takeoverRequestedBy = payload.takeover_requested_by ?? null;
   lock.grantAfter = payload.grant_after ?? null;
   if (payload.roster_count != null) lock.rosterCount = payload.roster_count;
@@ -171,11 +174,21 @@ export function applyLock(payload) {
  * the discovery of contention at the worst possible moment -- after a whole draw has
  * been built client-side.
  */
-export const isReadOnly = computed(() => {
-  const h = lock.holder;
-  if (!h) return true;
-  return !(h.user_id === lock.userId && h.session_id === lock.sessionId);
-});
+export const isReadOnly = computed(() => !isHolder(lock.holder));
+
+/**
+ * Is `who` this tab? The `{user_id, session_id}` pair test, in ONE place.
+ *
+ * It was written out three times -- `isReadOnly`, `pollLock`'s `mine`, and `applyLock` --
+ * which is how `lock.lost` came to be computed as `holder && !mine`: a form that is
+ * literally `isReadOnly && lock.holder` and therefore says nothing `isReadOnly` did not
+ * already say. The banner hung *"-- your unsaved work is still here."* on it, so a tab
+ * that had **never held the lease** was told its work was preserved. `heldOnce` is the
+ * missing half.
+ */
+export function isHolder(who) {
+  return !!(who && who.user_id === lock.userId && who.session_id === lock.sessionId);
+}
 
 /**
  * `drawCommitted` -- `POST /rr/draw` has run and closed the event.
