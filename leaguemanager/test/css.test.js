@@ -25,6 +25,28 @@ import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 const APP_ROOT_ID = '#lm-app';
+
+/**
+ * The ONE exception to rule 3, and it is narrow by construction.
+ *
+ * The site chrome is a **sibling** of `#lm-app`, not a descendant -- `index.html` renders
+ * `#header` and `#footer` inline because `bttc_web/CLAUDE.md` forbids refactoring
+ * navigation into shared includes. So no selector under the app root can reach it, and
+ * `print.css:519`'s *"Everything that is not the print region stays off the paper"* was
+ * aspirational: its rule is `#lm-app .lm-screen-only`, which cannot see outside the root.
+ *
+ * The failure that opened this hole is MEASURED, not hypothetical. `print.css:493` takes
+ * `#lm-app` out of flow so it escapes `body`'s 8px UA margin without the bare `body` rule
+ * ticket 23 Q10 forbids -- which leaves the chrome in flow at the top of page 1, printing
+ * the club's logo and nav bar across the first score sheet. Ten sheets and the floor map
+ * were correct; sheet one was not.
+ *
+ * **Permitted only inside `@media print`.** On screen these two ids stay unreachable, so
+ * the guarantee that matters -- no League Manager token or layout rule escapes `#lm-app`
+ * and reaches the other four apps -- is intact. What is given up is one `display: none`
+ * on the site's own chrome, on a stylesheet only `/leaguemanager/` loads.
+ */
+const PRINT_CHROME = new Set(['#header', '#footer']);
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const LM = here('../');
 
@@ -109,7 +131,7 @@ describe('ticket 23 Q10 rule 3 — every rule is written under the app root', ()
   });
 
   for (const { path, css } of sources) {
-    it(`${path.replace(LM, '')}: no bare html, body, * or #id rule`, () => {
+    it(`${path.replace(LM, '')}: no selector escapes the app root`, () => {
       const offenders = [];
       for (const { selector, nesting } of rules(css)) {
         // `@keyframes` stops carry percentages and `from`/`to`, not selectors.
@@ -121,6 +143,11 @@ describe('ticket 23 Q10 rule 3 — every rule is written under the app root', ()
           if (one === APP_ROOT_ID || one.startsWith(`${APP_ROOT_ID} `)
               || one.startsWith(`${APP_ROOT_ID}.`) || one.startsWith(`${APP_ROOT_ID}:`)
               || one.startsWith(`${APP_ROOT_ID}[`) || one.startsWith(`${APP_ROOT_ID}>`)) {
+            continue;
+          }
+          // The site chrome, and only when printing. See PRINT_CHROME above.
+          if (PRINT_CHROME.has(one)
+              && nesting.some((a) => a.replace(/\s+/g, ' ').trim() === '@media print')) {
             continue;
           }
           offenders.push(one);
@@ -226,6 +253,51 @@ describe('the two required print properties — ticket 18 via ticket 23 Q11', ()
     }
     assert.ok(!/^\s*(\*|html|body)\s*[,{]/m.test(covered),
       'ticket 09 scopes this tightly rather than document-wide');
+  });
+
+  /**
+   * The site's own print reset, and why this is a test rather than a comment.
+   *
+   * `index.html` loads `../css/style.css`, whose `@media print` block opens with the
+   * HTML5 Boilerplate line `* { background: transparent !important; color: #444
+   * !important }`. Nothing under `#lm-app` can outrank it -- specificity does not beat
+   * `!important`, only `!important` does -- so it erased every mini-map fill and printed
+   * the whole surface in #444 grey instead of black ink.
+   *
+   * **Measured by bisection, not reasoned about.** The same markup emits 2 filled
+   * rectangles under `print.css` alone and 0 under both stylesheets; with the
+   * restorations below it emits 3, in `0 0 0`, `.502 .502 .502` and `1 1 1`.
+   *
+   * `print-color-adjust: exact` is not a defence and the assertion above must not be
+   * read as one: it decides whether Chrome HONOURS a background, not what the background
+   * is. Both tests are needed and they guard different failures.
+   *
+   * This is the one place the League Manager's CSS is allowed `!important`, and it is
+   * allowed because it is a counter-reset rather than a preference.
+   */
+  it('the site\'s !important print reset is undone for the printed surface', () => {
+    const site = readFileSync(join(LM, '..', 'css', 'style.css'), 'utf8');
+    const sitePrint = site.match(/@media\s+print\s*\{([\s\S]*)/);
+    assert.ok(sitePrint, 'css/style.css has no @media print block');
+
+    const resets = /\*\s*\{[^}]*!important/.test(sitePrint[1]);
+    if (!resets) return;   // the site dropped the reset; nothing to undo
+
+    const print = css.match(/@media\s+print\s*\{([\s\S]*)\}/);
+    assert.ok(print, 'print.css has no @media print block');
+    const body = print[1];
+
+    assert.match(body, /#lm-app \.lm-print \*[^{]*\{[^}]*color:[^;]*!important/,
+      'the site reset paints every glyph #444; the print region must claim its ink back');
+
+    for (const [sel, what] of [
+      ['\\.lm-t\\.lm-mine', 'the black fill marking a table as this group\'s'],
+      ['\\.lm-t\\.lm-shared', 'the grey fill marking a shared table'],
+      ['\\.lm-minimap \\.lm-desk', 'the desk block a player orients from'],
+    ]) {
+      const re = new RegExp(sel + '[^{]*\\{[^}]*background:[^;]*!important');
+      assert.match(body, re, `${what} is erased by the site reset unless restored`);
+    }
   });
 
   it('every preview rule is reset at its own specificity inside @media print', () => {
