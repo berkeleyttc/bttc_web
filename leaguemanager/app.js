@@ -209,6 +209,30 @@ const Shell = {
      * `keepalive` fetch survives unload AND carries headers. Nothing depends on the
      * release landing, so this is a mechanism correction, not a decision reopened.
      */
+    /**
+     * `pagehide` fires when the tab is merely backgrounded into the bfcache, not only
+     * when it is closed -- and the old listener called this unconditionally. So
+     * switching away from the desk tab DROPPED the lease, the tab you switched to
+     * polled, saw `holder: null`, and offered a Take over that the server grants
+     * instantly (rr_lock_service.py:290 -- an unheld lease has no grace window). That
+     * is the takeover/acquire storm in the 2026-08-24 log, and it was one operator
+     * alternating two tabs, not two operators contending.
+     *
+     * `persisted` is the distinction: true means the page is going into the bfcache
+     * and is coming back, false means it is really going away.
+     */
+    function onPageHide(e) {
+      if (e && e.persisted) return;      // backgrounded, not closed -- keep the lease
+      releaseLease();
+    }
+
+    /** Restored from the bfcache: take the lease back if it is still free. */
+    async function onPageShow(e) {
+      if (!e || !e.persisted || !booted.value) return;
+      await acquireLease();
+      await pollLock();
+    }
+
     function releaseLease() {
       try {
         const r = api._describeRelease(eventId.value);
@@ -261,6 +285,12 @@ const Shell = {
 
         await acquireLease();
         await pollLock();
+        // boot() re-runs on every GRANTED takeover (see takeover() below), so the
+        // previous interval has to go first. Without this each takeover left another
+        // 5s poll running for the life of the tab and only the most recent was ever
+        // cleared in onUnmounted -- five takeovers, five polls, forever. Seen in the
+        // 2026-08-24 replay log: five GET /rr/lock inside 900ms from one connection.
+        if (pollTimer) window.clearInterval(pollTimer);
         pollTimer = window.setInterval(pollLock, LOCK_POLL_MS);
         lock.polling = true;
       } catch (err) {
@@ -280,14 +310,16 @@ const Shell = {
     onMounted(() => {
       readHash();
       window.addEventListener('hashchange', readHash);
-      window.addEventListener('pagehide', releaseLease);
+      window.addEventListener('pagehide', onPageHide);
+      window.addEventListener('pageshow', onPageShow);
       if (booted.value) boot();
     });
 
     onUnmounted(() => {
       if (pollTimer) window.clearInterval(pollTimer);
       window.removeEventListener('hashchange', readHash);
-      window.removeEventListener('pagehide', releaseLease);
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('pageshow', onPageShow);
     });
 
     const holderName = computed(() => (lock.holder
@@ -301,6 +333,19 @@ const Shell = {
     });
 
     const takeoverPending = computed(() => !!lock.grantAfter && !!lock.takeoverRequestedBy);
+    const takingOver = ref(false);
+
+    /**
+     * Nobody holds it -- so the honest verb is ACQUIRE, not takeover.
+     *
+     * `isReadOnly` is true for an unheld lease too (store.js), which is deliberate:
+     * ticket 14 Q8 wants the operator to decide before they start, not on their first
+     * mutation. But offering *takeover* for a lease with no holder is wrong in a way
+     * that costs someone else: `rr_lock_service.py:290-295` grants it outright AND
+     * silently clears any rival's pending `takeover_requested_by`, restarting their
+     * 20-second window at zero. Acquire does the same job and takes nothing.
+     */
+    const leaseUnheld = computed(() => !lock.holder);
 
     async function takeover() {
       // Idempotent and self-completing (ticket 14 Q8). The first call stamps the
@@ -309,15 +354,29 @@ const Shell = {
       // timer and nothing to poll on this endpoint -- the deadline is evaluated on the
       // next request, which is the only thing that works with stateless requests and
       // no scheduler. So we re-POST rather than wait for a push.
-      const body = await guard(() => api.takeoverLock(eventId.value));
-      if (!body) return;
-      applyLock({ holder: body.holder, grant_after: body.grant_after });
-      if (body.granted) { lock.lost = false; await boot(); }
+      // The button carried no in-flight guard and no :disabled, unlike every other
+      // mutating control in the app (finalize.js:218, scores.js:290). N impatient
+      // clicks were N round trips, each one re-stamping the lease record.
+      if (takingOver.value) return;
+      takingOver.value = true;
+      try {
+        if (leaseUnheld.value) {
+          await acquireLease();
+          await pollLock();
+          return;
+        }
+        const body = await guard(() => api.takeoverLock(eventId.value));
+        if (!body) return;
+        applyLock({ holder: body.holder, grant_after: body.grant_after });
+        if (body.granted) { lock.lost = false; await boot(); }
+      } finally {
+        takingOver.value = false;
+      }
     }
 
     return {
       TABS, booted, phone, pin, signingIn, operator, fatal,
-      ui, session, lock, isReadOnly, drawCommitted,
+      ui, session, lock, isReadOnly, drawCommitted, takingOver, leaseUnheld,
       staleBanner, redrawBanner, leaseBanner, holderName, takeoverPending,
       signIn, signOut, selectTab, takeover,
       remedyFor, LEASE_LOST,
@@ -365,8 +424,9 @@ const Shell = {
         <div v-if="leaseBanner" class="lm-banner lm-banner-lease">
           <span class="lm-who">{{ leaseBanner }}</span>
           <span v-if="takeoverPending" class="lm-sha">granted after {{ lock.grantAfter }}</span>
-          <button class="btn btn-secondary" @click="takeover">
-            {{ takeoverPending ? 'Complete takeover' : 'Take over' }}
+          <button class="btn btn-secondary" @click="takeover" :disabled="takingOver">
+            {{ takeoverPending ? 'Complete takeover'
+                               : (leaseUnheld ? 'Take the lease' : 'Take over') }}
           </button>
         </div>
       </div>
