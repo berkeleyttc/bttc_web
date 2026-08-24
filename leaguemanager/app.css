@@ -776,6 +776,20 @@
  * greedy, and a rule after it would be swallowed.
  */
 @media print {
+	/* THE SITE CHROME. `index.html` renders `#header` and `#footer` as SIBLINGS of the
+	   app root -- inline, because `CLAUDE.md` forbids refactoring navigation into shared
+	   includes -- and `print.css:493` takes `#lm-app` out of flow to escape `body`'s UA
+	   margin. So the chrome stays in flow at the top of page 1 and prints the club logo
+	   and nav bar across the first score sheet, while every later sheet is clean.
+
+	   These two ids are the one documented exception to ticket 23 Q10 rule 3, permitted
+	   by `css.test.js` inside `@media print` ALONE. Nothing here declares a token and
+	   nothing applies on screen, so the tokens still cannot reach the other four apps. */
+	#header,
+	#footer {
+		display: none;
+	}
+
 	/* The shell. Everything between the site chrome and the print region. */
 	#lm-app .lm-tabs,
 	#lm-app .lm-banners,

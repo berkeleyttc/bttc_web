@@ -497,6 +497,45 @@
 		width: var(--lm-sheet-paper-w);
 	}
 
+	/* ---- UNDO THE SITE'S PRINT RESET. MEASURED, NOT DEFENSIVE. -----------------
+	   `index.html` loads `../css/style.css`, and `css/style.css:189` is the HTML5
+	   Boilerplate print reset:
+
+	       * { background: transparent !important; color: #444 !important; ... }
+
+	   It erases every mini-map fill -- the only thing on the sheet telling a player
+	   which tables are theirs -- and prints the whole surface in #444 grey instead of
+	   black ink. Proven by bisection: the same markup under `print.css` alone emits 2
+	   filled rectangles, and under both stylesheets emits 0.
+
+	   **`print-color-adjust: exact` cannot help here, and the comment at :43 should not
+	   be read as though it can.** That property governs whether Chrome HONOURS a
+	   background; it does not decide what the background IS. Against
+	   `background: transparent !important` the background genuinely is transparent, and
+	   the only thing that beats `!important` is `!important`.
+
+	   Dropping `style.css` from this page was the alternative, and it was not taken: the
+	   page's site chrome is styled by it on screen. */
+	#lm-app .lm-print,
+	#lm-app .lm-print * {
+		color: var(--lm-sheet-ink) !important;
+	}
+
+	#lm-app .lm-minimap .lm-t.lm-mine {
+		background: var(--lm-sheet-ink) !important;
+	}
+
+	#lm-app .lm-minimap .lm-t.lm-shared {
+		background: var(--lm-sheet-grey) !important;
+		border-color: var(--lm-sheet-grey) !important;
+	}
+
+	/* Last of the four, so it wins the colour back from the blanket rule above. */
+	#lm-app .lm-minimap .lm-desk {
+		background: var(--lm-sheet-grey) !important;
+		color: #fff !important;
+	}
+
 	/* Written at the preview's own specificity, not below it. `.lm-print-preview` is an
 	   id + two classes; a plain `#lm-app .lm-print` reset loses to it and its 1.5rem of
 	   padding survives onto the paper, pushing every artifact a fraction past 11in and
