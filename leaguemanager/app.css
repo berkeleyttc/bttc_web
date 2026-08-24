@@ -377,6 +377,23 @@
 	white-space: pre-wrap;
 }
 
+/* `css/style.css:358` defines a global, unscoped `.row { display: grid }` for the club
+   site's chrome, and `index.html:22` loads that stylesheet so the League Manager carries
+   the same site nav as every other page. It therefore matches the player rows in this
+   tab (`tabs/draw.js`) and in Results (`tabs/results.js`) -- and with no
+   `grid-template-columns` it is a ONE-column grid, so every `<td>` lands on its own line.
+   The class came verbatim from the design handoff (`League Manager.dc.html:369`), which
+   loaded only `_ds/styles.css` and never the club's.
+
+   The class stays rather than being stripped from the two templates: `:753`
+   (`#lm-app .lm-results .row:hover`) uses it as a hook. The layout is restored instead. */
+#lm-app tr.row {
+	display: table-row;
+	/* `.table td` (ds.css:267) already draws the divider, in the theme's colour. The
+	   site rule's hardcoded #ccc would sit on top of it. */
+	border-bottom: 0;
+}
+
 /* The inverted group header row, `:360`. */
 #lm-app .lm-drawlist tr.lm-grouphead td {
 	background: var(--color-text);
