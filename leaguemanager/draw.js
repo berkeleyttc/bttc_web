@@ -79,15 +79,21 @@ class Stacklet {
 }
 
 /**
- * Parse a solution string into `[[players, tables], ...]`, or `null` on failure.
+ * Parse a solution string into `{ pairs, error }`.
  *
  * `tables` may be fractional: `(a, b)⁴` gives the two groups 1.5 and 2.5, and
  * `(a, b)³` / `(a, b)⁵` split evenly. Those are **shares** -- one physical table
  * carrying two groups -- and ticket 07 kept them exactly as the C# has them.
+ *
+ * Split out of `parseSpec()` so the operator-typed path can say WHERE the string went
+ * wrong. Legacy shows a message box naming the position and the character
+ * (`TableDistribution.cs:663`); `parseSpec()` returning a bare `null` cannot, and a
+ * `Console.Beep()` is not a port target. The public `parseSpec()` contract is unchanged.
  */
-export function parseSpec(text) {
+function parseSpecDetailed(text) {
   const seq = String(text).split('»')[0].replace(/\s+/g, '');
-  if (!seq) return null;
+  // `TableDistribution.cs:628-632` -- "Blank specification line not allowed."
+  if (!seq) return { pairs: null, error: 'Blank specification line not allowed.' };
   const pairs = [];
   const stack = new Stacklet();
   let state = 0;
@@ -116,25 +122,68 @@ export function parseSpec(text) {
     return true;
   }
 
+  const bad = (pos, ch) => ({
+    pairs: null,
+    // `TableDistribution.cs:663`, 1-based as the C# reports it.
+    error: 'Bad entry or syntax at position ' + (pos + 1) + ' (‘' + ch + '’) in “' + seq + '”.',
+  });
+
   let ok = false;
   for (let pos = 0; pos < seq.length; pos += 1) {
-    if (pos > 100) return null;                    // runaway guard, :642-646
+    if (pos > 100) {                               // runaway guard, :642-646
+      return { pairs: null, error: 'Runaway condition in sequence parse. Discard and recalculate.' };
+    }
     const ch = seq[pos];
     let hit = null;
     for (const keys of Object.keys(FSM[state])) {
       if (keys.includes(ch)) { hit = FSM[state][keys]; break; }
     }
-    if (hit === null) return null;
+    if (hit === null) return bad(pos, ch);
     const fn = hit[0];
     state = hit[1];
     if (fn === 0) ok = true;
     else if (fn === 1) ok = stack.push(Number(ch));
     else if (fn === 2) ok = record();
     else if (fn === 3) ok = stack.push(SUPERSCRIPTS.indexOf(ch) + 2);
-    if (!ok) return null;
+    if (!ok) return bad(pos, ch);
   }
   if (state === 1 || state === 8) ok = record();   // :667-668
-  return ok ? pairs : null;
+  // States other than 1 and 8 are a truncated string -- `6²,` or `(5,`.
+  return ok ? { pairs, error: null }
+            : { pairs: null, error: '“' + seq + '” is not a complete solution.' };
+}
+
+/**
+ * Parse a solution string into `[[players, tables], ...]`, or `null` on failure.
+ *
+ * The shape every existing caller and the oracle fixtures expect.
+ */
+export function parseSpec(text) {
+  return parseSpecDetailed(text).pairs;
+}
+
+/**
+ * The operator-typed solution, validated the way legacy validates it.
+ *
+ * `TableAssignment.cs:485-497`: a spec that parses is still rejected when its players do
+ * not total the roster, and the message says so in the club's own words -- the
+ * parenthetical exists because the mistake it names is the one operators actually make.
+ *
+ * Returns `{ pairs, error }`. `pairs` is `null` whenever `error` is set.
+ */
+export function validateSpec(text, rosterCount) {
+  const { pairs, error } = parseSpecDetailed(text);
+  if (!pairs) return { pairs: null, error };
+  const total = pairs.reduce((n, p) => n + p[0], 0);
+  if (total !== rosterCount) {
+    return {
+      pairs: null,
+      error: 'Number of players specified (' + total + ') does not match the number in the '
+        + 'roster (' + rosterCount + '). If you increased the players at one table, did you '
+        + 'reduce the players at another?',
+    };
+  }
+  return { pairs, error: null };
 }
 
 /**
@@ -325,11 +374,24 @@ export function sliceInto(roster, sizes) {
  * Returns `{ spec, sizes, groups }`, or `null` if no solution exists -- which is a real
  * outcome: a roster whose every partition strands 1-4 players yields an empty solution
  * list, and legacy's DistributeTables2() still returns true.
+ *
+ * **`specOverride` bypasses the two ranked lists entirely**, which is what legacy's
+ * `CheckForUserAddedDraw()` needs (`DrawListCode.cs:157-176`): the operator types a
+ * solution, it goes in at index 0 of `SortedSolutions`, and from then on the index no
+ * longer means what it meant to the enumerator. A caller that maintains its own list --
+ * `tabs/draw.js` does -- should pass the spec and ignore `solutionIndex`, because the
+ * two orderings cannot be kept in step and a desync here silently draws a DIFFERENT
+ * partition from the one named in the picker.
+ *
+ * `solutionIndex` is untouched for callers that do not, which is the oracle path
+ * `test/draw.test.js` and `oracle_solutions.py` pin.
  */
-export function draw(players, numTables = NUM_TABLES, solutionIndex = 0) {
+export function draw(players, numTables = NUM_TABLES, solutionIndex = 0, specOverride = null) {
   const roster = drawRoster(players);
   let spec = null;
-  if (hasQuickSolutionOption(roster.length, numTables)) {
+  if (specOverride) {
+    spec = specOverride;
+  } else if (hasQuickSolutionOption(roster.length, numTables)) {
     spec = QUICK_SOLUTIONS[roster.length][solutionIndex];
   } else {
     const sols = enumerateSolutions(roster.length, numTables);

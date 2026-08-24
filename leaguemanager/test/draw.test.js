@@ -22,7 +22,7 @@ import { describe, it } from 'node:test';
 import {
   DISTRIBUTIONS, MAX_SOLUTIONS_LISTED, QUICK_SOLUTIONS, compareNameKeys, drawRoster,
   enumerateSolutions, hasQuickSolutionOption, nameKey, parseSpec, quickTablesUsed,
-  sliceInto, draw,
+  sliceInto, draw, validateSpec,
   promoteAllGroups, adjustLowestRankings, assignSeeds,
   REJECT_PROMOTION_MAX_GAP, MAX_PROMOTION_CANDIDATES,
 } from '../draw.js';
@@ -225,6 +225,83 @@ describe('draw() end to end', () => {
     const result = draw(roster, 19);
     assert.notEqual(result, null, '65 players is solvable at 19 tables');
     assert.equal(result.sizes.reduce((a, b) => a + b, 0), 65);
+  });
+
+  /**
+   * The operator-typed solution, `DrawListCode.cs:157-176`. `specOverride` is what makes
+   * it reachable: it goes in at index 0 of the tab's list, so from that point on the
+   * index no longer means to the tab what it means to the enumerator.
+   */
+  it('draws from a typed spec, bypassing both ranked lists', () => {
+    const roster = partition.seed_order.map((id, i) => ({
+      userId: id, lastName: 'X', firstName: 'Y', rating: 10000 - i,
+    }));
+    // Ten groups of five plus three of five... 65 as 13 fives, which the curated table
+    // for 65 does not offer and the enumerator does not rank first.
+    const spec = Array(13).fill('5').join(', ');
+    const result = draw(roster, 20, 0, spec);
+    assert.deepEqual(result.sizes, Array(13).fill(5));
+    assert.notEqual(result.spec, solutions.jul17.spec,
+      'the override must beat the curated table, not agree with it by accident');
+    assert.equal(result.groups.flat().length, 65, 'every player is still seated once');
+  });
+
+  it('ignores solutionIndex entirely when a spec is given', () => {
+    const roster = partition.seed_order.map((id, i) => ({
+      userId: id, lastName: 'X', firstName: 'Y', rating: 10000 - i,
+    }));
+    const spec = Array(13).fill('5').join(', ');
+    assert.deepEqual(draw(roster, 20, 0, spec).groups,
+                     draw(roster, 20, 7, spec).groups);
+  });
+
+  it('leaves the index path untouched — the oracle still runs through it', () => {
+    const roster = partition.seed_order.map((id, i) => ({
+      userId: id, lastName: partition.labels[String(id)][0],
+      firstName: partition.labels[String(id)][1], rating: 10000 - i,
+    }));
+    assert.equal(draw(roster, 20, 0, null).spec, solutions.jul17.spec);
+  });
+});
+
+/**
+ * `validateSpec` — the parse plus the roster check legacy applies on top of it
+ * (`TableAssignment.cs:485-497`). A spec that parses is still refused when its players do
+ * not total the roster, and the port must refuse it for the same reason.
+ */
+describe('validateSpec — the operator typed it', () => {
+  it('accepts a spec whose players total the roster', () => {
+    const { pairs, error } = validateSpec('6², (5, 5)³, 7²', 23);
+    assert.equal(error, null);
+    assert.deepEqual(pairs, parseSpec('6², (5, 5)³, 7²'));
+  });
+
+  it('refuses a spec that parses but does not total the roster', () => {
+    const { pairs, error } = validateSpec('6², (5, 5)³, 7²', 65);
+    assert.equal(pairs, null);
+    assert.match(error, /\(23\)/, 'names what was specified');
+    assert.match(error, /\(65\)/, 'and what the roster holds');
+  });
+
+  it('refuses a blank line, as the C# does by name', () => {
+    assert.match(validateSpec('   ', 10).error, /Blank specification/);
+  });
+
+  it('reports WHERE a bad string went wrong, 1-based as the C# reports it', () => {
+    const { pairs, error } = validateSpec('6², ))(', 10);
+    assert.equal(pairs, null);
+    assert.match(error, /position 4/, 'whitespace is stripped before positions are counted');
+  });
+
+  it('accepts the trailing comma the C# accepts', () => {
+    // State 8 at end-of-string records and stops; `TableDistribution.cs:667` only fires
+    // for states 1 and 8, and `success` is already true from the last record.
+    assert.deepEqual(parseSpec('6²,'), [[6, 2]]);
+  });
+
+  it('parseSpec keeps its bare pairs-or-null contract', () => {
+    assert.equal(parseSpec('))('), null);
+    assert.deepEqual(parseSpec('6²'), [[6, 2]]);
   });
 });
 

@@ -51,7 +51,7 @@ import { ApiError } from '../api.js';
 import { session, drafts, applySession, isReadOnly, drawCommitted, eventId } from '../store.js';
 import { writeDraw, clearDraw } from '../persist.js';
 import {
-  drawRoster, draw, enumerateSolutions, hasQuickSolutionOption, parseSpec,
+  drawRoster, draw, enumerateSolutions, hasQuickSolutionOption, validateSpec,
   QUICK_SOLUTIONS, MAX_SOLUTIONS_LISTED, NUM_TABLES,
   promoteAllGroups, assignSeeds, REJECT_PROMOTION_MAX_GAP,
 } from '../draw.js';
@@ -64,6 +64,14 @@ export const DrawTab = {
     const moves = ref({});                 // userId -> target group ordinal (1-based)
     const banner = ref(null);
     const busy = ref(false);
+    const customSpec = ref(null);          // the operator's typed solution, or null
+    const specText = ref('');              // what the combo currently shows
+    const specError = ref(null);
+    // Re-draw is an explicit gesture, as legacy's lock is a toggle rather than a
+    // one-way door (`Form1.cs:1236`, `:2196`). See `frozen` below.
+    const unlocked = ref(false);
+
+    const norm = (t) => String(t == null ? '' : t).replace(/\s+/g, '');
 
     onMounted(() => {
       if (session.settings) {
@@ -76,6 +84,7 @@ export const DrawTab = {
       const saved = drafts.draw;
       if (saved) {
         if (saved.tableCount) tableCount.value = saved.tableCount;
+        customSpec.value = saved.customSpec || null;
         solutionIndex.value = saved.solutionIndex || 0;
         moves.value = Object.fromEntries((saved.moves || []).map((m) => [m.userId, m.to]));
       }
@@ -102,12 +111,45 @@ export const DrawTab = {
 
     const seeded = computed(() => drawRoster(players.value));
 
+    /**
+     * `frozen` -- a committed draw the operator has not asked to re-draw.
+     *
+     * **Not the same as `drawCommitted`, and that is the whole fix.** Ticket 15 Q1:
+     * *"re-draw allowed until the first score"*, and `POST /rr/draw` is a full idempotent
+     * DELETE+INSERT that `409 SCORES_EXIST`s only once an `RRMatch` row exists. The tab
+     * used to disable every control on `drawCommitted`, which made that impossible from
+     * the browser -- while four separate messages told the operator to do it anyway
+     * (`api.js:93` RATING_MOVED, `api.js:95` ROSTER_MISMATCH, `roster.js` after a
+     * removal, and `store.js`'s `redrawBanner`, which disables PRINTING until the draw is
+     * re-run). A walk-in arriving after commit had no way out of that.
+     *
+     * Legacy has the affordance: `ChangesLockedOut` is a toggle, and unlocking re-enables
+     * the solutions combo and Discard (`Form1.cs:979-1030`).
+     */
+    const frozen = computed(() => drawCommitted.value && !unlocked.value);
+
+    /** Any score at all arms the server's `SCORES_EXIST` refusal. */
+    const scoresExist = computed(() => session.matches.length > 0);
+
     // ------------------------------------------------------------ solutions
 
     const curated = computed(() =>
       hasQuickSolutionOption(players.value.length, tableCount.value));
 
-    const solutions = computed(() => {
+    /**
+     * The typed solution, re-checked against the CURRENT roster on every read.
+     *
+     * A spec is only ever stored after `validateSpec` passed, but the roster moves
+     * underneath it -- a walk-in arrives and `6², (5, 5)³, 7²` no longer totals. Legacy
+     * cannot hit this: `CheckForUserAddedDraw()` validates once, at the moment of typing,
+     * and the whole draw is rebuilt from scratch when the roster changes. Here the spec
+     * outlives the roster it was typed for, so it is re-validated rather than trusted.
+     */
+    const customPairs = computed(() => (customSpec.value
+      ? validateSpec(customSpec.value, players.value.length).pairs
+      : null));
+
+    const enumerated = computed(() => {
       const n = players.value.length;
       if (!n) return [];
       if (curated.value) {
@@ -123,9 +165,80 @@ export const DrawTab = {
         }));
     });
 
+    /**
+     * The typed solution goes in at **index 0**, which is where legacy puts it:
+     * `SortedSolutions.Insert(0, tplist)` (`DrawListCode.cs:170`), labelled `(user)`
+     * (`TableAssignment.cs:343`). It is prepended rather than ranked because the
+     * enumerator has no score for it -- the operator's reason for typing it is not a
+     * number the catalogue holds.
+     */
+    const solutions = computed(() => (customPairs.value
+      ? [{ cfg: customSpec.value, label: customSpec.value + '  ·  (user)', user: true },
+         ...enumerated.value]
+      : enumerated.value));
+
+    /** Set aside rather than silently applied. See `customPairs`. */
+    const specNote = computed(() => (customSpec.value && !customPairs.value
+      ? 'The typed solution no longer fits a roster of ' + players.value.length
+        + ' and has been set aside.'
+      : null));
+
     watch(solutions, () => {
       if (solutionIndex.value >= solutions.value.length) solutionIndex.value = 0;
     });
+
+    /**
+     * The combo shows the selected spec. Typing does not move it; committing to the edit
+     * (`change`) does, through `onSpecChange` below.
+     *
+     * **While frozen it shows the COMMITTED spec**, which is the whole reason the server
+     * now stores one. Falling back to `solutions[0]` there would name the top-ranked
+     * partition while the table beside it renders a different, already-committed one --
+     * and after a reload, with no draft to restore, that is exactly what would happen.
+     */
+    watch([solutions, solutionIndex, frozen, () => session.settings], () => {
+      if (frozen.value) {
+        const st = session.settings || {};
+        // Older evenings were drawn before `spec` was persisted and have nothing to name.
+        specText.value = st.spec || '';
+        return;
+      }
+      const s = solutions.value[solutionIndex.value];
+      specText.value = s ? s.cfg : '';
+    }, { immediate: true, deep: true });
+
+    /**
+     * `CheckForUserAddedDraw()`, `DrawListCode.cs:157-176`.
+     *
+     * Legacy distinguishes typed from picked by `SelectedIndex == -1`; a `<datalist>`
+     * has no such signal, so the text is matched against the list instead. Whitespace is
+     * ignored on both sides because `parseSpec` strips it anyway, and the enumerator's
+     * own output carries spaces the operator will not reproduce by hand.
+     */
+    function onSpecChange(text) {
+      specError.value = null;
+      const want = norm(text);
+      if (!want) {                       // cleared -- fall back to the ranked list
+        customSpec.value = null;
+        solutionIndex.value = 0;
+        return;
+      }
+      const i = solutions.value.findIndex((s) => norm(s.cfg) === want);
+      if (i >= 0) {
+        solutionIndex.value = i;
+        return;
+      }
+      const { pairs, error } = validateSpec(text, players.value.length);
+      if (!pairs) {
+        // Legacy beeps (`:168`). A beep is not a port target; the reason is shown.
+        specError.value = error;
+        const cur = solutions.value[solutionIndex.value];
+        specText.value = cur ? cur.cfg : '';
+        return;
+      }
+      customSpec.value = String(text).trim();
+      solutionIndex.value = 0;
+    }
 
     const summary = computed(() => {
       const n = players.value.length;
@@ -152,7 +265,11 @@ export const DrawTab = {
 
     const built = computed(() => {
       if (!players.value.length || !solutions.value.length) return null;
-      const base = draw(seeded.value, tableCount.value, solutionIndex.value);
+      // The SPEC, not the index. With a typed solution at index 0 this tab's list and
+      // `draw()`'s internal enumeration no longer agree on what index *n* means, and a
+      // desync there draws a different partition from the one named in the picker.
+      const chosen = solutions.value[solutionIndex.value];
+      const base = draw(seeded.value, tableCount.value, 0, chosen ? chosen.cfg : null);
       if (!base) return null;
       // Promotion runs on the pre-promotion partition, exactly as
       // PromotePlayersAllGroups does: index order, strongest first, group 1 promotes
@@ -198,8 +315,39 @@ export const DrawTab = {
       return b && b.tables ? b.tables[i] : null;
     };
 
+    /**
+     * The COMMITTED draw, read back from the server.
+     *
+     * Until this existed the Draw List tab was the only tab that never read
+     * `session.groups` -- Scores, Printing and Results all do. It rendered `built`, a live
+     * client-side recomputation, which coincides with the committed draw right up until a
+     * reload: `commit()` clears the draft, so `solutionIndex` returns to 0 and every
+     * hand-move is lost, and the tab then showed a DIFFERENT draw from the one the rest of
+     * the app was working against, with nothing to say so.
+     */
+    const committedRows = computed(() => {
+      const out = [];
+      for (const g of session.groups) {
+        out.push({
+          header: true, ordinal: g.ordinal, count: g.players.length,
+          tables: g.table_count, key: 'h' + g.ordinal,
+        });
+        // Server-side these arrive seed-ordered (`_Group.players`), which is the order
+        // the printed sheet uses.
+        for (const p of g.players) {
+          out.push({
+            header: false, key: 'p' + p.user_id, userId: p.user_id, seed: p.seed,
+            last: p.last_name, first: p.first_name, rating: p.rating_at_draw,
+            group: g.ordinal,
+            note: p.promoted ? 'promoted' : '',
+          });
+        }
+      }
+      return out;
+    });
+
     /** Flat rows: a header row per group, then its players. The design's shape. */
-    const rows = computed(() => {
+    const liveRows = computed(() => {
       const out = [];
       groups.value.forEach((g, i) => {
         out.push({
@@ -221,17 +369,25 @@ export const DrawTab = {
       return out;
     });
 
+    const rows = computed(() => (frozen.value ? committedRows.value : liveRows.value));
+
     // Anyone the partition could not seat. Legacy's solution list simply has no entry
     // that strands players; this exists so a manual move that empties a group is
     // visible rather than silent.
+    //
+    // Against the COMMITTED seats once frozen, which is what makes the walk-in case
+    // legible: the roster grew, the stored draw does not seat them, and they show up here
+    // rather than only in `store.js`'s app-level `redrawBanner`.
     const unassigned = computed(() => {
-      const seated = new Set(groups.value.flat());
+      const seated = frozen.value
+        ? new Set(session.groups.flatMap((g) => g.players.map((p) => p.user_id)))
+        : new Set(groups.value.flat());
       return players.value.filter((p) => !seated.has(p.userId));
     });
 
     // ------------------------------------------------------------ persistence
 
-    watch([groups, moves, solutionIndex, tableCount], () => {
+    watch([groups, moves, solutionIndex, tableCount, customSpec], () => {
       if (eventId.value == null || !built.value) return;
       // **Stop persisting once the draw is committed.** `commit()` calls `clearDraw`,
       // but `built` still computes from the roster, so without this guard the watch
@@ -239,7 +395,10 @@ export const DrawTab = {
       // would then restore a draft for a draw that is already on the server. Found by
       // driving the app rather than by reading it: the key was still in
       // `sessionStorage` after a successful commit.
-      if (drawCommitted.value) return;
+      //
+      // `frozen`, not `drawCommitted`: a re-draw in progress is an uncommitted draw like
+      // any other, and it is exactly the work an F5 must not lose.
+      if (frozen.value) return;
       const draft = {
         spec: built.value.spec,
         sizes: built.value.sizes,
@@ -247,6 +406,7 @@ export const DrawTab = {
         groups: groups.value,
         moves: Object.entries(moves.value).map(([userId, to]) => ({ userId: Number(userId), to })),
         solutionIndex: solutionIndex.value,
+        customSpec: customSpec.value,
         tableCount: tableCount.value,
       };
       drafts.draw = draft;
@@ -282,8 +442,12 @@ export const DrawTab = {
     // and the draw is still legal with it. Everything else is a real refusal.
     const blocking = computed(() => problems.value.filter((p) => !p.includes('no rating')));
 
+    // `scoresExist` blocks committing as well as unlocking. Without it, an operator who
+    // unlocked BEFORE a score was entered still has a live "Re-commit draw" button, and
+    // the first they hear of the refusal is the 409. It cannot fire on a first commit:
+    // match rows reference group players, so there are none until a draw exists.
     const canCommit = computed(() => !isReadOnly.value && !busy.value
-      && !drawCommitted.value && !blocking.value.length);
+      && !frozen.value && !scoresExist.value && !blocking.value.length);
 
     async function commit() {
       busy.value = true;
@@ -305,11 +469,16 @@ export const DrawTab = {
         const body = await api.commitDraw(payload, {
           table_count: Number(tableCount.value),
           promotion_gap: Number(promotionGap.value),
+          // The partition this draw was built from. Stored by the server and handed back
+          // on the cold load, so a reload can name it instead of the tab recomputing one.
+          spec: built.value ? built.value.spec : null,
         }, eventId.value);
         applySession(body);
         // Cleared on 200, and only on 200.
         if (eventId.value != null) clearDraw(window.sessionStorage, eventId.value);
         drafts.draw = null;
+        // Re-freeze. A re-draw is one deliberate unlock, not a mode the tab stays in.
+        unlocked.value = false;
       } catch (err) {
         banner.value = err instanceof ApiError
           ? { text: err.detail || err.message, remedy: err.remedy, code: err.code,
@@ -323,14 +492,46 @@ export const DrawTab = {
     function discard() {
       if (!window.confirm('Discard this draw and recalculate from the roster?')) return;
       moves.value = {};
+      customSpec.value = null;
+      specError.value = null;
       solutionIndex.value = 0;
       banner.value = null;
       if (eventId.value != null) clearDraw(window.sessionStorage, eventId.value);
       drafts.draw = null;
     }
 
-    const moveOptions = computed(() =>
-      groups.value.map((_, i) => ({ value: i + 1, label: 'Group ' + (i + 1) })));
+    /**
+     * Re-draw: reopen a committed draw for editing. The server needs nothing for this --
+     * `POST /rr/draw` is the same call either way -- so it is purely this tab's state.
+     *
+     * Seeded from what was actually committed, so the operator starts where they left
+     * off. When the committed spec is no longer among the options the ranked list stands:
+     * the roster having changed under it is usually the very reason for the re-draw.
+     */
+    function redraw() {
+      if (isReadOnly.value || scoresExist.value) return;
+      const st = session.settings || {};
+      if (st.table_count) tableCount.value = st.table_count;
+      if (st.promotion_gap != null) promotionGap.value = st.promotion_gap;
+      moves.value = {};
+      customSpec.value = null;
+      specError.value = null;
+      banner.value = null;
+      solutionIndex.value = 0;
+      const want = norm(st.spec);
+      if (want) {
+        const i = solutions.value.findIndex((x) => norm(x.cfg) === want);
+        if (i >= 0) solutionIndex.value = i;
+      }
+      unlocked.value = true;
+    }
+
+    const moveOptions = computed(() => {
+      // Disabled while frozen, but the options still have to exist or the select shows
+      // blank instead of the group the player is actually in.
+      const n = frozen.value ? session.groups.length : groups.value.length;
+      return Array.from({ length: n }, (_, i) => ({ value: i + 1, label: 'Group ' + (i + 1) }));
+    });
 
     function onMove(userId, target) {
       moves.value = { ...moves.value, [userId]: Number(target) };
@@ -341,14 +542,26 @@ export const DrawTab = {
       tableCount, promotionGap, solutionIndex, solutions, curated, summary,
       rows, unassigned, moveOptions, onMove, problems, blocking, canCommit,
       commit, discard, players,
+      frozen, scoresExist, redraw, unlocked,
+      specText, specError, specNote, onSpecChange,
     };
   },
 
   template: `
-  <div v-if="drawCommitted" class="lm-banner" style="margin-bottom:16px">
+  <div v-if="drawCommitted && !unlocked" class="lm-banner" style="margin-bottom:16px">
     <span class="lm-who">
-      The draw is committed and the event is closed to public registration. Re-running it
-      refuses once any score exists — clear those groups on the Scores tab first.
+      The draw is committed and the event is closed to public registration.
+      <template v-if="scoresExist">
+        Scores have been entered, so it can no longer be re-run — clear those groups on the
+        Scores tab first.
+      </template>
+      <template v-else>Re-draw below to change it.</template>
+    </span>
+  </div>
+  <div v-else-if="unlocked" class="lm-banner" style="margin-bottom:16px">
+    <span class="lm-who">
+      Re-drawing. Nothing changes on the server until you re-commit, and re-committing
+      replaces the stored draw outright.
     </span>
   </div>
 
@@ -360,22 +573,34 @@ export const DrawTab = {
           <div class="field" style="width:130px">
             <label>Club tables</label>
             <input class="input" type="number" min="1" v-model.number="tableCount"
-                   :disabled="isReadOnly || drawCommitted" />
+                   :disabled="isReadOnly || frozen" />
           </div>
           <div class="field" style="width:130px">
             <label>Promotion gap</label>
             <input class="input" type="number" min="0" v-model.number="promotionGap"
-                   :disabled="isReadOnly || drawCommitted" />
+                   :disabled="isReadOnly || frozen" />
           </div>
         </div>
 
+        <!-- An editable combo, not a picker: legacy's SolutionsComboBox sets no
+             DropDownStyle ('Form1.Designer.cs:2905'), so it is a DropDown, and typing
+             into it runs CheckForUserAddedDraw(). Ticket 07 kept that in scope in as many
+             words: "the 9-state solution-string FSM, and the operator's ability to type a
+             solution". The option VALUE is the bare spec so the input stays parseable;
+             the metrics ride on 'label', which is what a datalist renders beside it. -->
         <div class="field">
           <label for="lm-sol">Selected solution</label>
-          <select id="lm-sol" class="input" v-model.number="solutionIndex"
-                  :disabled="isReadOnly || drawCommitted || !solutions.length">
-            <option v-for="(s, i) in solutions" :key="i" :value="i">{{ s.label }}</option>
-          </select>
+          <input id="lm-sol" class="input" type="text" list="lm-sol-list"
+                 placeholder="Pick one, or type e.g. 6², (5, 5)³, 7²"
+                 :value="specText"
+                 :disabled="isReadOnly || frozen || !solutions.length"
+                 @change="onSpecChange($event.target.value)" />
+          <datalist id="lm-sol-list">
+            <option v-for="(s, i) in solutions" :key="i" :value="s.cfg" :label="s.label"></option>
+          </datalist>
         </div>
+        <p v-if="specError" class="lm-reason">{{ specError }}</p>
+        <p v-if="specNote" class="lm-saved">{{ specNote }}</p>
 
         <div class="hr" style="margin:16px 0"></div>
         <div class="lm-solutions">{{ summary }}</div>
@@ -383,19 +608,41 @@ export const DrawTab = {
 
       <div class="card">
         <div class="card-kicker">Draw list</div>
-        <button class="btn btn-primary btn-block" style="margin-top:12px" type="button"
-                :disabled="!canCommit" @click="commit">
-          {{ busy ? 'Committing…' : 'Commit draw' }}
-        </button>
-        <p v-for="p in blocking" :key="p" class="lm-reason">{{ p }}</p>
-        <p v-for="p in problems" :key="'w' + p" class="lm-saved"
-           v-show="!blocking.includes(p)">{{ p }}</p>
-        <button class="btn btn-secondary btn-block" style="margin-top:12px" type="button"
-                :disabled="isReadOnly || drawCommitted" @click="discard">
-          Discard and recalculate
-        </button>
-        <span v-if="drawCommitted" class="tag tag-accent"
-              style="margin-top:12px;display:inline-block">Draw committed</span>
+
+        <!-- Frozen: the one control is the way back out. -->
+        <template v-if="frozen">
+          <button class="btn btn-primary btn-block" style="margin-top:12px" type="button"
+                  :disabled="isReadOnly || scoresExist" @click="redraw">
+            Re-draw
+          </button>
+          <!-- The server's own refusal, said before it is provoked. It does not replace
+               the 409: SCORES_EXIST stays the authority, and a score entered in another
+               tab between this render and the click still lands there. -->
+          <p v-if="scoresExist" class="lm-reason">
+            Scores have already been entered, so the draw cannot be re-run. Clear those
+            groups on the Scores tab first.
+          </p>
+          <span class="tag tag-accent"
+                style="margin-top:12px;display:inline-block">Draw committed</span>
+        </template>
+
+        <template v-else>
+          <button class="btn btn-primary btn-block" style="margin-top:12px" type="button"
+                  :disabled="!canCommit" @click="commit">
+            {{ busy ? 'Committing…' : (drawCommitted ? 'Re-commit draw' : 'Commit draw') }}
+          </button>
+          <p v-if="scoresExist" class="lm-reason">
+            Scores have already been entered, so the draw cannot be re-run. Clear those
+            groups on the Scores tab first.
+          </p>
+          <p v-for="p in blocking" :key="p" class="lm-reason">{{ p }}</p>
+          <p v-for="p in problems" :key="'w' + p" class="lm-saved"
+             v-show="!blocking.includes(p)">{{ p }}</p>
+          <button class="btn btn-secondary btn-block" style="margin-top:12px" type="button"
+                  :disabled="isReadOnly" @click="discard">
+            Discard and recalculate
+          </button>
+        </template>
       </div>
     </div>
 
@@ -441,7 +688,7 @@ export const DrawTab = {
                      uncommitted draw and seeds recompute; there is no /rr/draw/move,
                      and after commit moving is a re-draw. -->
                 <select class="input lm-move" :value="r.group"
-                        :disabled="isReadOnly || drawCommitted"
+                        :disabled="isReadOnly || frozen"
                         @change="onMove(r.userId, $event.target.value)">
                   <option v-for="o in moveOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
                 </select>
