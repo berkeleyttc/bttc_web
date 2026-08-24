@@ -414,11 +414,27 @@
 
 /* ═══════════════════════════════════════════════════════════════════ the Scores tab ══ */
 
+/* The first track holds the standings panel, and it CANNOT be a fixed 260px.
+   `.lm-panel` is three columns while the operator is typing (`#`, Name, Rtg) and
+   EIGHT once `showResults` turns on (`scores.js:443-446` adds W, GW, GL, Pl, Δ). A
+   table cannot shrink below its min-content width, so at eight columns it overflowed
+   the fixed track and painted across the pill strip and the entry grid beside it --
+   measured on the 2026Jul17 replay, where the Δ column landed on top of Group 1's
+   cells.
+
+   `minmax(260px, auto)` keeps the typing-time width as a floor and lets the track grow
+   when the result columns arrive. `min-width: 0` is the grid escape hatch: grid items
+   default to `min-width: auto`, which is what stops the second track being squeezed
+   rather than scrolled. */
 #lm-app .lm-scores {
 	display: grid;
-	grid-template-columns: 260px 1fr;
+	grid-template-columns: minmax(260px, auto) 1fr;
 	gap: var(--space-6);
 	align-items: start;
+}
+
+#lm-app .lm-scores > * {
+	min-width: 0;
 }
 
 #lm-app .lm-strip {

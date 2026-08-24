@@ -166,6 +166,27 @@ export const ScoresTab = {
 
     onMounted(seedFromSession);
 
+    /**
+     * Re-seed when the evening actually arrives.  **Not belt-and-braces -- the line
+     * above is guaranteed to run too early on a reload.**
+     *
+     * `app.js:84` latches `booted` TRUE synchronously from `sessionStorage`, so the
+     * shell renders this tab on the first paint; `boot()` -- which awaits
+     * `api.getSession()` -- is only started in the SHELL's `onMounted`; and Vue fires a
+     * child's `onMounted` before its parent's. So on any reload landing on `#scores`,
+     * `session.groups` is empty at `onMounted`, every grid renders blank, and nothing
+     * re-seeds until a mutation (`:346`) or a remount by switching tabs and back.
+     *
+     * Measured on the 2026Jul17 replay: 178 committed cells in the database, the
+     * payload carrying all of them, and all ten grids blank after F5. An operator who
+     * reloads mid-evening sees the night's scores gone and may re-enter them.
+     *
+     * `applySession` sets `loaded` LAST, so this fires only once the whole payload has
+     * landed. `seedFromSession` already lets a restored draft win over the server copy,
+     * so re-running it cannot discard anything the operator has typed.
+     */
+    watch(() => session.loaded, (yes) => { if (yes) seedFromSession(); });
+
     // Mirrored to `bttc_lm_draft_v1_<event_id>` on every keystroke (ticket 19 Q9).
     // In-memory-only satisfies every requirement tickets 13 and 14 state, because
     // those all happen within a live page -- and loses the draft to an accidental F5.
