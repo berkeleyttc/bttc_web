@@ -262,8 +262,31 @@
 	background: var(--color-neutral-100);
 }
 
+/* Three things want this row's background -- the unpaid tint, `:hover`, and selection.
+   The tint wins it outright, so selection moves off `background` and onto an inset bar.
+   Selection has to stay VISIBLE ON AN AMBER ROW: the rail is how you find which of 64
+   players is open in the centre pane, and the unpaid rows are exactly the ones you click
+   through on. `box-shadow` rather than `border-left` so the row's 6px/`--space-3`
+   padding needs no compensation and nothing reflows when the bar appears. */
 #lm-app .lm-rail-row[aria-current='true'] {
-	background: var(--color-accent-100);
+	box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+/* `--lm-status-unpaid-row` has been sitting in the token block unused since it was
+   transcribed from `League Manager.dc.html`'s `Component.STATUS`; only the `-panel`
+   variants were ever wired up. This is the row fill it was defined for.
+
+   Keyed on `status === 'pending'` LITERALLY, so a director or a fee-waived player tints
+   too. They owe nothing, and the rail says so only once you click through -- the
+   trade taken knowingly, against a `fee > 0 &&` guard that would have put money logic in
+   the browser. The desk clears them with the Cash button like anyone else.
+
+   `--lm-status-paid-row` stays unused, and deliberately: green lives in the centre pane
+   (`.lm-centre.lm-paid` below), not in a rail where 64 tinted rows would drown the
+   amber. */
+#lm-app .lm-rail-row.lm-unpaid-row,
+#lm-app .lm-rail-row.lm-unpaid-row:hover {
+	background: var(--lm-status-unpaid-row);
 }
 
 #lm-app .lm-rail-row .lm-grow {
@@ -354,6 +377,34 @@
 	min-height: 28px;
 	padding: 2px 6px;
 	text-align: center;
+}
+
+/* The rail's sort control, on its own line under the counter. The select takes the
+   slack so the direction button sits flush right, over the rating column it orders. */
+#lm-app .lm-sort {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+	margin-top: 6px;
+}
+
+#lm-app .lm-sort-label {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--color-neutral-700);
+}
+
+#lm-app .lm-sort .input {
+	flex: 1;
+	min-height: 28px;
+	padding: 2px 6px;
+}
+
+#lm-app .lm-sort-dir {
+	min-height: 28px;
+	padding: 2px 8px;
+	line-height: 1;
 }
 
 /* ═══════════════════════════════════════════════════════════════ the Draw List tab ══ */

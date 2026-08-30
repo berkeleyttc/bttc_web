@@ -4,8 +4,8 @@
  * Ticket 30 is its surface, ticket 21 its search, ticket 22 its money and ticket 23 Q6
  * its `isReadOnly` gate. Left: client-side search over the cached 1,143. Centre: the
  * member record, the create form and the per-player payment block. Right: tonight's
- * roster, **newest-first**, with a **Waitlist (N)** segment beneath it that is
- * **hidden entirely when empty**.
+ * roster, **newest-first by default and sortable by rating or name**, with a
+ * **Waitlist (N)** segment beneath it that is **hidden entirely when empty**.
  *
  * **What is NOT here, and where it went.**
  *
@@ -18,7 +18,7 @@
  *   desk cannot mark anyone paid.
  * - **Demotion** (roster -> waitlist) does not ship: ticket 30 Q5. `/rr/roster/update`
  *   409s `WAITLIST_TRANSITION` on any attempt, totally and permanently.
- * - **`alwaysAddToHead`** does not ship at all (ticket 30 Q12). The rail is
+ * - **`alwaysAddToHead`** does not ship at all (ticket 30 Q12). The rail DEFAULTS to
  *   newest-first, which is legacy's checked default -- `Form1.cs:63` and
  *   `Form1.Designer.cs:1180-1181` both set it checked, so the club has never run the
  *   other branch. What goes with the flag is `AddToRosterEndSection`
@@ -36,9 +36,10 @@ const { ref, reactive, computed } = window.Vue;
 
 import { api } from '../client.js';
 import { ApiError } from '../api.js';
-import { session, members, appendMember, applyRosterWrite, applySession, isReadOnly, eventId }
+import { session, members, appendMember, applyRosterWrite, applySession, isReadOnly, eventId, ui }
   from '../store.js';
 import { filterMembers, possibleDuplicates, RESULT_CAP } from '../search.js';
+import { nameKey, compareNameKeys } from '../draw.js';
 
 const AGE_OPTIONS = ['youth', 'adult', 'senior'];
 const PAYMENT_METHODS = [
@@ -50,6 +51,35 @@ const blankForm = () => ({
   first_name: '', last_name: '', phone_number: '', email: '',
   latest_rating: '', age_status: 'adult',
 });
+
+/**
+ * The rail's three sort modes.
+ *
+ * **Three, not four.** A first-name ordering would be a SECOND name collation, and this
+ * codebase has exactly one: `nameKey`/`compareNameKeys` in `draw.js`, ordinal on
+ * `(last, first, users.id)`, mirrored server-side in `roundrobin/placement.py` and
+ * bound across that seam by `oracle_partition.py`. `name` below is that comparator,
+ * imported. Nothing here reimplements it.
+ *
+ * **`added` is the array as the server returned it** -- `created_at DESC, id DESC`
+ * (`rr_session_service.py:371-384`), which is legacy's checked `alwaysAddToHead` and
+ * the reason the player you just walked through the door is at eye level. `asc`
+ * reverses; no date is parsed in the browser, because the server's order is the answer
+ * and `registered_at` is a string on the wire.
+ *
+ * **`rating` is `draw_rating`, not `latest_rating`.** The two disagree on purpose:
+ * `latest_rating` is NULL for every online signup, while `draw_rating` falls back to
+ * `details.initial_rating` and is what `POST /rr/draw` actually seeds on. Sorting the
+ * rail by anything else would let the rail and the bracket tell different stories about
+ * the same player. `0` means unrated and sorts as `0` -- the honest alternative
+ * (pinning unrated to the bottom in both directions) was weighed and declined, so `↑`
+ * puts them first.
+ */
+const SORT_MODES = [
+  { value: 'added', label: 'Added' },
+  { value: 'rating', label: 'Rating' },
+  { value: 'name', label: 'Name' },
+];
 
 export const RosterTab = {
   setup() {
@@ -323,7 +353,47 @@ export const RosterTab = {
       ? 'settled · ' + (row.payment_method === 'cash' ? 'cash' : 'online')
       : 'unpaid');
 
+    /**
+     * The rail's order. A COMPUTED, never a mutation.
+     *
+     * `session.roster` is replaced wholesale on every write -- `store.js`'s two
+     * assignment sites both rebind the array rather than splice it, because the server
+     * re-derives the order on each roster change. Sorting in place would be overwritten
+     * by the next `add`/`remove`/`settle` and, worse, would put a client-side order
+     * where `tabs/draw.js` reads `session.roster` directly. The draw seeds off
+     * `drawRoster()`, which sorts what it is given, so this cannot perturb a bracket --
+     * and it stays that way only as long as the sorting lives here and not in the store.
+     *
+     * `.slice()` before `.sort()` for the same reason: `Array.prototype.sort` mutates.
+     */
+    const sortedRoster = computed(() => {
+      const rows = session.roster.slice();
+      const dir = ui.rosterSortDir === 'asc' ? -1 : 1;
+      if (ui.rosterSort === 'added') {
+        // The server's order IS `added` descending; `asc` is that reversed.
+        return dir === 1 ? rows : rows.reverse();
+      }
+      const byName = (a, b) => compareNameKeys(
+        nameKey(a.last_name, a.first_name, a.user_id),
+        nameKey(b.last_name, b.first_name, b.user_id));
+      if (ui.rosterSort === 'name') return rows.sort((a, b) => dir * byName(a, b));
+      // `rating`: `draw_rating` descending, then the collation -- `drawRoster`'s own
+      // rule. The name tiebreak is NOT reversed with the rating, so two players on the
+      // same rating hold their relative order in both directions.
+      return rows.sort((a, b) => {
+        const ra = a.draw_rating || 0;
+        const rb = b.draw_rating || 0;
+        if (ra !== rb) return dir * (rb - ra);
+        return byName(a, b);
+      });
+    });
+
+    function toggleSortDir() {
+      ui.rosterSortDir = ui.rosterSortDir === 'desc' ? 'asc' : 'desc';
+    }
+
     return {
+      ui, SORT_MODES, sortedRoster, toggleSortDir,
       query, found, searchNote, RESULT_CAP,
       session, members, isReadOnly, busy, banner,
       selectedId, selectedMember, selectedRosterRow, selectedWaitlistRow,
@@ -496,7 +566,7 @@ export const RosterTab = {
       </div>
     </div>
 
-    <!-- ══ RIGHT: tonight's roster, newest-first, and the waitlist segment ═══ -->
+    <!-- ══ RIGHT: tonight's roster, sortable, and the waitlist segment ═══════ -->
     <div class="lm-rail">
       <div class="lm-rail-head">
         <div class="lm-cap">
@@ -510,12 +580,31 @@ export const RosterTab = {
                  @input="capDraft = $event.target.value"
                  @change="saveCap" @blur="saveCap" />
         </div>
+        <!-- The sort. A dropdown rather than clickable column headers because 'Added'
+             is not a column you can click, and a header row costs a line of a rail that
+             already scrolls at 64. -->
+        <div class="lm-sort">
+          <label class="lm-sort-label" for="lm-roster-sort">Sort</label>
+          <select id="lm-roster-sort" class="input" v-model="ui.rosterSort">
+            <option v-for="m in SORT_MODES" :key="m.value" :value="m.value">{{ m.label }}</option>
+          </select>
+          <button type="button" class="btn btn-ghost lm-sort-dir" @click="toggleSortDir"
+                  :aria-label="ui.rosterSortDir === 'desc' ? 'Descending' : 'Ascending'"
+                  :title="ui.rosterSortDir === 'desc' ? 'Descending' : 'Ascending'">
+            {{ ui.rosterSortDir === 'desc' ? '↓' : '↑' }}
+          </button>
+        </div>
       </div>
-      <button v-for="r in session.roster" :key="r.user_id" type="button" class="lm-rail-row"
+      <!-- The row carries NO money column. An unsettled status tints it instead: the
+           literal flag, so a fee-waived player or a director reads as unpaid too and the
+           browser computes nothing about money. Green is not mirrored here. The centre
+           pane already tints on lm-paid when you click through, and tinting all 64 rows
+           would leave the amber reading as wallpaper rather than as an alert. -->
+      <button v-for="r in sortedRoster" :key="r.user_id" type="button" class="lm-rail-row"
+              :class="{ 'lm-unpaid-row': r.status === 'pending' }"
               :aria-current="r.user_id === selectedId" @click="select(r.user_id)">
         <span class="lm-grow">{{ r.first_name }} {{ r.last_name }}</span>
-        <span class="lm-num">{{ r.fee === 0 ? '—' : '$' + r.fee }}</span>
-        <span class="lm-num">{{ r.status === 'confirmed' ? '✓' : '' }}</span>
+        <span class="lm-num">{{ r.draw_rating || '—' }}</span>
       </button>
 
       <!-- HIDDEN ENTIRELY WHEN EMPTY (ticket 30 Q11). A segment, not a mode: no
