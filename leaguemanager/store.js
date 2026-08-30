@@ -227,6 +227,14 @@ export const ui = reactive({
   // once, in a watcher. A tab reaching outside its own subtree is exactly the
   // document-wide DOM access ticket 23 flagged in the prototype.
   printPreview: false,
+  // The right rail's sort. Here rather than in `tabs/roster.js` because `app.js` mounts
+  // the tab with `v-if`, so a `ref` in `setup()` would reset on every trip to the Draw
+  // List and back. Here rather than in `persist.js` because that allowlist is frozen
+  // ("Nothing else may be read or written on this origin") and an operator's sort
+  // preference does not earn an amendment: an F5 lands back on `added`, which is the
+  // order the server returns anyway.
+  rosterSort: 'added',        // 'added' | 'rating' | 'name'
+  rosterSortDir: 'desc',      // 'desc' | 'asc'
 });
 
 /** Ticket 19 Q15: it follows the operator OUT of the Scores view. */
