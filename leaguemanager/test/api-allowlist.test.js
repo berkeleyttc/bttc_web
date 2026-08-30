@@ -92,6 +92,19 @@ test('the reserved slots are listed, so landing one is not also a proxy bug', ()
   }
 });
 
+// The ninth slot, and the endpoint it is NOT. Asserted here rather than folded into the
+// list above because the pair is the documentation: preview says "these are the bytes",
+// which the server has just rendered; status would have said "the site is live", which
+// nothing in the port can support. Ticket 26 removed status; ticket 33 added preview.
+test('the preview is reachable and the status endpoint is still not', () => {
+  assert.ok(allowed('GET', `${P}/rr/publish/preview`),
+    'GET /rr/publish/preview must reach the API or the Finalize tab cannot show the page');
+  assert.ok(!allowed('GET', `${P}/rr/publish/status`),
+    'ticket 26 removed the status endpoint from the surface; it is not deferred');
+  // Preview is a read. Nothing may reach it as a write.
+  assert.ok(!allowed('POST', `${P}/rr/publish/preview`));
+});
+
 // ------------------------------------------------------------- what ticket 13 closed
 test('the four leaked routes are gone from the public internet', () => {
   const closed = [

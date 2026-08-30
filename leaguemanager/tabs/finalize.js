@@ -42,6 +42,22 @@
  * cannot report a scope it cannot publish, so the split cannot rot into a log that claims
  * an act this tab did not perform.
  *
+ * ── THE PREVIEW IS A THIRD CARD, AND IT HAS NO SCOPE ──────────────────────────────
+ *
+ * Ticket 33. It sits BETWEEN the two steps because that is the operator's order --
+ * generate, look, publish -- and it is a separate card rather than a third button in
+ * Step 2 precisely so it does not join `SCOPES`. Publishing has three scopes; looking has
+ * one file, and a preview button in the scope list would have implied a fourth act the
+ * publisher cannot perform.
+ *
+ * **It is the one control on this tab that a read-only operator can use.** No
+ * `!isReadOnly` in `canPreview`, deliberately: the person who just lost the takeover can
+ * still see what is about to go on the club's site. Everything else here mutates.
+ *
+ * `canPreview` mirrors the server's `_gate` rather than trusting it, so the button
+ * explains itself before the round trip -- but the server still refuses, and the banner
+ * still renders what it says. The mirror is for the operator, never for correctness.
+ *
  * ── THE LOG DERIVES; IT DOES NOT ACCUMULATE ───────────────────────────────────────
  *
  * `events.details["rr_publish"]` rides the cold-load composite read, so the rows come
@@ -115,6 +131,55 @@ export const FinalizeTab = {
         busy.value = null;
       }
     }
+
+    // ── between the steps: preview ──────────────────────────────────────────
+    const previewHtml = ref(null);
+    const previewPath = ref(null);
+    const previewBytes = ref(null);
+    const previewError = ref(null);
+
+    async function previewResults() {
+      busy.value = 'preview';
+      previewError.value = null;
+      try {
+        const body = await api.previewResultsPage(eventId.value);
+        previewHtml.value = body.html;
+        previewPath.value = body.path;
+        previewBytes.value = body.bytes;
+      } catch (err) {
+        // The page on screen is now from an older render, and saying nothing would leave
+        // the operator studying it as though the refresh had worked.
+        previewHtml.value = null;
+        previewPath.value = null;
+        previewError.value = errorOf(err);
+      } finally {
+        busy.value = null;
+      }
+    }
+
+    function closePreview() {
+      previewHtml.value = null;
+      previewPath.value = null;
+      previewBytes.value = null;
+      previewError.value = null;
+    }
+
+    /**
+     * The ONE display-time change to the server's bytes, and it is here rather than in
+     * the renderer on purpose: `bytes` and the API's integration test both pin the page
+     * exactly as it will be committed, so nothing may edit it upstream of them.
+     *
+     * The page links `../css/_results-rr.css`, which resolves against wherever it is
+     * served from. Under `srcdoc` that is this app's URL, not `/results/`. Today the two
+     * depths coincide -- both land on `/css/` -- so the tag changes nothing; it is one
+     * line of insurance against the app ever moving, bought before the move rather than
+     * after somebody previews an unstyled page and files a bug against the template.
+     */
+    const previewSrcdoc = computed(() => (
+      previewHtml.value
+        ? previewHtml.value.replace('<head>', '<head>\n\t<base href="/results/" />')
+        : null
+    ));
 
     // ── step 2: publish ─────────────────────────────────────────────────────
 
@@ -193,11 +258,23 @@ export const FinalizeTab = {
 
     const canPublish = computed(() => !isReadOnly.value && !busy.value);
 
+    // No `!isReadOnly` -- see the header. Rendering a page changes nothing.
+    const canPreview = computed(() =>
+      session.resultsApplied && !session.resultsStale && !busy.value);
+
+    const previewReason = computed(() => {
+      if (!session.resultsApplied) return 'run Step 1 first — there is no page to render yet';
+      if (session.resultsStale) return 'a score changed since the last run — re-run Step 1';
+      return '';
+    });
+
     return {
       SCOPES, SCOPE_LABEL, BUTTON_LABEL, SCOPE_NAME, session, isReadOnly, drawCommitted,
       busy, dryRun, rows, tagClass,
       resultsBanner, generateResults, publish,
       canApply, applyReason, canPublish,
+      previewHtml, previewPath, previewBytes, previewError, previewSrcdoc,
+      previewResults, closePreview, canPreview, previewReason,
     };
   },
 
@@ -231,6 +308,47 @@ export const FinalizeTab = {
         </span>
         <span v-if="resultsBanner.code" class="lm-code">{{ resultsBanner.code }}</span>
       </div>
+    </div>
+
+    <div class="card" style="margin-bottom:24px">
+      <div class="card-kicker">Between the steps — see what Step 2 would publish</div>
+      <p class="text-muted">
+        Renders the results page out of the database and shows it here. Nothing is pushed
+        and nothing is created. It refuses on exactly what publishing refuses on, so a
+        page that previews is a page that will publish.
+      </p>
+      <div class="lm-actions">
+        <button class="btn btn-secondary" type="button" :disabled="!canPreview"
+                @click="previewResults">
+          {{ busy === 'preview' ? 'Rendering…'
+             : (previewHtml ? 'Refresh preview' : 'Preview results page') }}
+        </button>
+        <button v-if="previewHtml" class="btn btn-secondary" type="button"
+                @click="closePreview">Close</button>
+        <span class="lm-reason" v-if="!canPreview && busy !== 'preview'">
+          {{ previewReason }}
+        </span>
+      </div>
+      <div v-if="previewError" class="lm-banner" style="margin-top:12px">
+        <span class="lm-who">
+          {{ previewError.text }}
+          <span v-if="previewError.remedy"><br />{{ previewError.remedy }}</span>
+        </span>
+        <span v-if="previewError.code" class="lm-code">{{ previewError.code }}</span>
+      </div>
+      <!-- NO allow-scripts: the club page carries an analytics tag and a Google jsapi
+           script, and neither may fire for a page nobody has published. allow-same-origin
+           is what still lets its stylesheet load. -->
+      <iframe v-if="previewHtml" class="lm-preview" :srcdoc="previewSrcdoc"
+              sandbox="allow-same-origin" :title="'Preview of ' + previewPath"></iframe>
+      <p v-if="previewHtml" class="text-muted" style="font-size:11px;margin-top:8px">
+        <b>{{ previewPath }}</b> — {{ previewBytes }} bytes, byte for byte what Step 2
+        commits. The same commit also writes <code>results/index.json</code> and the
+        sleeping <code>draw-brackets/index.html</code>, and deletes
+        <code>draw-brackets/Group-*.html</code>; those are not shown here.
+        Scripts are off in this frame, and the page's two <code>http://</code> stylesheets
+        are blocked as mixed content — exactly as they are on the published page.
+      </p>
     </div>
 
     <div class="card" style="margin-bottom:24px">
