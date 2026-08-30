@@ -93,6 +93,11 @@ const ALLOWED_ROUTES = [
   ['POST',   '/rr/roster/add'],
   ['POST',   '/rr/roster/remove'],
   ['POST',   '/rr/roster/promote'],
+  // --- ticket 33. A NINTH slot, added rather than found in the reserved list. It is a
+  // read: it renders the results page publish would commit and pushes nothing. Its
+  // near-neighbour GET /rr/publish/status stays OFF this list -- ticket 26 removed that
+  // one from the surface, and api-allowlist.test.js asserts both facts side by side.
+  ['GET',    '/rr/publish/preview'],
 ];
 
 // NOT on the list, and that is the point:

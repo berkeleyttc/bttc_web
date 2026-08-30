@@ -365,6 +365,23 @@ export function createClient({ fetchImpl, baseUrl = DEFAULT_BASE_URL, getToken, 
     getMembers: () => request('GET', '/rr/members'),
     getLock: (eventId) =>
       request('GET', '/rr/lock' + (eventId == null ? '' : '?event_id=' + eventId)),
+    /**
+     * The page a `results` publish would commit, rendered but not pushed. Ticket 33.
+     *
+     * `{scope, path, html, bytes}`, from the same renderer `POST /rr/publish` uses, so
+     * what the operator approves is what goes up.
+     *
+     * **A read, so it is NOT in `GATED_MUTATIONS`** -- it creates no Git object and
+     * makes no network call, which is what lets the read-only operator look at the page
+     * too. Its neighbour the publish dry run *is* gated, because that one does create
+     * objects; the distinction is about writes, not about publishing.
+     *
+     * It refuses on exactly the codes publish refuses on, so if this returns the
+     * operator has one fewer surprise waiting at Step 2.
+     */
+    previewResultsPage: (eventId) =>
+      request('GET', '/rr/publish/preview'
+                     + (eventId == null ? '' : '?event_id=' + eventId)),
 
     // --- the lease: session_id in the BODY, not the query -------------------
     // These three cannot be gated on holding the lease; they are how it is held.
