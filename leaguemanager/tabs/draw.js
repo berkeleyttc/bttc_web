@@ -48,8 +48,13 @@ const { ref, computed, watch, onMounted } = window.Vue;
 
 import { api } from '../client.js';
 import { ApiError } from '../api.js';
-import { session, drafts, applySession, isReadOnly, drawCommitted, eventId } from '../store.js';
+import {
+  session, drafts, applySession, isReadOnly, drawCommitted, redrawBanner, eventId,
+} from '../store.js';
 import { writeDraw, clearDraw } from '../persist.js';
+import {
+  SCOPE_LABEL, BUTTON_LABEL, linksFor, tagClass, outcomeOf, errorOf, isTakenDown,
+} from '../publish.js';
 import {
   drawRoster, draw, enumerateSolutions, hasQuickSolutionOption, validateSpec,
   QUICK_SOLUTIONS, MAX_SOLUTIONS_LISTED, NUM_TABLES,
@@ -70,6 +75,13 @@ export const DrawTab = {
     // Re-draw is an explicit gesture, as legacy's lock is a toggle rather than a
     // one-way door (`Form1.cs:1236`, `:2196`). See `frozen` below.
     const unlocked = ref(false);
+
+    // Publishing the bracket page. Its own `busy` rather than the one above, so a publish
+    // never relabels the Commit button -- and, while `unlocked`, both buttons are live at
+    // the same time, so each has to be able to say which of them is in flight.
+    const publishBusy = ref(false);
+    const publishOutcome = ref(null);      // the last in-page result, or null
+    const dryRun = ref(false);
 
     const norm = (t) => String(t == null ? '' : t).replace(/\s+/g, '');
 
@@ -446,7 +458,7 @@ export const DrawTab = {
     // unlocked BEFORE a score was entered still has a live "Re-commit draw" button, and
     // the first they hear of the refusal is the 409. It cannot fire on a first commit:
     // match rows reference group players, so there are none until a draw exists.
-    const canCommit = computed(() => !isReadOnly.value && !busy.value
+    const canCommit = computed(() => !isReadOnly.value && !busy.value && !publishBusy.value
       && !frozen.value && !scoresExist.value && !blocking.value.length);
 
     async function commit() {
@@ -526,6 +538,90 @@ export const DrawTab = {
       unlocked.value = true;
     }
 
+    // ------------------------------------------------------------ publish brackets
+
+    /**
+     * `Publish brackets` lives here rather than on Finalize because the server's own gate
+     * for it is the DRAW, not the results: `_gate` (`rr_publish_service.py:317-344`) asks
+     * only that seats exist and 409s `DRAW_MISSING` otherwise. The button now says before
+     * the click what the server would have said after it.
+     *
+     * **The gate is `tabs/printing.js:112`, not something new.** Printing and publishing
+     * are the two ways tonight's groups reach an audience, and a draw too stale to print
+     * is too stale to put on the club's website -- `redrawBanner` is the shared test. The
+     * reason strings are shared too, so the two refusals cannot come to disagree.
+     *
+     * **`unlocked` is deliberately NOT in here.** A re-draw in progress is client-side
+     * only: the server still holds the committed draw, and publishing that is coherent.
+     * Refusing would strand an operator who opened a re-draw and then thought better of
+     * it, which is the same trap `frozen` exists to undo. The card says what will go up
+     * instead of disabling.
+     */
+    const canPublish = computed(() => !isReadOnly.value && !publishBusy.value && !busy.value
+      && drawCommitted.value && !redrawBanner.value);
+
+    /** `#45` one level up again: the disabled button says why. */
+    const publishReason = computed(() => {
+      if (isReadOnly.value) return 'another operator holds the editor lease';
+      if (!drawCommitted.value) return 'Commit the draw first.';
+      if (redrawBanner.value) return 'The draw is out of date. Re-run it before publishing.';
+      return '';
+    });
+
+    /** Live, and about to publish something other than what is on screen. */
+    const publishesCommitted = computed(() => canPublish.value && unlocked.value);
+
+    /**
+     * One row, derived the way the Finalize log derives its own: whatever this tab has
+     * live, else what the server persisted. The second half is why the row survives an F5
+     * and a trip to the Scores tab, and it needs no new `store.js` field -- `rr_publish`
+     * already rides the cold-load composite read.
+     */
+    const publishRow = computed(() => {
+      if (publishBusy.value) return { tag: 'Sending', links: [] };
+      const live = publishOutcome.value;
+      if (live && live.tag === 'Failed') return { tag: 'Failed', error: live.error, links: [] };
+      if (live && live.tag === 'Dry run') {
+        return {
+          tag: 'Dry run', links: [], at: live.record.published_at,
+          sha: live.record.commit_sha, compare: live.record.compare_url,
+          written: live.record.files_written, deleted: live.record.files_deleted,
+        };
+      }
+      const rec = live ? live.record : (session.rrPublish ? session.rrPublish.brackets : null);
+      if (!rec) return null;
+      // A NO_CHANGES publish is the one case where the page is provably up: the tree the
+      // server would have written is the tree already on the site.
+      const noChanges = !!(live && live.tag === 'No changes');
+      const down = isTakenDown(session.rrPublish) && !noChanges;
+      return {
+        tag: down ? 'Taken down' : (noChanges ? 'No changes' : 'Committed'),
+        // The link is dropped, not merely styled: a `sleep` or `results` publish since
+        // this one deleted the page, so it would 404. The SHA and the time stay, because
+        // that commit did happen.
+        links: down ? [] : linksFor('brackets', rec),
+        at: rec.published_at, sha: noChanges ? null : rec.commit_sha,
+        written: rec.files_written, deleted: rec.files_deleted,
+      };
+    });
+
+    async function publishBrackets() {
+      publishBusy.value = true;
+      publishOutcome.value = null;
+      try {
+        const body = await api.publish('brackets', { dryRun: dryRun.value, eventId: eventId.value });
+        const out = outcomeOf(body, dryRun.value);
+        publishOutcome.value = out;
+        if (out.tag === 'Committed') {
+          session.rrPublish = { ...session.rrPublish, brackets: body };
+        }
+      } catch (err) {
+        publishOutcome.value = { tag: 'Failed', error: errorOf(err) };
+      } finally {
+        publishBusy.value = false;
+      }
+    }
+
     const moveOptions = computed(() => {
       // Disabled while frozen, but the options still have to exist or the select shows
       // blank instead of the group the player is actually in.
@@ -544,6 +640,9 @@ export const DrawTab = {
       commit, discard, players,
       frozen, scoresExist, redraw, unlocked,
       specText, specError, specNote, onSpecChange,
+      SCOPE_LABEL, BUTTON_LABEL, tagClass,
+      publishBusy, dryRun, canPublish, publishReason, publishesCommitted,
+      publishRow, publishBrackets,
     };
   },
 
@@ -643,6 +742,66 @@ export const DrawTab = {
             Discard and recalculate
           </button>
         </template>
+      </div>
+
+      <!-- PUBLISH BRACKETS. Always rendered, never conditionally mounted: every other
+           gated control in this app renders and explains itself (printing.js:118,
+           finalize.js step 1), and a card that appears only once it is usable never
+           teaches the operator that the step exists. It is a card of its own rather than
+           a fourth button in the one above, because that card's frozen branch is
+           deliberately single-purpose -- the one control is the way back out -- and a
+           publish button one click below Re-draw invites the wrong one. -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-kicker">Publish brackets</div>
+        <p class="text-muted" style="font-size:12px;margin-top:8px">{{ SCOPE_LABEL.brackets }}</p>
+
+        <button class="btn btn-primary btn-block" style="margin-top:12px" type="button"
+                :disabled="!canPublish" @click="publishBrackets">
+          {{ publishBusy ? 'Sending…' : BUTTON_LABEL.brackets }}
+        </button>
+        <p v-if="publishReason" class="lm-reason">{{ publishReason }}</p>
+        <!-- Live during a re-draw, per the gate: the server still holds the committed
+             draw and that is what goes up, not the edit beside this button. -->
+        <p v-if="publishesCommitted" class="lm-saved">
+          This publishes the committed draw, not the re-draw on screen.
+        </p>
+
+        <!-- Lease-gated too, because a dry run creates real Git objects. -->
+        <label style="font-size:12px;display:block;margin-top:12px">
+          <input type="checkbox" v-model="dryRun" :disabled="isReadOnly" />
+          dry run (no ref update)
+        </label>
+
+        <template v-if="publishRow">
+          <div class="lm-actions" style="margin-top:12px">
+            <span :class="tagClass(publishRow.tag)">{{ publishRow.tag }}</span>
+            <span class="lm-sha">{{ publishRow.sha ? publishRow.sha.slice(0, 10) : '' }}</span>
+            <span class="lm-sha">{{ publishRow.at || '' }}</span>
+          </div>
+          <div v-if="publishRow.error" style="margin-top:4px">
+            {{ publishRow.error.text }}
+            <div v-if="publishRow.error.remedy" class="text-muted">{{ publishRow.error.remedy }}</div>
+            <div v-if="publishRow.error.github" class="lm-code">GitHub said: {{ publishRow.error.github }}</div>
+            <div v-if="publishRow.error.code" class="lm-code">{{ publishRow.error.code }}</div>
+          </div>
+          <div v-else class="lm-links">
+            <a v-for="l in publishRow.links" :key="l.href" :href="l.href" target="_blank"
+               rel="noopener">{{ l.label }}</a>
+            <a v-if="publishRow.compare" :href="publishRow.compare" target="_blank"
+               rel="noopener">compare</a>
+            <!-- No link, because a later take-down deleted the page it pointed at. -->
+            <span v-if="publishRow.tag === 'Taken down'" class="text-muted">
+              taken down since — publish again to put it back
+            </span>
+          </div>
+          <div v-if="publishRow.written && publishRow.written.length"
+               class="text-muted" style="font-size:11px">
+            {{ publishRow.written.length }} written<span
+              v-if="publishRow.deleted && publishRow.deleted.length">,
+              {{ publishRow.deleted.length }} deleted</span>
+          </div>
+        </template>
+        <p v-else-if="drawCommitted" class="lm-empty">Not published yet.</p>
       </div>
     </div>
 

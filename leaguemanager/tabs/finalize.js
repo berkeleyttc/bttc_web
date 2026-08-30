@@ -30,62 +30,40 @@
  * app cannot tell *I looked* from *I clicked*. `GET /rr/publish/status` never ships --
  * removed from ticket 12's surface, not deferred.
  *
+ * ── `brackets` IS NOT ON THIS TAB ─────────────────────────────────────────────────
+ *
+ * It moved to the Draw List tab, **button and log row together**. A bracket publish is
+ * gated on a committed draw and not on results at all -- `_gate`
+ * (`rr_publish_service.py:317-344`) asks only that seats exist -- so Step 1 was never its
+ * prerequisite, and putting it behind a tab whose first step is *generate results* implied
+ * an order that does not exist.
+ *
+ * The one `SCOPES` list below drives the buttons AND the log, deliberately: Finalize
+ * cannot report a scope it cannot publish, so the split cannot rot into a log that claims
+ * an act this tab did not perform.
+ *
  * ── THE LOG DERIVES; IT DOES NOT ACCUMULATE ───────────────────────────────────────
  *
  * `events.details["rr_publish"]` rides the cold-load composite read, so the rows come
  * from `session.rr_publish` (ticket 26 Q5). After an F5 the operator still sees what was
  * published, when, at which SHA, with the links live -- and ticket 23 Q7's `v-if`
  * teardown cannot lose it, **with no new `store.js` field**. Keying is latest-per-scope
- * (Q6), so at most three rows survive a reload; overwriting is not merely cheaper but
- * more honest, since two rows whose links point at the same URL can only serve the
- * newer content.
+ * (Q6), so at most TWO rows survive a reload here -- the third, `brackets`, is the Draw
+ * List tab's, though the record itself still rides the same composite read. Overwriting is
+ * not merely cheaper but more honest, since two rows whose links point at the same URL can
+ * only serve the newer content.
  */
 const { ref, reactive, computed } = window.Vue;
 
 import { api } from '../client.js';
-import { ApiError, isNoChanges } from '../api.js';
+import { ApiError } from '../api.js';
 import { session, applySession, isReadOnly, drawCommitted, eventId } from '../store.js';
+import {
+  SCOPE_LABEL, BUTTON_LABEL, SCOPE_NAME, linksFor, tagClass, outcomeOf, errorOf,
+} from '../publish.js';
 
-const SCOPES = ['brackets', 'results', 'sleep'];
-
-const SCOPE_LABEL = {
-  brackets: 'Brackets — tonight’s groups and play order',
-  results: 'Results — the session page, the index, and the brackets come down',
-  sleep: 'Sleep — take the brackets down and leave the rest',
-};
-
-/**
- * **One link per visible change, not one per publish** (ticket 26 Q2).
- *
- * `results` is a FUSED scope -- ticket 16 Q3 folded sleep into it -- so one commit has
- * three independent outcomes: a new session page, an index that gained an entry, and
- * the brackets coming down. One link under-reports what the commit did, and the
- * brackets half matters on its own: stale groups from last week showing until Wednesday
- * is precisely the failure `sleep` was made separately callable to fix. The index is
- * worth its own link because it is rendered client-side from `index.json` by ~40 lines
- * of vanilla JS, and that renderer can fail while the session page is perfectly live.
- *
- * **Emitted in the SERVED form -- lowercase, extensionless -- so the operator does not
- * eat a 301.** Netlify rewrites the HTML it serves and 301s `.html` to lowercase
- * extensionless: `/results/RR_Results_2026May29.html` becomes
- * `/results/rr_results_2026may29`.
- */
-function linksFor(scope, record) {
-  if (scope === 'brackets' || scope === 'sleep') return [{ href: '/draw-brackets/', label: 'brackets' }];
-  if (scope !== 'results') return [];
-  const page = (record.files_written || [])
-    .find((f) => /^results\/RR_Results_.*\.html$/i.test(f));
-  const out = [];
-  if (page) {
-    out.push({
-      href: '/' + page.replace(/\.html$/i, '').toLowerCase(),
-      label: 'session page',
-    });
-  }
-  out.push({ href: '/results', label: 'index' });
-  out.push({ href: '/draw-brackets/', label: 'brackets' });
-  return out;
-}
+/** `brackets` is absent by design -- see the header. */
+const SCOPES = ['results', 'sleep'];
 
 export const FinalizeTab = {
   setup() {
@@ -146,32 +124,17 @@ export const FinalizeTab = {
       delete outcome[scope];
       try {
         const body = await api.publish(scope, { dryRun: dryRun.value, eventId: eventId.value });
-        // NO_CHANGES IS A 200 AND A SUCCESS. An api.js that treated a `code` field as
-        // failure would render the idempotent case as an error and print a Failed row
-        // for a publish that did exactly the right thing.
-        outcome[scope] = {
-          tag: isNoChanges(body) ? 'No changes' : (dryRun.value ? 'Dry run' : 'Committed'),
-          record: body,
-          dryRun: dryRun.value,
-        };
-        if (!dryRun.value && !isNoChanges(body)) {
+        const out = outcomeOf(body, dryRun.value);
+        outcome[scope] = out;
+        // `Committed` is exactly "not a dry run, and something actually changed" -- a
+        // `No changes` body has no commit to record and a dry run has no ref to point at.
+        if (out.tag === 'Committed') {
           // The persisted record is what the log derives from after a reload; mirror
           // it now so the row does not vanish until the next cold read.
           session.rrPublish = { ...session.rrPublish, [scope]: body };
         }
       } catch (err) {
-        outcome[scope] = {
-          tag: 'Failed',
-          error: {
-            text: err instanceof ApiError ? (err.detail || err.message) : String(err),
-            remedy: err instanceof ApiError ? err.remedy : null,
-            code: err instanceof ApiError ? err.code : null,
-            // REF_CONFLICT carries GitHub's own words, which is the only place the
-            // branch-protection failure mode says anything at all. Nothing detects it,
-            // because ticket 26 ships no observer.
-            github: err instanceof ApiError ? err.extras.github_message : null,
-          },
-        };
+        outcome[scope] = { tag: 'Failed', error: errorOf(err) };
       } finally {
         busy.value = null;
         sending[scope] = false;
@@ -220,14 +183,6 @@ export const FinalizeTab = {
       return out;
     });
 
-    const tagClass = (tag) => ({
-      Sending: 'tag tag-outline',
-      Committed: 'tag tag-accent',
-      'No changes': 'tag tag-neutral',
-      'Dry run': 'tag tag-outline',
-      Failed: 'tag tag-danger',
-    }[tag] || 'tag');
-
     const canApply = computed(() => !isReadOnly.value && drawCommitted.value && !busy.value);
 
     const applyReason = computed(() => {
@@ -239,7 +194,7 @@ export const FinalizeTab = {
     const canPublish = computed(() => !isReadOnly.value && !busy.value);
 
     return {
-      SCOPES, SCOPE_LABEL, session, isReadOnly, drawCommitted,
+      SCOPES, SCOPE_LABEL, BUTTON_LABEL, SCOPE_NAME, session, isReadOnly, drawCommitted,
       busy, dryRun, rows, tagClass,
       resultsBanner, generateResults, publish,
       canApply, applyReason, canPublish,
@@ -287,7 +242,7 @@ export const FinalizeTab = {
       <div class="lm-actions">
         <button v-for="s in SCOPES" :key="s" class="btn btn-secondary" type="button"
                 :disabled="!canPublish" @click="publish(s)">
-          {{ busy === s ? 'Sending…' : 'Publish ' + s }}
+          {{ busy === s ? 'Sending…' : BUTTON_LABEL[s] }}
         </button>
         <span class="lm-sp"></span>
         <!-- The dry run is the SAME CODE PATH with the ref update withheld -- and it is
@@ -309,8 +264,9 @@ export const FinalizeTab = {
           <tr v-for="r in rows" :key="r.scope + r.tag">
             <td><span :class="tagClass(r.tag)">{{ r.tag }}</span></td>
             <!-- EVERY ROW NAMES ITS SCOPE. One message string cannot say whether
-                 brackets or results went up. -->
-            <td><b>{{ r.scope }}</b></td>
+                 the results or the take-down went up. Through SCOPE_NAME, so the row and
+                 the button above it use the same word for the same act. -->
+            <td><b>{{ SCOPE_NAME[r.scope] || r.scope }}</b></td>
             <td>
               <div v-if="r.error">
                 {{ r.error.text }}
