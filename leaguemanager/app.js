@@ -36,6 +36,7 @@ import {
   session, applySession, members, lock, applyLock, isHolder, drafts, ui,
   isReadOnly, drawCommitted, eventId, staleBanner, redrawBanner,
 } from './store.js';
+import { nextPollDelay } from './lock-cadence.js';
 
 import { RosterTab } from './tabs/roster.js';
 import { DrawTab } from './tabs/draw.js';
@@ -69,7 +70,11 @@ const TABS = [
 ];
 
 const TAB_KEYS = TABS.map((t) => t.key);
-const LOCK_POLL_MS = 5000;   // ticket 14 Q5: sees a takeover with 15 of the 20s left
+// The poll cadence lives in `lock-cadence.js`, and it is no longer one number. Ticket
+// 14 Q5's five seconds is now the CONTENDED interval only: an uncontested hold polls
+// every thirty seconds, and a hidden, idle or re-authenticating tab does not poll at
+// all. Read that file before changing any of it -- the intervals are paired with
+// `GRACE_SECONDS`, and moving one without the other deletes the flush margin.
 
 // The countdown ticks faster than the poll on purpose. `grant_after` is an absolute
 // deadline, so counting down to it needs no server round trip -- and a number that
@@ -95,7 +100,20 @@ const Shell = {
     const operator = ref(null);
     const fatal = ref('');
 
+    // One pending `setTimeout`, never a `setInterval`. `boot()` re-runs on every granted
+    // takeover and used to reassign the interval handle without clearing it -- "five
+    // takeovers, five polls, forever", seen in the 2026-08-24 replay log as five
+    // GET /rr/lock inside 900ms from one connection. A self-rescheduling timeout cannot
+    // leak that way: there is only ever one in flight, and `schedulePoll` clears before
+    // it arms. `null` here is a real state and not merely "not started yet" -- it is how
+    // a paused tab looks, and `wakePoll` is the only thing that ends it.
     let pollTimer = null;
+    // Separate from `pollTimer` on purpose. The timer handle is null for two very
+    // different reasons -- the loop has stopped, and a poll is in flight between two
+    // timers -- and `onInteraction` must not mistake the second for the first, or a
+    // click landing mid-poll fires a duplicate request.
+    let pollInFlight = false;
+    let lastInteractionAt = Date.now();
 
     // ---------------------------------------------------------------- auth
 
@@ -115,7 +133,10 @@ const Shell = {
           // A re-auth. Nothing is reloaded and nothing is discarded: the drafts,
           // the member list and the selected tab are all exactly where they were.
           ui.reauth = false;
+          // The poll disarmed itself when the token expired (see `schedulePoll`), so
+          // this has to start it again -- nothing else will.
           await pollLock();
+          schedulePoll();
         }
       } catch (err) {
         ui.gateError = err instanceof ApiError ? (err.remedy || err.message) : String(err);
@@ -177,7 +198,7 @@ const Shell = {
     /**
      * The ambient poll, doing two jobs (ticket 14 Q5).
      *
-     * Polling is not optional: the 20-second grace window only works if the
+     * Polling is not optional: the 45-second grace window only works if the
      * incumbent's tab LEARNS of a takeover request, and requests are stateless with no
      * push channel. It carries the roster's shape for nothing besides, because there
      * is a second writer the lease provably cannot hold -- public online registration
@@ -196,7 +217,7 @@ const Shell = {
       } catch (err) {
         if (isAuthExpired(err)) ui.reauth = true;
         // Any other failure is left silent on purpose: a dropped poll on gym wifi is
-        // not news, and the next one is five seconds away. Ticket 19 Q10's "no silent
+        // not news, and another is already scheduled. Ticket 19 Q10's "no silent
         // retry" is about MUTATIONS -- this is a read that repeats by construction.
         return;
       }
@@ -237,7 +258,7 @@ const Shell = {
       // **This is the half ticket 14 Q2 specified and nobody built.** `takeoverRequestedBy`
       // had two readers in the whole frontend and both sat behind `isReadOnly`, i.e. in
       // the CHALLENGER's tab -- the holding tab was never told, never flushed and never
-      // released early. So the twenty-second window it justified was dead time in every
+      // released early. So the grace window it justified was dead time in every
       // takeover the app has ever performed, and `operating-runbook.md:54-57` promised
       // operators a warning that no code emitted.
       if (mine && pending && !isHolder(pending)) {
@@ -248,7 +269,7 @@ const Shell = {
           return;
         }
         // Nothing to flush, so the window is protecting nothing. Hand over now and
-        // collapse twenty seconds of standing around into one poll interval.
+        // collapse the whole grace window into one poll interval.
         lock.yielded = true;
         await releaseLease();
         lock.holder = null;
@@ -265,6 +286,72 @@ const Shell = {
           && (!body.holder || deadlinePassed(body.grant_after))) {
         await takeover();
       }
+    }
+
+    /**
+     * Arm the next poll, or deliberately leave the tab quiet.
+     *
+     * `nextPollDelay` (`lock-cadence.js`) owns the decision and the reasoning behind it;
+     * this owns only the timer. A `null` delay means **stop**: no timer is armed, and
+     * nothing re-arms it until `wakePoll` runs. That is the point -- every poll is a
+     * metered Netlify function invocation, and a tab nobody is looking at was spending
+     * 17,280 of them a day for the life of the tab.
+     */
+    function schedulePoll() {
+      if (pollTimer) { window.clearTimeout(pollTimer); pollTimer = null; }
+      if (!booted.value) return;
+      const delay = nextPollDelay({
+        lock,
+        takingOver: takingOver.value,
+        reauth: ui.reauth,
+        hidden: !!document.hidden,
+        msSinceInteraction: Date.now() - lastInteractionAt,
+      });
+      lock.polling = delay !== null;
+      if (delay === null) return;
+      pollTimer = window.setTimeout(async () => {
+        pollInFlight = true;
+        try {
+          await pollLock();
+        } finally {
+          pollInFlight = false;
+          schedulePoll();
+        }
+      }, delay);
+    }
+
+    /**
+     * The operator came back. Poll once **immediately** rather than waiting out an
+     * interval: the lease may have moved while this tab was quiet, and `pollLock`
+     * synthesises `LEASE_LOST` for precisely that case -- the draft survives read-only
+     * and is still committable if the lease is taken back.
+     */
+    async function wakePoll() {
+      lastInteractionAt = Date.now();
+      if (!booted.value || ui.reauth) return;
+      if (pollTimer || pollInFlight) return;   // already ticking; the loop recomputes
+      await pollLock();
+      schedulePoll();
+    }
+
+    // Cheap by design: while the loop is running this only stamps a timestamp, and it
+    // is the *paused* case that costs a request. `passive` because neither handler
+    // touches the event.
+    function onInteraction() {
+      const wasPaused = pollTimer === null && !pollInFlight;
+      lastInteractionAt = Date.now();
+      if (wasPaused) wakePoll();
+    }
+
+    /**
+     * Backgrounding a tab stops the poll outright, which is safe for the same reason a
+     * shut laptop is: `rr_lock_service.py:30-35` calls that "the normal case" and the
+     * grace window exists to handle it. The lease is NOT released -- takeover is still
+     * the recovery path, exactly as `operating-runbook.md:59-60` describes.
+     */
+    function onVisibility() {
+      if (document.hidden) schedulePoll();   // resolves to null, which disarms
+      else wakePoll();
     }
 
     /**
@@ -319,6 +406,7 @@ const Shell = {
       if (!e || !e.persisted || !booted.value) return;
       await acquireLease();
       await pollLock();
+      schedulePoll();
     }
 
     function releaseLease() {
@@ -389,14 +477,10 @@ const Shell = {
 
         await acquireLease();
         await pollLock();
-        // boot() re-runs on every GRANTED takeover (see takeover() below), so the
-        // previous interval has to go first. Without this each takeover left another
-        // 5s poll running for the life of the tab and only the most recent was ever
-        // cleared in onUnmounted -- five takeovers, five polls, forever. Seen in the
-        // 2026-08-24 replay log: five GET /rr/lock inside 900ms from one connection.
-        if (pollTimer) window.clearInterval(pollTimer);
-        pollTimer = window.setInterval(pollLock, LOCK_POLL_MS);
-        lock.polling = true;
+        // boot() re-runs on every GRANTED takeover (see takeover() below), and
+        // `schedulePoll` clears before it arms, so the leak this used to carry is now
+        // structurally impossible rather than guarded against.
+        schedulePoll();
       } catch (err) {
         fatal.value = err instanceof ApiError ? (err.remedy || err.message) : String(err);
       }
@@ -416,15 +500,21 @@ const Shell = {
       window.addEventListener('hashchange', readHash);
       window.addEventListener('pagehide', onPageHide);
       window.addEventListener('pageshow', onPageShow);
+      document.addEventListener('visibilitychange', onVisibility);
+      document.addEventListener('pointerdown', onInteraction, { passive: true });
+      document.addEventListener('keydown', onInteraction, { passive: true });
       if (booted.value) boot();
     });
 
     onUnmounted(() => {
-      if (pollTimer) window.clearInterval(pollTimer);
+      if (pollTimer) window.clearTimeout(pollTimer);
       if (tickTimer) window.clearInterval(tickTimer);
       window.removeEventListener('hashchange', readHash);
       window.removeEventListener('pagehide', onPageHide);
       window.removeEventListener('pageshow', onPageShow);
+      document.removeEventListener('visibilitychange', onVisibility);
+      document.removeEventListener('pointerdown', onInteraction);
+      document.removeEventListener('keydown', onInteraction);
     });
 
     const holderName = computed(() => nameOf(lock.holder));
@@ -488,7 +578,7 @@ const Shell = {
      * The grace window is justified entirely by the incumbent flushing their draft before
      * releasing, and until now the holding tab was never told a takeover had been
      * requested -- `takeoverRequestedBy` had two readers and both sat behind `isReadOnly`.
-     * `operating-runbook.md:54-57` promises operators *"a 20-second warning naming the
+     * `operating-runbook.md:54-57` promises operators *"a 45-second warning naming the
      * person and the time"*. This is that warning.
      *
      * It only ever renders when there is something unsaved: with nothing to flush,
@@ -553,14 +643,14 @@ const Shell = {
      * mutation. But offering *takeover* for a lease with no holder is wrong in a way
      * that costs someone else: `rr_lock_service.py:290-295` grants it outright AND
      * silently clears any rival's pending `takeover_requested_by`, restarting their
-     * 20-second window at zero. Acquire does the same job and takes nothing.
+     * grace window at zero. Acquire does the same job and takes nothing.
      */
     const leaseUnheld = computed(() => !lock.holder);
 
     async function takeover() {
       // Idempotent and self-completing (ticket 14 Q8). The first call stamps the
       // request and returns 202 with the deadline; a later call is granted once the
-      // incumbent has released OR the 20 seconds has elapsed. There is no server-side
+      // incumbent has released OR the grace window has elapsed. There is no server-side
       // timer and nothing to poll on this endpoint -- the deadline is evaluated on the
       // next request, which is the only thing that works with stateless requests and
       // no scheduler. So we re-POST rather than wait for a push.
@@ -640,7 +730,7 @@ const Shell = {
         </div>
         <!-- The INCUMBENT side, and it is a fourth banner. 'store.js' and 'app.css'
              both record ticket 28 Q10 declining a third; this reopens that knowingly,
-             because ticket 14 Q2 justified the whole twenty-second window on the
+             because ticket 14 Q2 justified the whole grace window on the
              incumbent being warned and no code has ever warned them. It shows only when
              this tab has something unsaved -- with nothing to flush, 'pollLock' hands
              the lease over at once rather than making anyone watch a clock. -->
