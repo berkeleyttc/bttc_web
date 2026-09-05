@@ -29,6 +29,10 @@ const EventsPanel = {
       // open-event cron job posted. Note ENV.DEFAULT_PLAYER_CAP is 64 - the two are
       // out of sync; the field is editable until they're reconciled.
       max_capacity: 66,
+      // Players at or above this rating are promoted off the waitlist first.
+      // Mirrors settings.waitlist_priority_rating in the API; sent as an
+      // Event.details override so a single week can differ from the default.
+      waitlist_priority_rating: 1950,
       announcement_notes: ''
     });
 
@@ -99,10 +103,17 @@ const EventsPanel = {
         return;
       }
 
+      const priorityRating = Number(form.waitlist_priority_rating);
+      if (!Number.isInteger(priorityRating) || priorityRating < 0) {
+        showError('Waitlist priority rating must be a whole number of zero or more.');
+        return;
+      }
+
       const payload = {
         event_type: form.event_type,
         event_date: form.event_date,
-        max_capacity: capacity
+        max_capacity: capacity,
+        details: { waitlist_priority_rating: priorityRating }
       };
       const notes = form.announcement_notes.trim();
       if (notes) payload.announcement_notes = notes;
@@ -219,6 +230,13 @@ const EventsPanel = {
           <div class="form-group">
             <label for="event-capacity">Max Capacity</label>
             <input id="event-capacity" type="number" min="1" step="1" v-model.number="form.max_capacity" />
+          </div>
+          <div class="form-group">
+            <label for="event-priority-rating">
+              Waitlist Priority Rating <span class="optional-hint">(promoted first)</span>
+            </label>
+            <input id="event-priority-rating" type="number" min="0" step="10"
+                   v-model.number="form.waitlist_priority_rating" />
           </div>
         </div>
         <div class="form-group">
