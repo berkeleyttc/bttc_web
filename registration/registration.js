@@ -458,6 +458,40 @@ const PlayerLookup = {
   `
 };
 
+// Shows where to pay. The Venmo handle and Zelle number are held encoded (in
+// env.js) and decoded here at render time, so neither appears in any file the
+// site serves. Decoding happens in a computed rather than the load-time DOM
+// sweep the static pages use, because Vue renders after that sweep has run.
+const PaymentInfo = {
+  props: {
+    // 'block' for a standalone line, 'inline' to sit inside a sentence
+    variant: { type: String, default: 'block' }
+  },
+  setup() {
+    const zelleDigits = computed(() => {
+      const encoded = (typeof ENV !== 'undefined' && ENV.ZELLE_TEL_ENCODED) || '+45322720986';
+      return decodeObfuscatedDigits(encoded).replace(/\D/g, '').replace(/^1/, '');
+    });
+    const zelleHref = computed(() => `tel:+1${zelleDigits.value}`);
+    const zelleDisplay = computed(() => formatPhoneNumber(zelleDigits.value));
+    const venmoHandle = computed(() => {
+      return rot13((typeof ENV !== 'undefined' && ENV.VENMO_HANDLE_ROT13) || 'Ohaal-Yrr-3');
+    });
+
+    return { zelleHref, zelleDisplay, venmoHandle };
+  },
+  template: `
+    <span v-if="variant === 'inline'">
+      Zelle - <a :href="zelleHref"><strong>{{ zelleDisplay }}</strong></a> OR Venmo @<strong>{{ venmoHandle }}</strong>
+    </span>
+    <p v-else class="payment-identifiers">
+      <span class="payment-identifier"><strong>Venmo</strong> @{{ venmoHandle }}</span>
+      <span class="payment-identifier-sep">·</span>
+      <span class="payment-identifier"><strong>Zelle</strong> <a :href="zelleHref">{{ zelleDisplay }}</a></span>
+    </p>
+  `
+};
+
 const PlayerList = {
   props: {
     players: Array,        // Array of player objects from search
@@ -486,12 +520,29 @@ const PlayerList = {
       return props.devOverride || props.capacity.eventOpen;
     });
 
+    // Payment state, from the registration status the API returns per player.
+    // Gate on status, never on is_registered: the API reports is_registered
+    // true for waitlisted players too, and they are explicitly told not to pay.
+    const registrationStatus = (player) => String(player.status ?? 'pending').toLowerCase();
+
+    const isPaymentConfirmed = (player) => registrationStatus(player) === 'confirmed';
+
+    // Missing status is treated as pending: showing payment info to someone who
+    // already paid is a smaller failure than hiding it from someone who has not.
+    const isPaymentPending = (player) => {
+      if (player.is_on_waitlist) return false;
+      const status = registrationStatus(player);
+      return status !== 'confirmed' && status !== 'waitlist';
+    };
+
     return {
       registerPlayer,
       unregisterPlayer,
       capacityLastUpdated: props.capacityLastUpdated,  // Expose prop to template
       isEventOpen,
-      canRegister
+      canRegister,
+      isPaymentConfirmed,
+      isPaymentPending
     };
   },
   template: `
@@ -509,7 +560,19 @@ const PlayerList = {
         
         <!-- On Roster: is_registered === true AND is_on_waitlist === false -->
         <div v-if="player.is_registered && !player.is_on_waitlist" class="entry-content">
-          <p class="player-registered-status">
+          <p v-if="isPaymentConfirmed(player)" class="player-registered-status">
+            <span class="status-icon">✓</span>
+            <span class="player-registered-label">Payment confirmed</span>
+          </p>
+          <div v-else-if="isPaymentPending(player)" class="player-payment-pending">
+            <p class="player-pending-status">
+              <span class="status-icon">⚠</span>
+              <span class="player-pending-label">Registered — payment pending</span>
+              <span class="pending-pill">PENDING PAYMENT</span>
+            </p>
+            <payment-info />
+          </div>
+          <p v-else class="player-registered-status">
             <span class="status-icon">✓</span>
             <span class="player-registered-label">Already registered</span>
           </p>
@@ -582,7 +645,8 @@ const PlayerList = {
     </div>
   `,
   components: {
-    CapacityBanner
+    CapacityBanner,
+    PaymentInfo
   }
 };
 
@@ -592,28 +656,16 @@ const RegistrationDialog = {
     player: Object,   // Player object being registered
     capacity: Object, // Capacity info to determine if full
     successMessage: String,  // Success message to display inline
-    errorMessage: String     // Error message to display inline
+    errorMessage: String,    // Error message to display inline
+    onWaitlist: Boolean      // True when the success was a waitlist join (waitlisted players must not pay)
   },
   emits: ['close', 'confirm'],
   setup(props, { emit }) {
     // Waiver configuration - update filename here when waiver version changes
     const WAIVER_FILE = '../liability_waiver_2025-11-03-v1.html';
     
-    // ROT13 decoder to prevent URL scraping by crawlers
-    const rot13 = (s) => {
-      return s.replace(/[a-zA-Z]/g, c => String.fromCharCode((c <= 'Z' ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26));
-    };
-    
-    // Get support phone and encoded venmo URL from ENV (keep encoded until click)
+    // Get support phone from ENV
     const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
-    // const venmoUrlEncoded = typeof ENV !== 'undefined' ? ENV.VENMO_URL : 'uggcf://irazb.pbz/LBHE_HFREANZR';
-    
-    // Handle Venmo button click - decode URL and open in new tab
-    // const handleVenmoClick = (event) => {
-    //   event.preventDefault();
-    //   const decodedUrl = rot13(venmoUrlEncoded);
-    //   window.open(decodedUrl, '_blank', 'noopener,noreferrer');
-    // };
     
     // Form state
     const paymentMethod = ref('zelle_venmo');  // Zelle/Venmo only
@@ -692,8 +744,6 @@ const RegistrationDialog = {
       validationError,
       WAIVER_FILE,
       supportPhone,
-      // venmoUrlEncoded,
-      // handleVenmoClick,
       handleConfirm,
       handleClose
     };
@@ -710,6 +760,10 @@ const RegistrationDialog = {
             <div>{{ successMessage }}</div>
             <div class="success-next-steps">
               Please confirm your name appears in the "Round Robin Registered Players" list.
+            </div>
+            <div v-if="!onWaitlist" class="success-payment">
+              <span class="success-payment-label">Pay now to confirm your spot:</span>
+              <payment-info />
             </div>
           </div>
         </div>
@@ -745,7 +799,7 @@ const RegistrationDialog = {
               <div class="payment-card">
                 <h4 class="payment-card-title">Payment instructions</h4>
                 <ul class="payment-instructions">
-                  <li>Make a payment to Zelle - <strong>510-757-3662</strong> OR Venmo @<strong>Bunny-Lee-3</strong></li>
+                  <li>Make a payment to <payment-info variant="inline" /></li>
                   <li>Include your <strong>full name</strong> as registered with BTTC with payment</li>
                   <li>Text a payment screenshot to <strong>{{ supportPhone }}</strong> for faster confirmation</li>
                   <li>Check your status on the registered players page</li>
@@ -757,21 +811,10 @@ const RegistrationDialog = {
                   Status stays <strong>PENDING PAYMENT</strong> until BTTC confirms your payment. Your spot is guaranteed only when it shows <strong>CONFIRMED</strong>.
                   <br>
                   <br>
-                  If you’re on the <strong>WAITLIST</strong>, donot pay. If you're moved to the roster, BTTC support will contact you for payment.
+                  If you’re on the <strong>WAITLIST</strong>, do not pay. If you're moved to the roster, BTTC support will contact you for payment.
                 </p>
               </div>
             </div>
-            <!-- Venmo button (commented out for future use)
-            <div class="payment-buttons">
-              <a 
-                class="btn btn-venmo" 
-                :href="venmoUrlEncoded" 
-                @click="handleVenmoClick"
-              >
-                Pay with Venmo
-              </a>
-            </div>
-            -->
           </div>
 
           <div class="comments-section">
@@ -814,7 +857,10 @@ const RegistrationDialog = {
         </div>
       </div>
     </div>
-  `
+  `,
+  components: {
+    PaymentInfo
+  }
 };
 
 const UnregistrationDialog = {
@@ -942,7 +988,6 @@ const RegistrationApp = {
     const fallbackPlayerCap = typeof ENV !== 'undefined' ? ENV.FALLBACK_PLAYER_CAP : 64;
     const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
     const supportMethod = typeof ENV !== 'undefined' ? ENV.SUPPORT_METHOD : 'TEXT ONLY';
-    const venmoUrl = typeof ENV !== 'undefined' ? ENV.VENMO_URL : 'https://venmo.com/YOUR_USERNAME';
     
     // Application state
     const players = ref([]);                    // Players found by phone number
@@ -963,6 +1008,7 @@ const RegistrationApp = {
     const currentRegistrationData = ref(null);  // Player being registered (for dialog)
     const currentUnregistrationData = ref(null); // Player being unregistered (for dialog)
     const registrationSuccessMessage = ref('');  // Success message for registration dialog
+    const registrationSuccessOnWaitlist = ref(false); // True when that success was a waitlist join
     const registrationErrorMessage = ref('');    // Error message for registration dialog
     const unregistrationSuccessMessage = ref(''); // Success message for unregistration dialog
     const unregistrationErrorMessage = ref('');   // Error message for unregistration dialog
@@ -1313,6 +1359,7 @@ const RegistrationApp = {
 
       // Clear dialog messages from previous interactions
       registrationSuccessMessage.value = '';
+      registrationSuccessOnWaitlist.value = false;
       registrationErrorMessage.value = '';
 
       currentRegistrationData.value = { player, index };
@@ -1349,6 +1396,7 @@ const RegistrationApp = {
       
       // Clear any previous messages
       registrationSuccessMessage.value = '';
+      registrationSuccessOnWaitlist.value = false;
       registrationErrorMessage.value = '';
       
       try {
@@ -1377,6 +1425,7 @@ const RegistrationApp = {
           // Check if player was added to waitlist
           const onWaitlist = result.on_waitlist || false;
           const waitlistPosition = result.waitlist_position || null;
+          registrationSuccessOnWaitlist.value = onWaitlist;
           
           if (onWaitlist) {
             // Player added to waitlist
@@ -1394,11 +1443,15 @@ const RegistrationApp = {
               players.value[index].is_registered = true;
               players.value[index].is_on_waitlist = true;
               players.value[index].waitlist_position = waitlistPosition;
+              players.value[index].status = 'waitlist';
             } else {
               // On roster: is_registered = true, is_on_waitlist = false
               players.value[index].is_registered = true;
               players.value[index].is_on_waitlist = false;
               players.value[index].waitlist_position = null;
+              // A new registration always starts unpaid, so the list row shows
+              // the payment block without waiting for a fresh lookup.
+              players.value[index].status = 'pending';
             }
             // Clear any error fields
             players.value[index].registerError = '';
@@ -1464,6 +1517,7 @@ const RegistrationApp = {
             players.value[index].is_registered = false;
             players.value[index].is_on_waitlist = false;
             players.value[index].waitlist_position = null;
+            players.value[index].status = null;
             // Clear any error fields
             players.value[index].registerError = '';
             players.value[index].unregisterError = '';
@@ -1517,6 +1571,7 @@ const RegistrationApp = {
       currentRegistrationData,
       currentUnregistrationData,
       registrationSuccessMessage,
+      registrationSuccessOnWaitlist,
       registrationErrorMessage,
       unregistrationSuccessMessage,
       unregistrationErrorMessage,
@@ -1620,6 +1675,7 @@ const RegistrationApp = {
         :capacity="capacity"
         :success-message="registrationSuccessMessage"
         :error-message="registrationErrorMessage"
+        :on-waitlist="registrationSuccessOnWaitlist"
         @close="showRegistrationDialog = false"
         @confirm="confirmRegistration"
       />
