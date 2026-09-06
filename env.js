@@ -13,6 +13,13 @@ const ENV = {
   // Support Contact
   SUPPORT_PHONE: '510-926-6913',
   SUPPORT_METHOD: 'TEXT ONLY',
+
+  // Payment details - stored ENCODED so they cannot be scraped from this file,
+  // which is served as plaintext to every visitor. Decoded at render time by
+  // rot13() / decodeObfuscatedDigits() in js/bttc-utils.js.
+  // Do NOT put the readable values here.
+  ZELLE_TEL_ENCODED: '+45322720986',   // digits / 3 -> the club Zelle number
+  VENMO_HANDLE_ROT13: 'Ohaal-Yrr-3',   // rot13 -> the club Venmo handle
   
   // Registration Schedule
   // Opening time (when registration opens each week)
