@@ -21,10 +21,10 @@ const RegistrationStatus = {
         🔴 Registration is CLOSED
       </div>
       <div class="status-details">
-        <span v-if="isOpen && !devMode">Closes on closing day at {{ closingTime }} PST</span>
+        <span v-if="isOpen && !devMode">Closes {{ closingTime }}</span>
         <span v-else-if="isOpen && devMode">Developer override active</span>
         <span v-else-if="registrationClosed">Registration is currently closed. Please review this month's schedule on our homepage.</span>
-        <span v-else>Next opening: {{ nextOpening }} PST</span>
+        <span v-else>Next opening: {{ nextOpening }}</span>
       </div>
     </div>
   `,
@@ -927,19 +927,19 @@ const RegistrationApp = {
     console.log('DEV_OVERRIDE mode:', devOverride ? 'ENABLED' : 'DISABLED');
     console.log('REGISTRATION_CLOSED mode:', registrationClosed ? 'ENABLED' : 'DISABLED');
     
-    // Opening configuration (default: Wednesday at 10:00)
-    const openingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_DAY : 3;  // Wednesday = 3
-    const openingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_HOUR : 10;  // 10:00 (10 AM)
+    // Opening configuration (default: Thursday at 21:00)
+    const openingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_DAY : 4;  // Thursday = 4
+    const openingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_HOUR : 21;  // 21:00 (9 PM)
     const openingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_MINUTE : 0;
     
-    // Closing configuration (default: Friday at 18:45)
+    // Closing configuration (default: Friday at 18:00)
     const closingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_DAY : 5;  // Friday = 5
     const closingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_HOUR : 18;  // 18:00 (6 PM)
-    const closingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_MINUTE : 45;  // 45 minutes
+    const closingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_CLOSING_MINUTE : 0;
     
     const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
     const defaultPlayerCap = typeof ENV !== 'undefined' ? ENV.DEFAULT_PLAYER_CAP : 64;
-    const fallbackPlayerCap = typeof ENV !== 'undefined' ? ENV.FALLBACK_PLAYER_CAP : 64;
+    const fallbackPlayerCap = typeof ENV !== 'undefined' ? ENV.FALLBACK_PLAYER_CAP : 65;
     const supportPhone = typeof ENV !== 'undefined' ? ENV.SUPPORT_PHONE : '510-926-6913';
     const supportMethod = typeof ENV !== 'undefined' ? ENV.SUPPORT_METHOD : 'TEXT ONLY';
     const venmoUrl = typeof ENV !== 'undefined' ? ENV.VENMO_URL : 'https://venmo.com/YOUR_USERNAME';
@@ -1027,7 +1027,7 @@ const RegistrationApp = {
     
     /**
      * Computed: Whether to show the roster section
-     * Roster is ONLY open from Wednesday 00:00 to Saturday 00:00
+     * Roster is ONLY open from the opening day at opening time through the end of the closing day
      * AND if REGISTRATION_CLOSED = false
      * DEV_OVERRIDE = true unlocks the roster (bypasses all constraints)
      * Priority order: DEV_OVERRIDE > REGISTRATION_CLOSED > normal schedule
@@ -1060,7 +1060,18 @@ const RegistrationApp = {
       return false;
     });
     
-    // Closing time: Shows closing day and time (default: Friday 6:45 PM)
+    /**
+     * Returns the short timezone abbreviation (PST/PDT) for the configured
+     * timezone at the current instant, so copy never hardcodes the wrong one.
+     */
+    const timezoneAbbreviation = () => {
+      return new Date().toLocaleTimeString("en-US", {
+        timeZone: timezone,
+        timeZoneName: 'short'
+      }).split(' ').pop() || 'PST';
+    };
+
+    // Closing time: Shows closing day and time (default: Friday 6:00 PM)
     const closingTime = computed(() => {
       const now = new Date();
       const pstNow = new Date(now.toLocaleString("en-US", {timeZone: timezone}));
@@ -1079,14 +1090,18 @@ const RegistrationApp = {
       }
       
       closingDate.setHours(closingHour, closingMinute, 0, 0);
-      return closingDate.toLocaleString("en-US", {
-        timeZone: timezone,
+
+      // closingDate already holds club-local wall-clock time (it was derived
+      // from pstNow), so passing timeZone here would apply the offset twice.
+      const formatted = closingDate.toLocaleString("en-US", {
+        weekday: 'long',
         hour: 'numeric',
         minute: '2-digit'
       });
+      return `${formatted} ${timezoneAbbreviation()}`;
     });
 
-    // Next opening: Shows next opening day and time (default: Wednesday at 12:00 AM)
+    // Next opening: Shows next opening day and time (default: Thursday at 9:00 PM)
     const nextOpening = ref('Calculating...');
 
     /**
@@ -1117,8 +1132,9 @@ const RegistrationApp = {
       nextOpeningDate.setDate(nextOpeningDate.getDate() + daysUntil);
       nextOpeningDate.setHours(openingHour, openingMinute, 0, 0);
 
-      nextOpening.value = nextOpeningDate.toLocaleString("en-US", {
-        timeZone: timezone,
+      // nextOpeningDate already holds club-local wall-clock time (it was
+      // derived from pstNow), so passing timeZone here would double-convert.
+      const formatted = nextOpeningDate.toLocaleString("en-US", {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -1126,6 +1142,7 @@ const RegistrationApp = {
         hour: 'numeric',
         minute: '2-digit'
       });
+      nextOpening.value = `${formatted} ${timezoneAbbreviation()}`;
     };
 
     // Methods

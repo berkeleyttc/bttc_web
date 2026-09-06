@@ -16,8 +16,8 @@ const ENV = {
   
   // Registration Schedule
   // Opening time (when registration opens each week)
-  REGISTRATION_OPENING_DAY: 3, // Wednesday (0 = Sunday, 1 = Monday, ..., 3 = Wednesday)
-  REGISTRATION_OPENING_HOUR: 10, // 10:00 (10 AM)
+  REGISTRATION_OPENING_DAY: 4, // Thursday (0 = Sunday, 1 = Monday, ..., 4 = Thursday)
+  REGISTRATION_OPENING_HOUR: 21, // 21:00 (9 PM)
   REGISTRATION_OPENING_MINUTE: 0,
   
   // Closing time (when registration closes each week)
