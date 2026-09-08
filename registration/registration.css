@@ -949,6 +949,35 @@
     font-weight: normal;
   }
 
+  /* Upcoming Schedule Change Notice */
+  .schedule-notice {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 1rem;
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+  }
+
+  @media (max-width: 480px) {
+    .schedule-notice {
+      padding: 0.75rem;
+      font-size: 0.95rem;
+    }
+  }
+
+  .schedule-notice-details {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    font-weight: normal;
+  }
+
   /* Capacity Banner Styles */
   .capacity-banner {
     margin: 1rem 0;

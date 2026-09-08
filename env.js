@@ -8,7 +8,7 @@
 const ENV = {
   // API Configuration
   API_URL: '/.netlify/functions/api', // Netlify function endpoint (for local dev, use 'http://0.0.0.0:8080')
-  // API_KEY: 'secret', // Optional: Set API key for local dev (e.g., 'your-api-key-here')
+  // API_KEY: 'secret', // Optional : Set API key for local dev (e.g., 'your-api-key-here')
   
   // Support Contact
   SUPPORT_PHONE: '510-926-6913',
