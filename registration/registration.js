@@ -1062,13 +1062,20 @@ const RegistrationApp = {
     
     /**
      * Returns the short timezone abbreviation (PST/PDT) for the configured
-     * timezone at the current instant, so copy never hardcodes the wrong one.
+     * timezone on the given date, so copy never hardcodes the wrong one.
+     *
+     * wallClockDate holds club-local wall-clock time expressed in the browser's
+     * own zone (it was derived from pstNow), so shift it back to the real
+     * instant first. Reading the abbreviation off the current instant instead
+     * would report the wrong one for up to a week either side of a DST change.
      */
-    const timezoneAbbreviation = () => {
-      return new Date().toLocaleTimeString("en-US", {
+    const timezoneAbbreviation = (wallClockDate) => {
+      const offset = new Date(wallClockDate.toLocaleString("en-US", {timeZone: timezone})).getTime() - wallClockDate.getTime();
+      const instant = new Date(wallClockDate.getTime() - offset);
+      return instant.toLocaleTimeString("en-US", {
         timeZone: timezone,
         timeZoneName: 'short'
-      }).split(' ').pop() || 'PST';
+      }).split(' ').pop();
     };
 
     // Closing time: Shows closing day and time (default: Friday 6:00 PM)
@@ -1098,7 +1105,7 @@ const RegistrationApp = {
         hour: 'numeric',
         minute: '2-digit'
       });
-      return `${formatted} ${timezoneAbbreviation()}`;
+      return `${formatted} ${timezoneAbbreviation(closingDate)}`;
     });
 
     // Next opening: Shows next opening day and time (default: Thursday at 9:00 PM)
@@ -1142,7 +1149,7 @@ const RegistrationApp = {
         hour: 'numeric',
         minute: '2-digit'
       });
-      nextOpening.value = `${formatted} ${timezoneAbbreviation()}`;
+      nextOpening.value = `${formatted} ${timezoneAbbreviation(nextOpeningDate)}`;
     };
 
     // Methods
