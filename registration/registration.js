@@ -1607,6 +1607,15 @@ const RegistrationApp = {
         <p v-if="formattedEventDate" class="event-date">for {{ eventDayOfWeek }}, {{ formattedEventDate }}</p>
       </div>
 
+      <div class="schedule-notice">
+        <strong>Registration schedule change - starting Friday, September 18:</strong>
+        <div class="schedule-notice-details">
+          Registration will open <strong>Thursday at 9:00 PM</strong> instead of Wednesday at 10:00 AM,
+          first on <strong>Thursday, September 17</strong>. Closing time is unchanged at Friday 6:00 PM.
+          Payment is due by <strong>Friday 9:00 AM</strong>.
+        </div>
+      </div>
+
       <registration-status 
         v-if="!registrationOpen"
         :is-open="registrationOpen"
