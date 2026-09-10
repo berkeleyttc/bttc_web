@@ -47,6 +47,12 @@ export const session = reactive({
   resultsStale: false,
   rrPublish: {},        // latest record PER SCOPE; at most three. Ticket 26 Q5/Q6.
   drawCommitted: false, // server-derived: bool(rr_group_players rows exist)
+  // F40. Server-derived, like `resultsStale` and NOT like anything this file computes:
+  // it compares MAX(rr_group_players.created_at) against the brackets publish record's
+  // `at`, and those two are written by different clocks with no offset on either
+  // (`rr_session_service._brackets_state` carries the measurement). Comparing them here
+  // would be wrong by the UTC offset, and on a Friday evening the sign flips.
+  bracketsStale: false,
 });
 
 /** Apply a `GET /rr/session` payload, or anything else shaped like one. */
@@ -65,6 +71,7 @@ export function applySession(payload) {
   session.resultsStale = !!payload.results_stale;
   session.rrPublish = payload.rr_publish ?? {};
   session.drawCommitted = !!payload.draw_committed;
+  session.bracketsStale = !!payload.brackets_stale;
   session.loaded = true;
 }
 

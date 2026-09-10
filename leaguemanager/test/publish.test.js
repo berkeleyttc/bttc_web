@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { ApiError } from '../api.js';
 import {
   SCOPE_LABEL, BUTTON_LABEL, SCOPE_NAME,
-  linksFor, tagClass, outcomeOf, errorOf, isTakenDown,
+  linksFor, tagClass, outcomeOf, errorOf, isTakenDown, clearsBracketsStale,
 } from '../publish.js';
 
 describe('outcomeOf -- NO_CHANGES at 200 is a success, not a failure', () => {
@@ -105,41 +105,117 @@ describe('errorOf -- a Failed row says what the screen and the runbook both say'
   });
 });
 
-describe('isTakenDown -- both sleep and results delete /draw-brackets/', () => {
-  const at = (t) => ({ published_at: t });
+/**
+ * **Run against every shape the server actually emits, not just the one this file used to
+ * build.** `rr_publish_service.py:557-568` writes the timestamp under two different keys:
+ *
+ *   persisted  `events.details["rr_publish"][scope]`   -> `{ at }`            (COLD LOAD)
+ *   committed  `POST /rr/publish` 200                  -> `{ at, published_at }`
+ *   dry run / NO_CHANGES  (`:508`, `:534`)             -> `{ published_at }`
+ *
+ * This describe previously built only the third and asserted `isTakenDown` on it, which is
+ * the one shape that never survives an F5 -- `finalize.js:199` and `draw.js:626` store a
+ * body into `session.rrPublish` only when the tag is `Committed`. The persisted shape was
+ * therefore never exercised, and `isTakenDown` read `published_at` alone, so on every cold
+ * load it saw `null` and returned `false`: a live link to a deleted page.
+ */
+const SHAPES = {
+  'persisted (cold load)': (t) => ({ published_at: undefined, at: t }),
+  'committed response': (t) => ({ at: t, published_at: t }),
+  'dry run / NO_CHANGES response': (t) => ({ published_at: t }),
+};
 
-  it('is false when brackets was never published', () => {
-    assert.equal(isTakenDown({}), false);
-    assert.equal(isTakenDown({ sleep: at('2026-08-29T22:58:00Z') }), false);
-    assert.equal(isTakenDown(null), false);
+for (const [shapeName, at] of Object.entries(SHAPES)) {
+  describe('isTakenDown -- ' + shapeName, () => {
+    it('is false when brackets was never published', () => {
+      assert.equal(isTakenDown({}), false);
+      assert.equal(isTakenDown({ sleep: at('2026-08-29T22:58:00Z') }), false);
+      assert.equal(isTakenDown(null), false);
+    });
+
+    it('is false when brackets is the most recent write to the page', () => {
+      assert.equal(isTakenDown({
+        brackets: at('2026-08-29T19:42:00Z'),
+        sleep: at('2026-08-28T22:58:00Z'),
+      }), false);
+    });
+
+    it('is true when a later sleep took the page down', () => {
+      assert.equal(isTakenDown({
+        brackets: at('2026-08-29T19:42:00Z'),
+        sleep: at('2026-08-29T22:58:00Z'),
+      }), true);
+    });
+
+    it('is true when a later results publish took the brackets down with it', () => {
+      assert.equal(isTakenDown({
+        brackets: at('2026-08-29T19:42:00Z'),
+        results: at('2026-08-29T22:10:00Z'),
+      }), true);
+    });
+
+    it('ignores a record with no timestamp rather than treating it as newest', () => {
+      assert.equal(isTakenDown({
+        brackets: at('2026-08-29T19:42:00Z'),
+        sleep: { commit_sha: 'abc' },
+      }), false);
+    });
   });
+}
 
-  it('is false when brackets is the most recent write to the page', () => {
+describe('isTakenDown -- shapes mixed, which is the real cold-load-plus-one-publish case', () => {
+  it('sees a persisted sleep as later than a live committed brackets body', () => {
+    // The operator published brackets this session (response shape, both keys) and the
+    // sleep record came off the cold load (persisted shape, `at` only).
     assert.equal(isTakenDown({
-      brackets: at('2026-08-29T19:42:00Z'),
-      sleep: at('2026-08-28T22:58:00Z'),
-    }), false);
-  });
-
-  it('is true when a later sleep took the page down', () => {
-    assert.equal(isTakenDown({
-      brackets: at('2026-08-29T19:42:00Z'),
-      sleep: at('2026-08-29T22:58:00Z'),
+      brackets: { at: '2026-08-29T19:42:00Z', published_at: '2026-08-29T19:42:00Z' },
+      sleep: { at: '2026-08-29T22:58:00Z' },
     }), true);
   });
 
-  it('is true when a later results publish took the brackets down with it', () => {
+  it('sees a persisted brackets as later than a persisted results', () => {
     assert.equal(isTakenDown({
-      brackets: at('2026-08-29T19:42:00Z'),
-      results: at('2026-08-29T22:10:00Z'),
-    }), true);
+      brackets: { at: '2026-08-29T22:58:00Z' },
+      results: { at: '2026-08-29T19:42:00Z' },
+    }), false);
   });
 
-  it('ignores a record with no timestamp rather than treating it as newest', () => {
+  // The regression itself, stated as one assertion so a revert names the defect.
+  it('does not report a persisted brackets record as absent', () => {
     assert.equal(isTakenDown({
-      brackets: at('2026-08-29T19:42:00Z'),
-      sleep: { commit_sha: 'abc' },
-    }), false);
+      brackets: { at: '2026-08-29T19:42:00Z' },
+      sleep: { at: '2026-08-29T22:58:00Z' },
+    }), true, 'a cold-load record keys its timestamp `at`, not `published_at`');
+  });
+});
+
+describe('clearsBracketsStale -- F40, the flag must not outlive its own remedy', () => {
+  it('clears on a real committed publish', () => {
+    assert.equal(clearsBracketsStale(outcomeOf({ commit_sha: 'a'.repeat(40) }, false)), true);
+  });
+
+  it('clears on NO_CHANGES, the one case where the page is provably current', () => {
+    assert.equal(clearsBracketsStale(outcomeOf({ code: 'NO_CHANGES' }, false)), true);
+  });
+
+  it('does NOT clear on a dry run', () => {
+    assert.equal(clearsBracketsStale(outcomeOf({ commit_sha: 'a'.repeat(40) }, true)), false);
+  });
+
+  it('does NOT clear on a dry run that happens to find an identical tree', () => {
+    // `outcomeOf` lets `isNoChanges` win over `dryRun`, so this is tagged `No changes`
+    // while having changed nothing. Tag-only logic would clear the flag on a rehearsal,
+    // and the server does not advance the record's `at` for it either.
+    const out = outcomeOf({ code: 'NO_CHANGES' }, true);
+    assert.equal(out.tag, 'No changes', 'precondition: the tag really is misleading here');
+    assert.equal(clearsBracketsStale(out), false);
+  });
+
+  it('clears on nothing else', () => {
+    assert.equal(clearsBracketsStale(null), false);
+    assert.equal(clearsBracketsStale(undefined), false);
+    assert.equal(clearsBracketsStale({ tag: 'Failed', dryRun: false }), false);
+    assert.equal(clearsBracketsStale({ tag: 'Sending', dryRun: false }), false);
   });
 });
 

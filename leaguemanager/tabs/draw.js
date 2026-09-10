@@ -54,6 +54,7 @@ import {
 import { writeDraw, clearDraw } from '../persist.js';
 import {
   SCOPE_LABEL, BUTTON_LABEL, linksFor, tagClass, outcomeOf, errorOf, isTakenDown,
+  clearsBracketsStale,
 } from '../publish.js';
 import {
   drawRoster, draw, enumerateSolutions, hasQuickSolutionOption, validateSpec,
@@ -610,7 +611,10 @@ export const DrawTab = {
         // this one deleted the page, so it would 404. The SHA and the time stay, because
         // that commit did happen.
         links: down ? [] : linksFor('brackets', rec),
-        at: rec.published_at, sha: noChanges ? null : rec.commit_sha,
+        // `at` first: the PERSISTED record carries only `at`, the POST response carries
+        // both. See `publish.js`'s `isTakenDown` -- reading `published_at` alone left this
+        // column blank on every cold load. `finalize.js:243` reads the same pair.
+        at: rec.at || rec.published_at, sha: noChanges ? null : rec.commit_sha,
         written: rec.files_written, deleted: rec.files_deleted,
       };
     });
@@ -625,6 +629,10 @@ export const DrawTab = {
         if (out.tag === 'Committed') {
           session.rrPublish = { ...session.rrPublish, brackets: body };
         }
+        // F40. The rule lives in `publish.js` because these seven tab modules import
+        // `window.Vue` and are not behaviour-testable (`test/README.md`), and this one is
+        // correctness-bearing: without it the warning survives its own remedy.
+        if (clearsBracketsStale(out)) session.bracketsStale = false;
       } catch (err) {
         publishOutcome.value = { tag: 'Failed', error: errorOf(err) };
       } finally {
@@ -774,6 +782,12 @@ export const DrawTab = {
              draw and that is what goes up, not the edit beside this button. -->
         <p v-if="publishesCommitted" class="lm-saved">
           This publishes the committed draw, not the re-draw on screen.
+        </p>
+        <!-- F40. It WARNS and never disables: this button is the remedy, so gating it on
+             the condition would lock the operator out of the one click that clears it. -->
+        <p v-if="session.bracketsStale" class="lm-reason">
+          The draw was committed again after this page went up, so the published brackets
+          show the earlier draw — publish again to update them.
         </p>
 
         <!-- Lease-gated too, because a dry run creates real Git objects. -->
