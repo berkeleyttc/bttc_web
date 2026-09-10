@@ -345,6 +345,47 @@ describe('promotion, the branches with no oracle', () => {
     assert.deepEqual(groups, [[1, 3], [2, 4]], 'one in, one out, sizes unchanged');
   });
 
+  /**
+   * **Two promotions into the SAME group.** The regression that four archived nights
+   * could not see and the fifth could.
+   *
+   * `promoteInto` walks its queue, and `adjustLowestRankings` skips a player only while
+   * `toBePromoted` is set. The code used to clear that flag on promotion, citing
+   * `Group.cs` Note 3 -- which says the opposite: the earlier `&& !player.NowPromoted`
+   * was removed *because* "Now-Promoted players are a subset of players ToBePromoted
+   * (this logic must be changed if ever that condition is not fulfilled)". Clearing it
+   * broke the subset, so the second candidate's `adjustLowestRankings` found the player
+   * the first candidate had just promoted sitting at the bottom of the group, and
+   * ejected them.
+   *
+   * The outcome was worse than a swap: `promoted` still reported BOTH ids while one of
+   * them was seated in the lower group, so `rr_group_players.promoted` would have
+   * disagreed with the seating it was written beside.
+   *
+   * `Jul 17` sends its two promotions to groups 1 and 8, `Aug 07` to 8 and 9, `Nov 21`
+   * to 2, 4 and 5, and `Nov 14` promotes nobody -- so none of them collide, and 258
+   * tests plus a full session replay all passed. `2025Mar21` sends both to group 1.
+   */
+  it('promotes two candidates into one group without ejecting the first', () => {
+    const players = [
+      person(1, 2000), person(2, 1990), person(3, 1980),
+      person(4, 1970), person(5, 1960), person(6, 1950),
+      person(7, 1940, true), person(8, 1930, true), person(9, 1920),
+      person(10, 1910), person(11, 1900), person(12, 1890),
+    ];
+    const { groups, promoted } = promoteAllGroups(
+      [[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]], players, 150,
+    );
+    assert.deepEqual(promoted, [7, 8]);
+    assert.deepEqual(groups, [[1, 2, 3, 4, 7, 8], [5, 6, 9, 10, 11, 12]],
+      'both promoted seats stay up; the two ejected seats go down');
+    // The invariant the bug violated: every id `promoted` reports is seated in a group
+    // strictly above the one it was drawn into.
+    for (const id of promoted) {
+      assert.ok(groups[0].includes(id), `${id} is reported promoted and must be seated up`);
+    }
+  });
+
   it('caps candidates at three, and a fourth simply stays put', () => {
     // DrawListCode.cs:325. FindPlayersToPromote counts every flagged player but adds
     // only the first three to the list, so the fourth is neither promoted nor demoted.
