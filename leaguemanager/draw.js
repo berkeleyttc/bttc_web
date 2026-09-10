@@ -562,7 +562,13 @@ function promoteInto(receiving, candidates, byId, gap, promoted, maxPlayers) {
     }
 
     receiving.push(cand);
-    byId[cand].toBePromoted = false;              // NowPromoted is a subset of ToBePromoted
+    // `ToBePromoted` deliberately STAYS SET. `Group.cs` Note 3 removed an earlier
+    // `&& !player.NowPromoted` from AdjustLowestRankings on the grounds that
+    // "Now-Promoted players are a subset of players ToBePromoted (this logic must be
+    // changed if ever that condition is not fulfilled)". Clearing the flag here broke
+    // exactly that invariant, and the next candidate in the queue then ejected the
+    // player this one had just promoted -- wrong on 2025Mar21, where two promotions
+    // land in the same group.
     byId[cand].nowPromoted = true;
     resortGroup(receiving, byId);
     promoted.push(cand);
