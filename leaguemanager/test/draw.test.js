@@ -386,6 +386,49 @@ describe('promotion, the branches with no oracle', () => {
     }
   });
 
+  /**
+   * **A demoted player can fall twice in one pass, and that is the C#'s behaviour too.**
+   *
+   * This settles the last open question in this function. The C# carries a disjunct
+   * `draw.js` has never had -- `player.GroupNum != MyGroupIndex`, at `Group.cs:179` and
+   * `:192`, mirrored as `==` at `:235`. `b0c79bd` left it unported on the argument that
+   * it guards a demoted player from being re-ejected out of the group it was merged
+   * into, and that this cannot happen while groups are contiguous rating slices.
+   * **Both halves of that argument are wrong**, and the real mechanism is simpler.
+   *
+   * `Group.Players` is only ever inserted into at `Group.cs:80`, and the next statement,
+   * `:81`, is `player.GroupNum = MyGroupIndex` -- before `AdjustLowestRankings` runs at
+   * `:83`. The only other write, `DrawListCode.cs:297`, sets the same value. So every
+   * player in a group always agrees with it, the disjunct is **never true**, and a
+   * demoted player arriving via `MergePlayersList -> AddPlayer` (`Group.cs:318`) is a
+   * full citizen of the group it lands in -- ejectable again immediately. Contiguity
+   * never enters into it. The C# comment claiming the group number "is updated at the
+   * end of the promotion algorithm" (`Group.cs:163`) is false, and is what the earlier
+   * reading was built on. ADR 0003 -- comments are not specification.
+   *
+   * Below, seat 2 is ejected from group 1 into group 2, then ejected again into group 3
+   * -- two groups down in a single pass. It takes a rating tie across the receiving
+   * group's eligible seats, which is why no archived night shows it.
+   *
+   * **This test fails if the `GroupNum` disjunct is ever implemented.** Skipping seat 2
+   * as foreign makes `adjustLowestRankings` return `{lowest: 3, secondLowest: null}`
+   * rather than `{lowest: 2, secondLowest: 3}` -- ejecting the wrong seat *and* nulling
+   * the second-lowest, which silently skips the gap test at `draw.js:544`. Porting the
+   * disjunct would introduce a divergence, not close one. See appendix B and the
+   * register note in the replay runbook.
+   */
+  it('does not spare a demoted player from a second ejection -- Group.cs:80-83', () => {
+    const players = [
+      person(1, 2000), person(2, 1900), person(3, 1900),
+      person(4, 1850, true), person(5, 1800, true), person(6, 1700),
+    ];
+    const { groups, promoted } = promoteAllGroups([[1, 2], [3, 4], [5, 6]], players, 150);
+    assert.deepEqual(promoted, [4, 5]);
+    assert.deepEqual(groups, [[1, 4], [3, 5], [2, 6]],
+      'seat 2 falls from group 1 to 2 to 3; the disjunct would have stopped it at 2');
+    assert.deepEqual(groups.map((g) => g.length), [2, 2, 2], 'sizes still one-in-one-out');
+  });
+
   it('caps candidates at three, and a fourth simply stays put', () => {
     // DrawListCode.cs:325. FindPlayersToPromote counts every flagged player but adds
     // only the first three to the list, so the fourth is neither promoted nor demoted.

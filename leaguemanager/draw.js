@@ -532,6 +532,16 @@ function findPlayersToPromote(ids, byId, max = MAX_PROMOTION_CANDIDATES) {
  * transcribed but unreachable: `AddPlayer` refuses only when the group is at
  * `MaxPlayers`, and a slot was just freed by the eject. It is kept because the trailing
  * drain below depends on the `break` existing.
+ *
+ * **The C#'s `GroupNum != MyGroupIndex` disjunct is deliberately not ported, at either
+ * site** -- `AdjustLowestRankings` (`Group.cs:179`, `:192`) and, mirrored as `==`,
+ * `FindPlayersToPromote` (`:235`). It is inert in the C#: the only insertion into
+ * `Group.Players` is `Group.cs:80`, and `:81` stamps `player.GroupNum = MyGroupIndex`
+ * before `AdjustLowestRankings` runs at `:83`, so no player in a group ever disagrees
+ * with it. Porting it faithfully is a no-op; porting it without that eager re-stamp
+ * ejects the wrong seat and nulls `secondLowest`, skipping the gap test below. Both
+ * measured. Do not re-open this -- `draw.test.js`'s *"does not spare a demoted player
+ * from a second ejection"* fails if it is ever added, and appendix B carries the proof.
  */
 function promoteInto(receiving, candidates, byId, gap, promoted, maxPlayers) {
   const demoted = [];

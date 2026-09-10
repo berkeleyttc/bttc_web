@@ -291,7 +291,17 @@ export const DrawTab = {
       return { ...base, groups: after.groups, promoted: new Set(after.promoted) };
     });
 
-    /** The manual moves, applied on top of the computed draw. */
+    /**
+     * The manual moves, applied on top of the computed draw.
+     *
+     * **This is the one path that produces non-contiguous groups, and promotion must
+     * never be re-run over its output.** `built` above computes promotion from the
+     * pre-move partition and nothing feeds these groups back into it -- keep it that
+     * way. Nothing in `promoteAllGroups` checks contiguity, so it would not complain;
+     * it would just answer a question nobody asked. Promotion means *"lift the winner
+     * into the group above and drop that group's lowest"*, and over hand-moved groups
+     * neither "the group above" nor "its lowest" carries the meaning the C# gave it.
+     */
     const groups = computed(() => {
       const b = built.value;
       if (!b) return [];
