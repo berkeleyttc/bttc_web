@@ -553,9 +553,9 @@ const Shell = {
       // **Your own name is not a rival.** The lease is keyed `{user_id, session_id}` so a
       // second tab is a genuine challenger -- correct, and it is what stops two tabs
       // clobbering each other with no precondition token anywhere to catch it. But the
-      // banner rendered that as *"Mohit Galvankar is running tonight’s session"* to Mohit
-      // Galvankar, which reads as a stranger holding the desk rather than as the tab
-      // behind this one.
+      // banner rendered that as *"<the operator's own name> is running tonight’s
+      // session"* to that same operator, which reads as a stranger holding the desk
+      // rather than as the tab behind this one.
       if (holderIsMe.value) {
         return lock.lost
           ? 'You took the session over in another tab. This tab is read-only and anything'
