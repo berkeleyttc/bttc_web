@@ -27,6 +27,12 @@
  * other.
  */
 
+// The one import this module has, and it is deliberate. `pinProblem` decides whether a
+// PIN is settable at all; `updateMember` refuses to put an unsettable one on the wire.
+// Keeping the rule in a pure sibling rather than inline here is what lets the Roster tab
+// show the same sentence under the field without a second copy of the rule.
+import { pinProblem } from './member-form.js';
+
 /** The Netlify Functions proxy. It strips this prefix and forwards the rest. */
 export const DEFAULT_BASE_URL = '/.netlify/functions/api';
 
@@ -454,25 +460,43 @@ export function createClient({ fetchImpl, baseUrl = DEFAULT_BASE_URL, getToken, 
      * **the edit form needs no server change**. It sits beside `initial_rating` and
      * `rating_survey`, which are already there.
      *
-     * **Three fields the request model accepts and this function will not send.**
-     * `UpdatePlayerRequest` declares `token`, `role` and `is_active`, and the proxy
+     * **Two fields the request model accepts and this function will not send.**
+     * `UpdatePlayerRequest` declares `role` and `is_active` as well, and the proxy
      * allowlists this route:
      *
-     * - **`token`** is the member's six-digit PIN, and ticket 30 Q16 ships no control
-     *   for it. The client could not display one anyway -- ticket 13 dropped `token`
-     *   from `PlayerDbSearchResponse` and from `to_dict`'s 'all' list. The cost is
-     *   named rather than absorbed: `POST /rr/login` must refuse `token == "123456"`,
-     *   the default written for every member who signs up without supplying one, so a
-     *   member promoted to director mid-season **cannot log in** and the desk has no
-     *   way to fix it (**F30**).
      * - **`role`** is what the three-request bypass writes (13 Q2b). Not ours to send.
      * - **`is_active`** is ticket 31's soft delete, which has its own path.
+     *
+     * **`token` was the third, until F30 shipped 2026-09-10.** It is the member's
+     * six-digit PIN and it is now sent -- but only ever *written*, never read back:
+     * ticket 13 dropped `token` from `PlayerDbSearchResponse` and from `to_dict`'s
+     * 'all' list, so no cached member row carries one and the form has nothing to
+     * display. **Blank therefore means unchanged**, which is why `token` is guarded on
+     * emptiness rather than on the `!= null` the other five use -- `''` would blank a
+     * credential the operator never saw.
+     *
+     * Why it had to ship: `POST /rr/login` refuses `token == "123456"`
+     * (`bttc_api/helpers/auth_helper.py:180`), and that is the default written for
+     * every member who signs up without supplying one *and* for every walk-in the desk
+     * creates, so a member promoted to director after cutover could not sign in and the
+     * desk had no way to fix it.
+     *
+     * **An unusable PIN throws before anything is sent**, at `status: 0`, the same
+     * shape as the offline arm below. The Roster tab disables Save on the same rule and
+     * shows the same sentence, so this arm is a second lock rather than the UX: a bug
+     * in the tab must not be able to write a PIN that provably cannot sign in. The two
+     * refusals are `123456` itself and a leading zero -- see `member-form.js`'s
+     * `pinProblem`, which owns both and explains the `Optional[int]` coercion behind
+     * the second.
      *
      * `model_config = ConfigDict(extra="forbid")`, so an unknown key is a 422 rather
      * than a silent no-op -- which is why the caller passes a fixed shape and not a
      * spread. `phone_number` is coerced to `int` server-side and must be ten digits.
      */
-    updateMember: (userId, { firstName, lastName, phoneNumber, email, latestRating, ageStatus }) => {
+    // `async` where its eight siblings are not, and only for the PIN: a bare `throw` in a
+    // sync arrow escapes the call rather than the promise, so a caller holding `.catch()`
+    // would miss it entirely. `request` already rejects rather than throws; this matches.
+    updateMember: async (userId, { firstName, lastName, phoneNumber, email, latestRating, ageStatus, token }) => {
       const body = {};
       if (firstName != null) body.first_name = firstName;
       if (lastName != null) body.last_name = lastName;
@@ -481,6 +505,12 @@ export function createClient({ fetchImpl, baseUrl = DEFAULT_BASE_URL, getToken, 
       if (latestRating != null) body.latest_rating = latestRating;
       // Shallow-merged, so this does not disturb initial_rating or rating_survey.
       if (ageStatus != null) body.details = { age_status: ageStatus };
+      const pin = String(token ?? '').trim();
+      if (pin !== '') {
+        const problem = pinProblem(pin);
+        if (problem) throw new ApiError({ status: 0, code: null, detail: problem });
+        body.token = pin;
+      }
       return request('PUT', '/player/' + userId, { body });
     },
 
