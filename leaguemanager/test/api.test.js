@@ -286,18 +286,59 @@ describe('the error body shapes, including the three that carry no code', () => 
 });
 
 describe('PUT /player/{id} — the member edit form', () => {
-  it('never sends token, role or is_active', async () => {
-    // UpdatePlayerRequest accepts all three and the proxy allowlists the route.
-    // `token` is the six-digit PIN and ticket 30 Q16 ships no control for it; `role`
-    // is what ticket 13 Q2b's three-request bypass writes; `is_active` is ticket 31's
-    // soft delete, which has its own path.
+  it('never sends role or is_active', async () => {
+    // UpdatePlayerRequest accepts both and the proxy allowlists the route. `role` is what
+    // ticket 13 Q2b's three-request bypass writes; `is_active` is ticket 31's soft delete,
+    // which has its own path. **`token` used to be on this list** and came off when F30
+    // shipped the PIN field — see the three cases below, which are what replaced it.
     const { calls, client } = harness();
     await client.updateMember(812, {
       firstName: 'Jane', lastName: 'Doe', phoneNumber: '(510) 555-1212',
       email: 'j@x.com', latestRating: 1740, ageStatus: 'senior',
     });
-    for (const forbidden of ['token', 'role', 'is_active']) {
+    for (const forbidden of ['role', 'is_active']) {
       assert.equal(forbidden in calls[0].body, false, forbidden + ' must never be sent');
+    }
+  });
+
+  it('omits token entirely when the PIN field was left blank — blank means unchanged', async () => {
+    // The field can never show the current PIN (ticket 13 dropped `token` from
+    // PlayerDbSearchResponse), so sending '' would blank a credential the operator never
+    // saw. The `!= null` idiom the other five fields use would do exactly that.
+    const { calls, client } = harness();
+    await client.updateMember(812, { firstName: 'Jane', token: '' });
+    assert.equal('token' in calls[0].body, false);
+    await client.updateMember(812, { firstName: 'Jane', token: '   ' });
+    assert.equal('token' in calls[1].body, false);
+    await client.updateMember(812, { firstName: 'Jane', token: null });
+    assert.equal('token' in calls[2].body, false);
+  });
+
+  it('sends token when the desk sets one — F30, the only way to unlock a new director', async () => {
+    // POST /rr/login refuses the "123456" default every member carries, so without this
+    // a member promoted to director after cutover cannot sign in at all.
+    const { calls, client } = harness();
+    await client.updateMember(812, { token: '481902' });
+    assert.deepEqual(Object.keys(calls[0].body), ['token']);
+    assert.equal(calls[0].body.token, '481902');
+  });
+
+  it('refuses an unusable PIN before the request leaves, never at the server', async () => {
+    // The form disables Save on the same rule, so this arm is the second lock: a bug in
+    // the tab must not be able to write a PIN that provably cannot sign in. Defects #10,
+    // #19 and #20 were all a state whose remedy could not reach it — this is that shape
+    // caught on the way in.
+    for (const [bad, expected] of [
+      ['12345', /six digits/],
+      ['012345', /cannot start with/],
+      ['123456', /sign-in refuses it|sign in/],
+    ]) {
+      const { calls, client } = harness();
+      const err = await client.updateMember(812, { token: bad }).then(() => null, (e) => e);
+      assert.ok(err instanceof ApiError, bad + ' must throw');
+      assert.equal(err.status, 0, bad + ' never reached the network');
+      assert.match(err.detail, expected);
+      assert.equal(calls.length, 0, bad + ' must send nothing at all');
     }
   });
 

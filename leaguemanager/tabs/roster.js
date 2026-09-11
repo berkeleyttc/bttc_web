@@ -26,7 +26,11 @@
  *   and then sorted the rest by last name through a `CompareTo(...) == -1` test that is
  *   correct only because .NET's ordinal comparison happens to return exactly `-1`. A
  *   latent bug the port declines to transcribe.
- * - **A PIN field** on the edit form: ticket 30 Q16, and see `api.js`'s `updateMember`.
+ * - ~~**A PIN field** on the edit form: ticket 30 Q16.~~ **Shipped 2026-09-10 as F30**,
+ *   because the gap was not cosmetic: `POST /rr/login` refuses the `123456` every member
+ *   starts with, so a member promoted to director after cutover could not sign in at all.
+ *   Edit-only, write-only, blank means unchanged. The rule and both form shapes live in
+ *   `member-form.js` -- this file cannot be reached by `node --test`, and they can.
  * - **`age_status` on the roster row.** Ticket 22 Q11 offered a desk-side correction
  *   and declined it, so a mis-bracketed Youth costs **$5 through `fee_waived`, not
  *   $3**. The bracket is edited on the member record, which reprices the evening on
@@ -40,17 +44,14 @@ import { session, members, appendMember, applyRosterWrite, applySession, isReadO
   from '../store.js';
 import { filterMembers, possibleDuplicates, RESULT_CAP } from '../search.js';
 import { nameKey, compareNameKeys } from '../draw.js';
+// Both form shapes and the PIN rule live outside this file so `node --test` can reach
+// them -- this module imports `window.Vue` and cannot be loaded there. See member-form.js.
+import { AGE_OPTIONS, blankForm, editFormFor, pinProblem } from '../member-form.js';
 
-const AGE_OPTIONS = ['youth', 'adult', 'senior'];
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash' },
   { value: 'zelle_venmo', label: 'Venmo, Zelle, etc.' },
 ];
-
-const blankForm = () => ({
-  first_name: '', last_name: '', phone_number: '', email: '',
-  latest_rating: '', age_status: 'adult',
-});
 
 /**
  * The rail's three sort modes.
@@ -146,12 +147,11 @@ export const RosterTab = {
     function startEdit() {
       const m = selectedMember.value;
       if (!m) return;
-      Object.assign(form, {
-        first_name: m.first_name ?? '', last_name: m.last_name ?? '',
-        phone_number: m.phone_number ?? '', email: m.email === 'NA' ? '' : (m.email ?? ''),
-        latest_rating: m.latest_rating ?? '',
-        age_status: AGE_OPTIONS.includes(m.age_status) ? m.age_status : 'adult',
-      });
+      // A TOTAL shape, from one place. This used to be a partial literal, which is safe
+      // only while every field is refilled from the member -- and the PIN never can be
+      // (there is nothing to read it from). A partial assign would leave a PIN typed for
+      // the previous member sitting in the form. See member-form.js's `editFormFor`.
+      Object.assign(form, editFormFor(m));
       mode.value = 'edit';
       banner.value = null;
     }
@@ -217,6 +217,13 @@ export const RosterTab = {
       select(body.user_id);
     }
 
+    /**
+     * What is wrong with the PIN as typed, or null. Rendered under the field and used to
+     * disable Save -- `api.js` refuses the same values independently, so a mistake here
+     * costs a banner rather than a lockout.
+     */
+    const pinHint = computed(() => pinProblem(form.token));
+
     async function saveMember() {
       const id = selectedId.value;
       const ok = await run(() => api.updateMember(id, {
@@ -226,8 +233,14 @@ export const RosterTab = {
         email: form.email.trim() || null,
         latestRating: form.latest_rating === '' ? null : Number(form.latest_rating),
         ageStatus: form.age_status,
+        // Blank means unchanged. It CANNOT mean "clear it": there is no value to compare
+        // against and no way to show one, so an empty field has to be a no-op.
+        token: form.token.trim() || null,
       }));
       if (!ok) return;
+      // Cleared on success as well as by `editFormFor`, so a PIN never outlives the save
+      // that wrote it -- not in the form, and not on the screen behind the operator.
+      form.token = '';
       // The endpoint returns {success, message, bttc_id, internal_user_id} and not the
       // row, so patch the cached copy rather than refetch 1,143 members for one edit.
       const m = selectedMember.value;
@@ -397,7 +410,7 @@ export const RosterTab = {
       query, found, searchNote, RESULT_CAP,
       session, members, isReadOnly, busy, banner,
       selectedId, selectedMember, selectedRosterRow, selectedWaitlistRow,
-      mode, form, duplicates, AGE_OPTIONS, PAYMENT_METHODS, addMethod,
+      mode, form, duplicates, pinHint, AGE_OPTIONS, PAYMENT_METHODS, addMethod,
       capDraft,
       select, startCreate, startEdit, createMember, saveMember,
       addToRoster, removeFromRoster, promote, settle, toggleFlag, saveCap,
@@ -524,7 +537,10 @@ export const RosterTab = {
       <!-- One form shape for create and edit. AGE STATUS IS A <select> ON BOTH
            (ticket 30 Q13): the design's create-form radio group at
            'League Manager.dc.html:189-192' becomes the '<select>' the edit form
-           already used at ':252-253'. THERE IS NO PIN FIELD (ticket 30 Q16). -->
+           already used at ':252-253'. THE PIN FIELD IS EDIT-ONLY (F30): 'POST /rr/member'
+           declares no 'model_config', so pydantic's default 'extra=ignore' would swallow
+           a PIN sent at creation and the control would look like it worked. Create, then
+           edit. -->
       <div v-if="mode === 'edit' || mode === 'create'">
         <div class="card-kicker">{{ mode === 'create' ? 'New member' : 'Edit details' }}</div>
         <div class="lm-row2">
@@ -547,6 +563,23 @@ export const RosterTab = {
           </select>
         </div>
 
+        <!-- F30. WRITE-ONLY, AND IT NEVER SHOWS THE CURRENT VALUE: ticket 13 dropped
+             'token' from PlayerDbSearchResponse, so no cached member row carries one.
+             Blank means unchanged. This exists because 'POST /rr/login' refuses the
+             '123456' every member starts with, so without it a member promoted to
+             director cannot sign in and the desk cannot fix it. -->
+        <div v-if="mode === 'edit'" class="field">
+          <label for="lm-pin">Sign-in PIN</label>
+          <input id="lm-pin" class="input" v-model="form.token" inputmode="numeric"
+                 maxlength="6" autocomplete="off" :disabled="isReadOnly"
+                 placeholder="leave blank to keep the current PIN" />
+          <p class="text-muted" v-if="!pinHint">
+            Six digits, and never shown back — write it down and hand it to them.
+            Only needed for a director or admin; a player never signs in.
+          </p>
+          <p class="text-muted" v-else>{{ pinHint }}</p>
+        </div>
+
         <!-- Advisory only, and the create button below is NEVER disabled. -->
         <div v-if="duplicates.length" class="lm-dupes">
           {{ duplicates.length }} member{{ duplicates.length === 1 ? '' : 's' }} already
@@ -557,7 +590,11 @@ export const RosterTab = {
         </div>
 
         <div class="lm-row2" style="margin-top:12px">
-          <button class="btn btn-primary" type="button" :disabled="isReadOnly || busy"
+          <!-- Save is blocked while the PIN is unusable. The duplicate warning above
+               never blocks anything (ticket 21 Q7) and this does, because a bad name is
+               a judgement call and a bad PIN is a lockout with no error to read. -->
+          <button class="btn btn-primary" type="button"
+                  :disabled="isReadOnly || busy || !!pinHint"
                   @click="mode === 'create' ? createMember() : saveMember()">
             {{ mode === 'create' ? 'Create member' : 'Save' }}
           </button>
