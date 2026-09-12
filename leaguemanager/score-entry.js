@@ -14,6 +14,12 @@
  * `cells` is the operator's draft, `saved` is the shadow of what the server holds. A
  * blank half means NOT YET ENTERED (ticket 19 Q4); a match that did not happen is typed
  * `0/0` or `D`. Only a fully entered pair can be wrong.
+ *
+ * **The Clear controls' count and wording are here too** (2026-09-12), the piece F41 named
+ * untested and left. What stays in the tab is I/O -- the `confirm`, the wipe, the POST --
+ * and the read-only guard in front of them, which protects the DRAFT rather than the
+ * POST (`post` has its own guard): an evicted tab keeps its draft, read-only rather than
+ * discarded. That guard is on the tab side of the line and is untested by construction.
  */
 
 /** Ticket 19 Q5. `D` is a real forfeit; the `-99` sentinel died with ticket 11. */
@@ -114,4 +120,32 @@ export function submitProblem(cells, saved, { readOnly, busy }) {
 export function autoSubmitDue(cells, saved, pairs) {
   if (savedComplete(saved, pairs)) return false;
   return entered(cells) === pairs && !hasInvalid(cells) && dirty(cells, saved);
+}
+
+/** Pairs in a group of `n`: the closed form `docs/10` section 2.2 draws its rows from. */
+export function pairsIn(n) {
+  return n > 1 ? (n * (n - 1)) / 2 : 0;
+}
+
+/**
+ * Pairs across the evening. The reference session's `[6,6,6,6,6,7,7,7,7,7]` is **180** --
+ * not `docs/00:34`'s "335 matches", which counts nothing (ticket 19 Q11): the session has
+ * 180 pairs, 178 played, 360 cells and 356 stored deltas, and 335 is none of those.
+ */
+export function totalPairs(groups) {
+  return groups.reduce((sum, g) => sum + pairsIn(g.players.length), 0);
+}
+
+/**
+ * The two Clear confirms (ticket 19 Q11): both controls ship behind one, the per-group
+ * one gaining a dialog legacy never had because the port DELETEs rows with no undo. The
+ * count is COMPUTED, never transcribed -- 335 had already propagated into Q11's own
+ * verbatim string before it was measured.
+ */
+export function clearGroupPrompt(g, pairs) {
+  return 'Clear all ' + pairs + ' results for group ' + g + '?';
+}
+
+export function clearAllPrompt(groups) {
+  return 'Clear results for ALL ' + groups.length + ' groups? ' + totalPairs(groups) + ' matches.';
 }

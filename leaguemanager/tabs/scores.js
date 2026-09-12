@@ -61,6 +61,7 @@ import { writeDraft, clearDraftGroup } from '../persist.js';
 import {
   ALPHABET, entered as enteredIn, invalidKeys as invalidKeysIn, hasInvalid as hasInvalidIn,
   groupState, dirty as dirtyIn, savedComplete as savedCompleteIn, submitProblem, autoSubmitDue,
+  pairsIn, clearGroupPrompt, clearAllPrompt,
 } from '../score-entry.js';
 
 /** Everything that navigates. Arrow keys are deliberately NOT intercepted. */
@@ -104,13 +105,11 @@ export const ScoresTab = {
     const groupOf = (n) => session.groups.find((g) => g.ordinal === n) || null;
     const group = computed(() => groupOf(cur.value));
     const size = computed(() => (group.value ? group.value.players.length : 0));
-    const total = computed(() => (size.value * (size.value - 1)) / 2);
+    const total = computed(() => pairsIn(size.value));
 
     const pairsOf = (n) => {
       const g = groupOf(n);
-      if (!g) return 0;
-      const p = g.players.length;
-      return (p * (p - 1)) / 2;
+      return g ? pairsIn(g.players.length) : 0;
     };
 
     /** `docs/10` section 2.2's closed form: rows = N-1, row k against k+1..N. */
@@ -361,30 +360,24 @@ export const ScoresTab = {
     // ------------------------------------------------------------ the clear controls
 
     /**
-     * Both Clear controls ship, **both confirmed** (ticket 19 Q11), one of them new.
+     * Both Clear controls ship, **both confirmed** (ticket 19 Q11), one of them new. The
+     * count and the wording are `score-entry.js`'s, where the 335 story is told and
+     * `test/score-entry.test.js` pins 180. What is here is I/O.
      *
-     * The count is COMPUTED, never transcribed. `docs/00:34` gives the reference
-     * session's scale as *"335 matches"*, which counts nothing: the group sizes are
-     * `[6,6,6,6,6,7,7,7,7,7]`, so the session has **180 pairs, 178 played, 360 cells and
-     * 356 stored deltas**. 335 is none of those and divides into none of them, and it
-     * had already propagated into ticket 19 Q11's verbatim confirm string.
+     * The read-only guard protects the DRAFT, not the POST -- `post` refuses on its own.
+     * Without it an evicted tab would wipe the draft it is supposed to keep (ticket 14,
+     * and the comment in `post` above) before the refused POST ever ran.
      */
-    const allPairs = computed(() => session.groups.reduce((n, g) => {
-      const p = g.players.length;
-      return n + (p * (p - 1)) / 2;
-    }, 0));
-
     async function clearGroup(g) {
       if (isReadOnly.value) return;
-      if (!window.confirm('Clear all ' + pairsOf(g) + ' results for group ' + g + '?')) return;
+      if (!window.confirm(clearGroupPrompt(g, pairsOf(g)))) return;
       draft[g] = {};
       await post(g, false);            // an empty payload deletes this group's rows
     }
 
     async function clearAll() {
       if (isReadOnly.value) return;
-      if (!window.confirm('Clear results for ALL ' + session.groups.length
-        + ' groups? ' + allPairs.value + ' matches.')) return;
+      if (!window.confirm(clearAllPrompt(session.groups))) return;
       for (const g of session.groups) {
         draft[g.ordinal] = {};
         await post(g.ordinal, false);

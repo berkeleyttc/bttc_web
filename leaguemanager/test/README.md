@@ -71,7 +71,10 @@ a decision rather than an accident of layout:
   `pairProblem` against `fixtures/pairs.json`, every pair `is_valid_pair` answers for,
   and the same deletion now fails one named test. What stays on the browser side is the
   tab's *call* of `autoSubmitDue` — the decision is tested, the firing still needs a
-  browser.
+  browser. The Clear controls' count and confirm wording followed on 2026-09-12
+  (`pairsIn`, `totalPairs`, the two prompts; the reference session is 180, not "335");
+  their read-only guard, the `confirm` and the POST are I/O and stay in the tab, untested
+  by construction.
 
 ## `fixtures/`
 

@@ -26,6 +26,7 @@ import { describe, it } from 'node:test';
 import {
   ALPHABET, pairProblem, isEntered, entered, invalidKeys, hasInvalid, groupState,
   dirty, savedComplete, submitProblem, autoSubmitDue,
+  pairsIn, totalPairs, clearGroupPrompt, clearAllPrompt,
 } from '../score-entry.js';
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
@@ -148,5 +149,38 @@ describe('autoSubmitDue -- the incomplete → complete edge, and the test that w
     const partial = complete(); partial['2_3'] = { a: 'D', b: '' };
     assert.equal(autoSubmitDue(complete(), complete(), 3), false);
     assert.equal(autoSubmitDue(partial, undefined, 3), false);
+  });
+});
+
+describe('the Clear controls -- ticket 19 Q11, the count is computed, never transcribed', () => {
+  // The reference session: ten groups, `[6,6,6,6,6,7,7,7,7,7]`. Legacy's confirm said
+  // "335 matches", a number that is none of its measures (180 pairs, 178 played, 360
+  // cells, 356 deltas) and divides into none of them. These are the sentences the tab
+  // puts in `window.confirm`; the confirm and the POST that follows stay I/O in the tab.
+  const reference = [6, 6, 6, 6, 6, 7, 7, 7, 7, 7]
+    .map((n, i) => ({ ordinal: i + 1, players: Array.from({ length: n }, (_, k) => ({ seed: k + 1 })) }));
+
+  it('counts the pairs in a group by the closed form, and never below zero', () => {
+    assert.equal(pairsIn(0), 0);
+    assert.equal(pairsIn(1), 0);
+    assert.equal(pairsIn(2), 1);
+    assert.equal(pairsIn(6), 15);
+    assert.equal(pairsIn(7), 21);
+  });
+
+  it('sums the evening to 180 for the reference session, and 0 for none', () => {
+    assert.equal(totalPairs(reference), 180);
+    assert.equal(totalPairs([]), 0);
+  });
+
+  it('words the per-group confirm with its own pair count', () => {
+    assert.equal(clearGroupPrompt(3, 15), 'Clear all 15 results for group 3?');
+    assert.equal(clearGroupPrompt(10, 21), 'Clear all 21 results for group 10?');
+  });
+
+  it('words the all-groups confirm from the computed total, not from docs/00:34', () => {
+    const text = clearAllPrompt(reference);
+    assert.equal(text, 'Clear results for ALL 10 groups? 180 matches.');
+    assert.doesNotMatch(text, /335/);
   });
 });
