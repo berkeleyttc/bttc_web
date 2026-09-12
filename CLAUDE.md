@@ -32,10 +32,17 @@ upstream, so one careless stage-and-push publishes both credentials. Stage by pa
 `signup/`, `roster/`) switch to reading status codes instead of `success: false`, and the public
 signup form is broken in the minutes between the two pushes.
 
-**The `staging` branch is a different thing** and is not the port branch: it is a one-line flip of
-`netlify/functions/api.js`'s `USE_DEV_API` so the browser reaches `bttc-api-dev`. Rebase it on `main`
-before each rehearsal. Netlify branch deploys must be enabled in the dashboard — `netlify.toml` has
-no `[context.branch-deploy]`.
+**The dev site is Netlify's deploy preview of the draft PR** from `feature/league-manager` to
+`main` (ticket 34; there is no `staging` branch — that design was reversed). While the branch is in
+test it carries one commit flipping `netlify/functions/api.js`'s `USE_DEV_API` to `true`, which is
+that file's own convention for PR reviews; the preview then reaches `bttc-api-dev` through
+`BTTC_API_DEV_URL` / `BTTC_DEV_API_KEY` on the site, which `[context.deploy-preview]` already
+inherits. `bttc-api-dev` publishes **to this branch** (`BTTC_GH_BRANCH`), so a rehearsal publish
+rebuilds the preview and never the club site — and leaves commits authored by *BTTC Publisher* on
+the branch. **Before the branch merges, drop every one of those and the flip commit by rebase**
+(`tools/dev-environment.sh --cutover-clean` in the planner does it and checks
+`git log origin/main..HEAD --author='BTTC Publisher'` is empty). They are rehearsal artifacts
+carrying real names; they must not reach `main`'s history.
 
 **`/leaguemanager/` uses native ES modules**, the first in this repo. Modules are not a build step, so
 the no-bundler constraint below still holds — but **Local Development Option 1 will not work for this
