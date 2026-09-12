@@ -49,7 +49,8 @@ describe('every shipped module is a well-formed ES module', () => {
   it('finds the modules at all, so the check is not vacuous', () => {
     assert.ok(files.length >= 8, 'expected the app plus its seven tabs, found ' + files.length);
     for (const name of ['api.js', 'app.js', 'store.js', 'persist.js', 'client.js',
-                        'search.js', 'draw.js', 'play-order.js', 'print.js']) {
+                        'search.js', 'draw.js', 'play-order.js', 'print.js',
+                        'member-form.js', 'score-entry.js']) {
       assert.ok(files.some((f) => basename(f) === name), name + ' is missing');
     }
     for (const tab of ['roster', 'draw', 'printing', 'scores', 'finalize', 'results', 'settings']) {

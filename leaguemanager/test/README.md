@@ -1,8 +1,8 @@
 # `leaguemanager/test/`
 
 Conformance tests for the pure domain modules — `draw.js`, `play-order.js`,
-`print.js`, `api.js`, `persist.js` and `search.js` — for the printed surface's
-stylesheet, and for the syntax of every module the app ships.
+`print.js`, `api.js`, `persist.js`, `search.js`, `member-form.js` and `score-entry.js` —
+for the printed surface's stylesheet, and for the syntax of every module the app ships.
 
 ```sh
 node --test 'leaguemanager/test/*.test.js'
@@ -45,7 +45,7 @@ The line between "runs in `node --test`" and "runs only in a browser" is exactly
 line between the pure domain files and everything else, so the seven tab modules,
 which import `window.Vue` from the CDN build, are not testable this way.
 
-**Three more files were built on the pure side of that line on purpose**, and each is
+**Five more files were built on the pure side of that line on purpose**, and each is
 a decision rather than an accident of layout:
 
 - **`api.js`** takes its `fetch`, its base URL and its two credential readers as
@@ -63,6 +63,15 @@ a decision rather than an accident of layout:
   reproduced exactly. That run cannot live here (this repo is public and the file is
   not), so `search.test.js` pins the rules on synthetic names and the real counts are
   recorded in its header as the reason to trust them.
+- **`member-form.js`** and **`score-entry.js`** are rules lifted *out of a tab* —
+  the PIN rule out of `roster.js`, the score-pair and group rules out of `scores.js` —
+  because a rule inside `setup()` cannot be reached from here at all. The second was
+  **measured** untested before it moved (F41): deleting the `3`/`3` gate from both of
+  the Scores tab's write paths left this suite green at 294. `score-entry.test.js` runs
+  `pairProblem` against `fixtures/pairs.json`, every pair `is_valid_pair` answers for,
+  and the same deletion now fails one named test. What stays on the browser side is the
+  tab's *call* of `autoSubmitDue` — the decision is tested, the firing still needs a
+  browser.
 
 ## `fixtures/`
 
@@ -83,6 +92,7 @@ Regenerate from a `bttc_api` checkout:
 python3 tests/oracles/oracle_solutions.py  --emit-fixture
 python3 tests/oracles/oracle_partition.py  --emit-fixture
 python3 tests/oracles/oracle_play_order.py --emit-fixture
+python3 tests/oracles/oracle_pairs.py      --emit-fixture   # no roster; a table of symbols
 ```
 
 **Staleness is visible, not enforced** (ticket 24 Q16): the `_source` block records
@@ -154,8 +164,9 @@ anything about CSS. A stale `app.css` cost half an hour of chasing a print bug t
 already been fixed.
 
 What that run is for, beyond "does it work": the properties no unit test reaches — that
-a 401 raises the overlay **without unmounting the app**, that auto-submit fires on the
-completeness edge with no click, that the four `sessionStorage` keys are the only ones
+a 401 raises the overlay **without unmounting the app**, that auto-submit *fires* on the
+completeness edge with no click (the decision itself is `score-entry.test.js`'s; the
+keystroke reaching it is not), that the four `sessionStorage` keys are the only ones
 written, and that the printed surface still lands **one page per artifact at MediaBox
 612 × 792 pt**. That last one caught a real defect: the app wraps the print region in a
 shell `print-preview.html` never had, and the tab strip pushed every sheet a fraction
