@@ -179,3 +179,22 @@ export function isTakenDown(rrPublish) {
   if (!brackets) return false;
   return [at(pub.sleep), at(pub.results)].some((t) => !!t && t > brackets);
 }
+
+/**
+ * Which notice the Draw List publish panel prints about the bracket page, so its two
+ * warnings cannot both render. `bracketsStale` (server, `_brackets_state`) says the page
+ * shows an earlier draw; `Taken down` (client, `isTakenDown` above) says the page is gone.
+ * When both hold the first premise is false -- there is no page to be wrong -- so the
+ * panel prints one sentence carrying both facts instead of two that contradict each
+ * other on the way to the same click. Lives here, not in the tab, for the reason
+ * `clearsBracketsStale` does.
+ *
+ * Returns `'down-and-stale'`, `'down'`, `'stale'`, or `null`.
+ */
+export function bracketsNotice(bracketsStale, publishRow) {
+  const down = !!publishRow && publishRow.tag === 'Taken down';
+  if (down && bracketsStale) return 'down-and-stale';
+  if (down) return 'down';
+  if (bracketsStale) return 'stale';
+  return null;
+}

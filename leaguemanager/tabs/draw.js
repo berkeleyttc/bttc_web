@@ -54,7 +54,7 @@ import {
 import { writeDraw, clearDraw } from '../persist.js';
 import {
   SCOPE_LABEL, BUTTON_LABEL, linksFor, tagClass, outcomeOf, errorOf, isTakenDown,
-  clearsBracketsStale,
+  clearsBracketsStale, bracketsNotice,
 } from '../publish.js';
 import {
   drawRoster, draw, enumerateSolutions, hasQuickSolutionOption, validateSpec,
@@ -619,6 +619,13 @@ export const DrawTab = {
       };
     });
 
+    /**
+     * Which of the two bracket-page warnings prints, or the one sentence that stands in
+     * for both. The rule is in `publish.js` so `publish.test.js` can pin it; the template
+     * below only switches on the word.
+     */
+    const notice = computed(() => bracketsNotice(session.bracketsStale, publishRow.value));
+
     async function publishBrackets() {
       publishBusy.value = true;
       publishOutcome.value = null;
@@ -660,7 +667,7 @@ export const DrawTab = {
       specText, specError, specNote, onSpecChange,
       SCOPE_LABEL, BUTTON_LABEL, tagClass,
       publishBusy, dryRun, canPublish, publishReason, publishesCommitted,
-      publishRow, publishBrackets,
+      publishRow, notice, publishBrackets,
     };
   },
 
@@ -784,8 +791,10 @@ export const DrawTab = {
           This publishes the committed draw, not the re-draw on screen.
         </p>
         <!-- F40. It WARNS and never disables: this button is the remedy, so gating it on
-             the condition would lock the operator out of the one click that clears it. -->
-        <p v-if="session.bracketsStale" class="lm-reason">
+             the condition would lock the operator out of the one click that clears it.
+             Yields to the 'Taken down' row below when the page is gone rather than wrong;
+             that row then says both. -->
+        <p v-if="notice === 'stale'" class="lm-reason">
           The draw was committed again after this page went up, so the published brackets
           show the earlier draw — publish again to update them.
         </p>
@@ -813,9 +822,16 @@ export const DrawTab = {
                rel="noopener">{{ l.label }}</a>
             <a v-if="publishRow.compare" :href="publishRow.compare" target="_blank"
                rel="noopener">compare</a>
-            <!-- No link, because a later take-down deleted the page it pointed at. -->
-            <span v-if="publishRow.tag === 'Taken down'" class="text-muted">
+            <!-- No link, because a later take-down deleted the page it pointed at. The
+                 second sentence is the F40 warning above folded in: when the draw has also
+                 moved, "the published brackets show the earlier draw" would be false --
+                 there is no page to be wrong -- so one line carries both facts. -->
+            <span v-if="notice === 'down'" class="text-muted">
               taken down since — publish again to put it back
+            </span>
+            <span v-if="notice === 'down-and-stale'" class="text-muted">
+              taken down since, and the draw has been committed again — publish again to
+              put it back with the current draw
             </span>
           </div>
           <div v-if="publishRow.written && publishRow.written.length"

@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { ApiError } from '../api.js';
 import {
   SCOPE_LABEL, BUTTON_LABEL, SCOPE_NAME,
-  linksFor, tagClass, outcomeOf, errorOf, isTakenDown, clearsBracketsStale,
+  linksFor, tagClass, outcomeOf, errorOf, isTakenDown, clearsBracketsStale, bracketsNotice,
 } from '../publish.js';
 
 describe('outcomeOf -- NO_CHANGES at 200 is a success, not a failure', () => {
@@ -216,6 +216,43 @@ describe('clearsBracketsStale -- F40, the flag must not outlive its own remedy',
     assert.equal(clearsBracketsStale(undefined), false);
     assert.equal(clearsBracketsStale({ tag: 'Failed', dryRun: false }), false);
     assert.equal(clearsBracketsStale({ tag: 'Sending', dryRun: false }), false);
+  });
+});
+
+describe('bracketsNotice -- the two bracket-page warnings never render together', () => {
+  // Publish brackets, re-commit the draw, publish sleep or results: the server's
+  // `bracketsStale` and the client's `Taken down` both hold, and until this rule the panel
+  // printed both sentences -- "the published brackets show the earlier draw" beside "taken
+  // down since". The first premise is false when the second holds: there is no page to be
+  // wrong. One sentence carries both facts.
+  it('merges into one notice when the page is gone AND the draw has moved', () => {
+    assert.equal(bracketsNotice(true, { tag: 'Taken down' }), 'down-and-stale');
+  });
+
+  it('is `down` alone when the page is gone and the draw has not moved', () => {
+    assert.equal(bracketsNotice(false, { tag: 'Taken down' }), 'down');
+  });
+
+  it('is `stale` alone under every other row, since the page is still up', () => {
+    for (const tag of ['Committed', 'No changes', 'Sending', 'Dry run', 'Failed']) {
+      assert.equal(bracketsNotice(true, { tag }), 'stale', tag);
+    }
+  });
+
+  it('is `stale` with no row at all, which is the flag before the cold load fills rrPublish', () => {
+    assert.equal(bracketsNotice(true, null), 'stale');
+    assert.equal(bracketsNotice(true, undefined), 'stale');
+  });
+
+  it('is nothing when neither holds', () => {
+    assert.equal(bracketsNotice(false, null), null);
+    assert.equal(bracketsNotice(false, { tag: 'Committed' }), null);
+    assert.equal(bracketsNotice(undefined, { tag: 'Committed' }), null);
+  });
+
+  it('reads the flag as a boolean, the way the template does', () => {
+    assert.equal(bracketsNotice(1, { tag: 'Taken down' }), 'down-and-stale');
+    assert.equal(bracketsNotice(0, { tag: 'Taken down' }), 'down');
   });
 });
 
