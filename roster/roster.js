@@ -4,15 +4,13 @@
 const { createApp, ref, reactive, computed, onMounted, onUnmounted } = Vue;
 
 const CACHE_KEYS = {
-  ROSTER: 'bttc_roster_cache',
-  EVENT_METADATA: 'bttc_event_metadata'
+  ROSTER: 'bttc_roster_cache'
 };
 
 // Cache TTL configuration (in milliseconds)
 // Defaults from ENV or fallback to reasonable defaults
 const CACHE_TTL = {
-  ROSTER: (typeof ENV !== 'undefined' && ENV.CACHE_TTL_ROSTER ? ENV.CACHE_TTL_ROSTER : 45) * 1000,    // Default: 45 seconds
-  EVENT_METADATA: 24 * 60 * 60 * 1000  // 24 hours (event date never changes once set)
+  ROSTER: (typeof ENV !== 'undefined' && ENV.CACHE_TTL_ROSTER ? ENV.CACHE_TTL_ROSTER : 45) * 1000    // Default: 45 seconds
 };
 
 const getCachedData = (cacheKey, ttl) => {
@@ -61,41 +59,6 @@ const clearCache = (cacheKey) => {
     sessionStorage.removeItem(cacheKey);
   } catch {
     // Ignore errors
-  }
-};
-
-// Helper functions for event metadata cache (shared with registration page)
-const getEventMetadataCache = () => {
-  try {
-    const cached = sessionStorage.getItem(CACHE_KEYS.EVENT_METADATA);
-    if (!cached) return null;
-
-    const { data, timestamp } = JSON.parse(cached);
-    const now = Date.now();
-    const age = now - timestamp;
-
-    // Check if cache is still valid (24 hours TTL)
-    if (age < CACHE_TTL.EVENT_METADATA) {
-      return data;
-    }
-
-    // Cache expired, remove it
-    sessionStorage.removeItem(CACHE_KEYS.EVENT_METADATA);
-    return null;
-  } catch (err) {
-    return null;
-  }
-};
-
-const setEventMetadataCache = (eventDate, eventType) => {
-  try {
-    const cacheEntry = {
-      data: { eventDate, eventType },
-      timestamp: Date.now()
-    };
-    sessionStorage.setItem(CACHE_KEYS.EVENT_METADATA, JSON.stringify(cacheEntry));
-  } catch (err) {
-    // sessionStorage unavailable, silently fail
   }
 };
 
@@ -259,11 +222,6 @@ const RosterApp = {
           capacity.value = capacityData;
           lastUpdated.value.capacity = now;
 
-          // Cache event metadata separately (long TTL since event date never changes)
-          // This cache is shared with the registration page to avoid unnecessary API calls
-          if (data.capacity.event_date || data.capacity.event_type) {
-            setEventMetadataCache(data.capacity.event_date, data.capacity.event_type);
-          }
         } else {
           // If capacity not included (should not happen with new API), continue without capacity
         }
@@ -921,4 +879,3 @@ window.addEventListener('unhandledrejection', (event) => {
     event.preventDefault();
   }
 });
-
