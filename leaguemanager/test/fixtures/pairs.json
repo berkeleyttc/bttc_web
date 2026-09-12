@@ -1,0 +1,744 @@
+{
+  "_source": {
+    "emitted_from": "8afa02e",
+    "note": "No roster in this fixture: it is a table of symbols, not a session. Regenerate with --emit-fixture. Staleness is visible, not enforced (ticket 24 Q16).",
+    "oracle": "tests/oracles/oracle_pairs.py",
+    "session": "RR_Results_2026Jul17.bttc"
+  },
+  "pairs": [
+    {
+      "a": "0",
+      "b": "0",
+      "valid": true
+    },
+    {
+      "a": "0",
+      "b": "1",
+      "valid": true
+    },
+    {
+      "a": "0",
+      "b": "2",
+      "valid": true
+    },
+    {
+      "a": "0",
+      "b": "3",
+      "valid": true
+    },
+    {
+      "a": "0",
+      "b": "D",
+      "valid": true
+    },
+    {
+      "a": "0",
+      "b": "",
+      "valid": false
+    },
+    {
+      "a": "0",
+      "b": " ",
+      "valid": false
+    },
+    {
+      "a": "0",
+      "b": "d",
+      "valid": true
+    },
+    {
+      "a": "0",
+      "b": "4",
+      "valid": false
+    },
+    {
+      "a": "0",
+      "b": "33",
+      "valid": false
+    },
+    {
+      "a": "0",
+      "b": "-99",
+      "valid": false
+    },
+    {
+      "a": "0",
+      "b": "x",
+      "valid": false
+    },
+    {
+      "a": "1",
+      "b": "0",
+      "valid": true
+    },
+    {
+      "a": "1",
+      "b": "1",
+      "valid": true
+    },
+    {
+      "a": "1",
+      "b": "2",
+      "valid": true
+    },
+    {
+      "a": "1",
+      "b": "3",
+      "valid": true
+    },
+    {
+      "a": "1",
+      "b": "D",
+      "valid": true
+    },
+    {
+      "a": "1",
+      "b": "",
+      "valid": false
+    },
+    {
+      "a": "1",
+      "b": " ",
+      "valid": false
+    },
+    {
+      "a": "1",
+      "b": "d",
+      "valid": true
+    },
+    {
+      "a": "1",
+      "b": "4",
+      "valid": false
+    },
+    {
+      "a": "1",
+      "b": "33",
+      "valid": false
+    },
+    {
+      "a": "1",
+      "b": "-99",
+      "valid": false
+    },
+    {
+      "a": "1",
+      "b": "x",
+      "valid": false
+    },
+    {
+      "a": "2",
+      "b": "0",
+      "valid": true
+    },
+    {
+      "a": "2",
+      "b": "1",
+      "valid": true
+    },
+    {
+      "a": "2",
+      "b": "2",
+      "valid": true
+    },
+    {
+      "a": "2",
+      "b": "3",
+      "valid": true
+    },
+    {
+      "a": "2",
+      "b": "D",
+      "valid": true
+    },
+    {
+      "a": "2",
+      "b": "",
+      "valid": false
+    },
+    {
+      "a": "2",
+      "b": " ",
+      "valid": false
+    },
+    {
+      "a": "2",
+      "b": "d",
+      "valid": true
+    },
+    {
+      "a": "2",
+      "b": "4",
+      "valid": false
+    },
+    {
+      "a": "2",
+      "b": "33",
+      "valid": false
+    },
+    {
+      "a": "2",
+      "b": "-99",
+      "valid": false
+    },
+    {
+      "a": "2",
+      "b": "x",
+      "valid": false
+    },
+    {
+      "a": "3",
+      "b": "0",
+      "valid": true
+    },
+    {
+      "a": "3",
+      "b": "1",
+      "valid": true
+    },
+    {
+      "a": "3",
+      "b": "2",
+      "valid": true
+    },
+    {
+      "a": "3",
+      "b": "3",
+      "valid": false
+    },
+    {
+      "a": "3",
+      "b": "D",
+      "valid": true
+    },
+    {
+      "a": "3",
+      "b": "",
+      "valid": false
+    },
+    {
+      "a": "3",
+      "b": " ",
+      "valid": false
+    },
+    {
+      "a": "3",
+      "b": "d",
+      "valid": true
+    },
+    {
+      "a": "3",
+      "b": "4",
+      "valid": false
+    },
+    {
+      "a": "3",
+      "b": "33",
+      "valid": false
+    },
+    {
+      "a": "3",
+      "b": "-99",
+      "valid": false
+    },
+    {
+      "a": "3",
+      "b": "x",
+      "valid": false
+    },
+    {
+      "a": "D",
+      "b": "0",
+      "valid": true
+    },
+    {
+      "a": "D",
+      "b": "1",
+      "valid": true
+    },
+    {
+      "a": "D",
+      "b": "2",
+      "valid": true
+    },
+    {
+      "a": "D",
+      "b": "3",
+      "valid": true
+    },
+    {
+      "a": "D",
+      "b": "D",
+      "valid": true
+    },
+    {
+      "a": "D",
+      "b": "",
+      "valid": false
+    },
+    {
+      "a": "D",
+      "b": " ",
+      "valid": false
+    },
+    {
+      "a": "D",
+      "b": "d",
+      "valid": true
+    },
+    {
+      "a": "D",
+      "b": "4",
+      "valid": false
+    },
+    {
+      "a": "D",
+      "b": "33",
+      "valid": false
+    },
+    {
+      "a": "D",
+      "b": "-99",
+      "valid": false
+    },
+    {
+      "a": "D",
+      "b": "x",
+      "valid": false
+    },
+    {
+      "a": "",
+      "b": "0",
+      "valid": false
+    },
+    {
+      "a": "",
+      "b": "1",
+      "valid": false
+    },
+    {
+      "a": "",
+      "b": "2",
+      "valid": false
+    },
+    {
+      "a": "",
+      "b": "3",
+      "valid": false
+    },
+    {
+      "a": "",
+      "b": "D",
+      "valid": false
+    },
+    {
+      "a": "",
+      "b": "",
+      "valid": false
+    },
+    {
+      "a": "",
+      "b": " ",
+      "valid": false
+    },
+    {
+      "a": "",
+      "b": "d",
+      "valid": false
+    },
+    {
+      "a": "",
+      "b": "4",
+      "valid": false
+    },
+    {
+      "a": "",
+      "b": "33",
+      "valid": false
+    },
+    {
+      "a": "",
+      "b": "-99",
+      "valid": false
+    },
+    {
+      "a": "",
+      "b": "x",
+      "valid": false
+    },
+    {
+      "a": " ",
+      "b": "0",
+      "valid": false
+    },
+    {
+      "a": " ",
+      "b": "1",
+      "valid": false
+    },
+    {
+      "a": " ",
+      "b": "2",
+      "valid": false
+    },
+    {
+      "a": " ",
+      "b": "3",
+      "valid": false
+    },
+    {
+      "a": " ",
+      "b": "D",
+      "valid": false
+    },
+    {
+      "a": " ",
+      "b": "",
+      "valid": false
+    },
+    {
+      "a": " ",
+      "b": " ",
+      "valid": false
+    },
+    {
+      "a": " ",
+      "b": "d",
+      "valid": false
+    },
+    {
+      "a": " ",
+      "b": "4",
+      "valid": false
+    },
+    {
+      "a": " ",
+      "b": "33",
+      "valid": false
+    },
+    {
+      "a": " ",
+      "b": "-99",
+      "valid": false
+    },
+    {
+      "a": " ",
+      "b": "x",
+      "valid": false
+    },
+    {
+      "a": "d",
+      "b": "0",
+      "valid": true
+    },
+    {
+      "a": "d",
+      "b": "1",
+      "valid": true
+    },
+    {
+      "a": "d",
+      "b": "2",
+      "valid": true
+    },
+    {
+      "a": "d",
+      "b": "3",
+      "valid": true
+    },
+    {
+      "a": "d",
+      "b": "D",
+      "valid": true
+    },
+    {
+      "a": "d",
+      "b": "",
+      "valid": false
+    },
+    {
+      "a": "d",
+      "b": " ",
+      "valid": false
+    },
+    {
+      "a": "d",
+      "b": "d",
+      "valid": true
+    },
+    {
+      "a": "d",
+      "b": "4",
+      "valid": false
+    },
+    {
+      "a": "d",
+      "b": "33",
+      "valid": false
+    },
+    {
+      "a": "d",
+      "b": "-99",
+      "valid": false
+    },
+    {
+      "a": "d",
+      "b": "x",
+      "valid": false
+    },
+    {
+      "a": "4",
+      "b": "0",
+      "valid": false
+    },
+    {
+      "a": "4",
+      "b": "1",
+      "valid": false
+    },
+    {
+      "a": "4",
+      "b": "2",
+      "valid": false
+    },
+    {
+      "a": "4",
+      "b": "3",
+      "valid": false
+    },
+    {
+      "a": "4",
+      "b": "D",
+      "valid": false
+    },
+    {
+      "a": "4",
+      "b": "",
+      "valid": false
+    },
+    {
+      "a": "4",
+      "b": " ",
+      "valid": false
+    },
+    {
+      "a": "4",
+      "b": "d",
+      "valid": false
+    },
+    {
+      "a": "4",
+      "b": "4",
+      "valid": false
+    },
+    {
+      "a": "4",
+      "b": "33",
+      "valid": false
+    },
+    {
+      "a": "4",
+      "b": "-99",
+      "valid": false
+    },
+    {
+      "a": "4",
+      "b": "x",
+      "valid": false
+    },
+    {
+      "a": "33",
+      "b": "0",
+      "valid": false
+    },
+    {
+      "a": "33",
+      "b": "1",
+      "valid": false
+    },
+    {
+      "a": "33",
+      "b": "2",
+      "valid": false
+    },
+    {
+      "a": "33",
+      "b": "3",
+      "valid": false
+    },
+    {
+      "a": "33",
+      "b": "D",
+      "valid": false
+    },
+    {
+      "a": "33",
+      "b": "",
+      "valid": false
+    },
+    {
+      "a": "33",
+      "b": " ",
+      "valid": false
+    },
+    {
+      "a": "33",
+      "b": "d",
+      "valid": false
+    },
+    {
+      "a": "33",
+      "b": "4",
+      "valid": false
+    },
+    {
+      "a": "33",
+      "b": "33",
+      "valid": false
+    },
+    {
+      "a": "33",
+      "b": "-99",
+      "valid": false
+    },
+    {
+      "a": "33",
+      "b": "x",
+      "valid": false
+    },
+    {
+      "a": "-99",
+      "b": "0",
+      "valid": false
+    },
+    {
+      "a": "-99",
+      "b": "1",
+      "valid": false
+    },
+    {
+      "a": "-99",
+      "b": "2",
+      "valid": false
+    },
+    {
+      "a": "-99",
+      "b": "3",
+      "valid": false
+    },
+    {
+      "a": "-99",
+      "b": "D",
+      "valid": false
+    },
+    {
+      "a": "-99",
+      "b": "",
+      "valid": false
+    },
+    {
+      "a": "-99",
+      "b": " ",
+      "valid": false
+    },
+    {
+      "a": "-99",
+      "b": "d",
+      "valid": false
+    },
+    {
+      "a": "-99",
+      "b": "4",
+      "valid": false
+    },
+    {
+      "a": "-99",
+      "b": "33",
+      "valid": false
+    },
+    {
+      "a": "-99",
+      "b": "-99",
+      "valid": false
+    },
+    {
+      "a": "-99",
+      "b": "x",
+      "valid": false
+    },
+    {
+      "a": "x",
+      "b": "0",
+      "valid": false
+    },
+    {
+      "a": "x",
+      "b": "1",
+      "valid": false
+    },
+    {
+      "a": "x",
+      "b": "2",
+      "valid": false
+    },
+    {
+      "a": "x",
+      "b": "3",
+      "valid": false
+    },
+    {
+      "a": "x",
+      "b": "D",
+      "valid": false
+    },
+    {
+      "a": "x",
+      "b": "",
+      "valid": false
+    },
+    {
+      "a": "x",
+      "b": " ",
+      "valid": false
+    },
+    {
+      "a": "x",
+      "b": "d",
+      "valid": false
+    },
+    {
+      "a": "x",
+      "b": "4",
+      "valid": false
+    },
+    {
+      "a": "x",
+      "b": "33",
+      "valid": false
+    },
+    {
+      "a": "x",
+      "b": "-99",
+      "valid": false
+    },
+    {
+      "a": "x",
+      "b": "x",
+      "valid": false
+    }
+  ],
+  "symbols": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "D",
+    "",
+    " ",
+    "d",
+    "4",
+    "33",
+    "-99",
+    "x"
+  ]
+}

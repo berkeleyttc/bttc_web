@@ -41,6 +41,16 @@
  * pill's four orthogonal channels; `Enter` flashing like any other key outside the
  * alphabet; and group switching by mouse click, ten a night, accepted rather than
  * designed away.
+ *
+ * ── WHAT LEFT, AND WHERE IT WENT (F41, 2026-09-12) ─────────────────────────────────
+ *
+ * The cell and group RULES -- the `3`/`3` pair, entered, dirty, the `savedComplete`
+ * latch, the Submit button's reason and the auto-submit edge -- live in
+ * `../score-entry.js`, and this file keeps only closures over `draft[n]` / `saved[n]`
+ * under the same names the template used. They were measured untested here: deleting
+ * `!hasInvalid(...)` from both write paths below left `node --test` green, because
+ * nothing inside `setup()` can be imported by it. `test/score-entry.test.js` now holds
+ * the pair rule to a fixture the Python emits, and the same mutation goes red.
  */
 const { ref, reactive, computed, watch, onMounted } = window.Vue;
 
@@ -48,9 +58,10 @@ import { api } from '../client.js';
 import { ApiError } from '../api.js';
 import { session, drafts, isReadOnly, eventId, applySession } from '../store.js';
 import { writeDraft, clearDraftGroup } from '../persist.js';
-
-/** Ticket 19 Q5. `D` is a real forfeit; the `-99` sentinel died with ticket 11. */
-const ALPHABET = ['0', '1', '2', '3', 'D'];
+import {
+  ALPHABET, entered as enteredIn, invalidKeys as invalidKeysIn, hasInvalid as hasInvalidIn,
+  groupState, dirty as dirtyIn, savedComplete as savedCompleteIn, submitProblem, autoSubmitDue,
+} from '../score-entry.js';
 
 /** Everything that navigates. Arrow keys are deliberately NOT intercepted. */
 const NAV = new Set(['Tab', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
@@ -70,9 +81,6 @@ const FAIL_ACTIONS = {
   LEASE_REQUIRED: ['Retry'],
   LEASE_HELD: [],
 };
-
-const normalise = (o) => JSON.stringify(
-  Object.keys(o || {}).sort().map((k) => [k, o[k].a, o[k].b]));
 
 export const ScoresTab = {
   setup() {
@@ -199,31 +207,20 @@ export const ScoresTab = {
     const cellsOf = (n) => draft[n] || (draft[n] = {});
     const val = (k, side) => (cellsOf(cur.value)[k] || {})[side] || '';
 
-    /** `3`/`3` is the ONLY invalid pair. `2/1 1/2 2/2 D/1 D/0 0/0` are all accepted. */
-    const bad = (k) => {
-      const c = cellsOf(cur.value)[k];
-      return !!c && c.a === '3' && c.b === '3';
-    };
+    // Every rule below is `score-entry.js`'s, closed over this tab's two objects. The
+    // `3`/`3` pair is the ONLY invalid one; `2/1 1/2 2/2 D/1 D/0 0/0` are all accepted.
+    // Blank means NOT YET ENTERED; a match that did not happen is typed 0/0 or D
+    // (ticket 19 Q4 overturned ticket 11's "no row at all" so that reload is lossless).
+    const bad = (k) => invalidKeysIn(cellsOf(cur.value)).includes(k);
 
-    const invalidKeys = computed(() => Object.keys(cellsOf(cur.value))
-      .filter(bad).map((k) => k.replace('_', ' v ')));
+    const invalidKeys = computed(() => invalidKeysIn(cellsOf(cur.value))
+      .map((k) => k.replace('_', ' v ')));
 
-    // Blank means NOT YET ENTERED; a match that did not happen is typed 0/0 or D.
-    // Ticket 19 Q4 overturned ticket 11's "no row at all" so that reload is lossless.
-    const entered = (n) => Object.values(draft[n] || {})
-      .filter((c) => c.a !== '' && c.b !== '' && c.a != null && c.b != null).length;
-    const hasInvalid = (n) => Object.values(draft[n] || {})
-      .some((c) => c.a === '3' && c.b === '3');
-
-    const state = (n) => {
-      const e = entered(n);
-      if (e === 0) return 'none';
-      return e === pairsOf(n) ? 'done' : 'partial';
-    };
-
-    const dirty = (n) => normalise(draft[n]) !== normalise(saved[n]);
-    const savedComplete = (n) => Object.values(saved[n] || {})
-      .filter((c) => c.a && c.b).length === pairsOf(n);
+    const entered = (n) => enteredIn(draft[n]);
+    const hasInvalid = (n) => hasInvalidIn(draft[n]);
+    const state = (n) => groupState(draft[n], pairsOf(n));
+    const dirty = (n) => dirtyIn(draft[n], saved[n]);
+    const savedComplete = (n) => savedCompleteIn(saved[n], pairsOf(n));
 
     // ------------------------------------------------------------ the keystroke filter
 
@@ -281,23 +278,15 @@ export const ScoresTab = {
      */
     function maybeAuto(g) {
       if (isReadOnly.value) return;
-      if (savedComplete(g)) return;
-      if (!(entered(g) === pairsOf(g) && !hasInvalid(g) && dirty(g))) return;
+      if (!autoSubmitDue(draft[g], saved[g], pairsOf(g))) return;
       if (busy.value) { pending = true; return; }
       post(g, true);
     }
 
-    const canSubmit = computed(() => !isReadOnly.value && !busy.value
-      && dirty(cur.value) && !hasInvalid(cur.value) && entered(cur.value) > 0);
-
-    const submitReason = computed(() => {
-      if (isReadOnly.value) return 'another operator holds the editor lease';
-      if (busy.value) return 'saving…';
-      if (hasInvalid(cur.value)) return 'a cell reads 3 / 3 — one side wins 3';
-      if (entered(cur.value) === 0) return 'nothing entered yet';
-      if (!dirty(cur.value)) return 'nothing to save';
-      return '';
-    });
+    // One predicate for the button and its label: the reason IS the disablement.
+    const submitReason = computed(() => submitProblem(draft[cur.value], saved[cur.value],
+      { readOnly: isReadOnly.value, busy: busy.value }) ?? '');
+    const canSubmit = computed(() => submitReason.value === '');
 
     // ------------------------------------------------------------ the POST
 
