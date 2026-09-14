@@ -111,9 +111,9 @@ const RosterApp = {
     const registrationClosed = typeof ENV !== 'undefined' ? (ENV.REGISTRATION_CLOSED ?? false) : false;
     const timezone = typeof ENV !== 'undefined' ? ENV.TIMEZONE : 'America/Los_Angeles';
 
-    // Opening configuration (default: Wednesday at 10:00)
-    const openingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_DAY : 3;    // Wednesday = 3
-    const openingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_HOUR : 10; // 10:00 (10 AM)
+    // Opening configuration (default: Thursday at 21:00)
+    const openingDay = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_DAY : 4;    // Thursday = 4
+    const openingHour = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_HOUR : 21; // 21:00 (9 PM)
     const openingMinute = typeof ENV !== 'undefined' ? ENV.REGISTRATION_OPENING_MINUTE : 0;
 
     // Closing configuration (default: Friday at 18:00)
