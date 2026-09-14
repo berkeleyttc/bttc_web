@@ -170,6 +170,19 @@ const formatPhoneNumber = (phoneString) => {
   }
 };
 
+// Obfuscation decoders.
+// Contact details are stored encoded so they cannot be lifted out of the served
+// source, and are decoded at render time. Same schemes the static pages use:
+// ROT13 for text (about.html), digits-multiplied-by-3 for phone numbers
+// (coaching.html, index.html).
+const rot13 = (s) => {
+  return s.replace(/[a-zA-Z]/g, c => String.fromCharCode((c <= 'Z' ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26));
+};
+
+const decodeObfuscatedDigits = (s) => {
+  return s.replace(/\d+/g, match => parseInt(match) / 3);
+};
+
 // Cookie utilities for storing phone number for auto-sign-in
 const setCookie = (name, value, days = 365) => {
   // Set cookie with expiration date
