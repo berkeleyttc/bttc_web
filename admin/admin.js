@@ -6,6 +6,7 @@
 const ApprovalsPanel = {
   setup() {
     const players = ref([]);
+    const waitlist = ref([]);
     const loading = ref(false);
     const error = ref(null);
     const eventDate = ref('');
@@ -27,6 +28,7 @@ const ApprovalsPanel = {
     });
 
     const playerCount = computed(() => pendingPlayers.value.length);
+    const waitlistCount = computed(() => waitlist.value.length);
 
     onMounted(() => {
       fetchPlayers();
@@ -41,6 +43,7 @@ const ApprovalsPanel = {
         const response = await fetch(`${apiUrl}/rr/roster?include_id=true`, getFetchOptions());
         const data = await handleApiResponse(response);
         players.value = data.roster || [];
+        waitlist.value = data.waitlist || [];
         eventDate.value = data.event_date || '';
         eventType.value = data.event_type || '';
         console.log(`[ApprovalsPanel] Found ${pendingPlayers.value.length} pending players`);
@@ -128,6 +131,8 @@ const ApprovalsPanel = {
 
     const isProcessing = (player) => processingPlayers.value.has(player.internal_user_id);
 
+    const formatPhone = (phone) => (phone ? formatPhoneNumber(phone) : 'N/A');
+
     const formatStatus = (status) => {
       if (!status) return 'Pending';
       if (status === 'PENDING_PAYMENT') return 'Pending Payment';
@@ -154,10 +159,10 @@ const ApprovalsPanel = {
     };
 
     return {
-      players, loading, error, eventDate, eventType, successMessage, currentSort,
-      pendingPlayers, playerCount,
+      players, waitlist, loading, error, eventDate, eventType, successMessage, currentSort,
+      pendingPlayers, playerCount, waitlistCount,
       fetchPlayers, confirmPlayer, isProcessing,
-      formatStatus, formatEventDate, formatRegisteredAt,
+      formatPhone, formatStatus, formatEventDate, formatRegisteredAt,
       sortBy, getSortClass
     };
   },
@@ -207,7 +212,7 @@ const ApprovalsPanel = {
               <td>{{ formatRegisteredAt(player.registered_at) }}</td>
               <td>{{ player.first_name }}</td>
               <td>{{ player.last_name }}</td>
-              <td>{{ player.phone_number || 'N/A' }}</td>
+              <td>{{ formatPhone(player.phone_number) }}</td>
               <td>
                 <span
                   class="status-badge"
@@ -230,6 +235,39 @@ const ApprovalsPanel = {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div v-if="!loading && !error" class="waitlist-section">
+        <h4 class="waitlist-section-title">Waitlist ({{ waitlistCount }})</h4>
+
+        <div v-if="waitlistCount === 0" class="empty-message">
+          No one on the waitlist.
+        </div>
+
+        <div v-else class="pending-table-container">
+          <table class="waitlist-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Registered At</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Rating</th>
+                <th>Phone Number</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="player in waitlist" :key="player.position">
+                <td class="waitlist-position">{{ player.position }}</td>
+                <td>{{ formatRegisteredAt(player.registered_at) }}</td>
+                <td>{{ player.first_name }}</td>
+                <td>{{ player.last_name }}</td>
+                <td>{{ player.rating }}</td>
+                <td>{{ formatPhone(player.phone_number) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   `
