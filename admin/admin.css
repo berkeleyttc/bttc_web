@@ -362,7 +362,8 @@
   overflow-x: auto;
 }
 
-.pending-table {
+.pending-table,
+.waitlist-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
@@ -370,14 +371,17 @@
 }
 
 .pending-table th,
-.pending-table td {
+.pending-table td,
+.waitlist-table th,
+.waitlist-table td {
   padding: 0.75rem;
   border: 1px solid #ddd;
   text-align: left;
   font-family: 'PT Sans Narrow', Arial, sans-serif;
 }
 
-.pending-table th {
+.pending-table th,
+.waitlist-table th {
   background-color: #f0f0f0;
   font-weight: 700;
   color: #333;
@@ -421,16 +425,53 @@
   opacity: 1;
 }
 
-.pending-table tbody tr {
+.pending-table tbody tr,
+.waitlist-table tbody tr {
   transition: background-color 0.2s ease;
 }
 
-.pending-table tbody tr:hover {
+.pending-table tbody tr:hover,
+.waitlist-table tbody tr:hover {
   background-color: #f8f9fa;
 }
 
-.pending-table tbody td {
+.pending-table tbody td,
+.waitlist-table tbody td {
   color: #555;
+}
+
+/* ========================================
+   WAITLIST TABLE
+   ======================================== */
+
+.waitlist-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #ddd;
+}
+
+.waitlist-section-title {
+  margin: 0;
+  font-family: 'PT Sans Narrow', Arial, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #333;
+}
+
+/* The waitlist is fixed in promotion order, so its headers are not clickable */
+.waitlist-table th {
+  cursor: default;
+  padding-right: 0.75rem;
+}
+
+.waitlist-table th:hover {
+  background-color: #f0f0f0;
+}
+
+.waitlist-position {
+  width: 3rem;
+  text-align: center;
+  color: #777;
 }
 
 /* Status Badge */
