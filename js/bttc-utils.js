@@ -157,8 +157,9 @@ const validateToken = (token) => {
 };
 
 const formatPhoneNumber = (phoneString) => {
-  // Remove all non-numeric characters
-  const cleaned = phoneString.replace(/\D/g, '').slice(0, 10);
+  // Remove all non-numeric characters. The API returns phone_number as an
+  // integer on some endpoints, so coerce instead of assuming a string.
+  const cleaned = String(phoneString ?? '').replace(/\D/g, '').slice(0, 10);
   
   // Format as xxx-xxx-xxxx
   if (cleaned.length <= 3) {
